@@ -1,0 +1,211 @@
+[
+  {
+    "_id": "1",
+    "nome_evento": "Desafio das Dunas",
+    "data_realizacao": "2025-07-03T00:00:00.000Z",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/desafio-das-dunas",
+    "url_imagem": "https://picsum.photos/seed/100/400/200",
+    "distancias": [
+      "21km"
+    ],
+    "organizador": "Corrida Livre",
+    "categorias": [
+      "Noturna"
+    ]
+  },
+  {
+    "_id": "2",
+    "nome_evento": "Meia Maratona do Sol",
+    "data_realizacao": "2025-06-14T00:00:00.000Z",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/meia-maratona-do-sol",
+    "url_imagem": "https://picsum.photos/seed/101/400/200",
+    "distancias": [
+      "21km"
+    ],
+    "organizador": "RunPB",
+    "categorias": [
+      "Trail"
+    ]
+  },
+  {
+    "_id": "3",
+    "nome_evento": "Corrida da Paz",
+    "data_realizacao": "2025-06-17T00:00:00.000Z",
+    "cidade": "Sousa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-da-paz",
+    "url_imagem": "https://picsum.photos/seed/102/400/200",
+    "distancias": [
+      "7km",
+      "15km"
+    ],
+    "organizador": "Desafio do Sertão",
+    "categorias": [
+      "Trail"
+    ]
+  },
+  {
+    "_id": "4",
+    "nome_evento": "Run Sunset Festival",
+    "data_realizacao": "2025-05-21T00:00:00.000Z",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/run-sunset-festival",
+    "url_imagem": "https://picsum.photos/seed/103/400/200",
+    "distancias": [
+      "7km",
+      "15km"
+    ],
+    "organizador": "Ativa Eventos",
+    "categorias": [
+      "Kids"
+    ]
+  },
+  {
+    "_id": "5",
+    "nome_evento": "Maratona do Interior",
+    "data_realizacao": "2025-07-31T00:00:00.000Z",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/maratona-do-interior",
+    "url_imagem": "https://picsum.photos/seed/104/400/200",
+    "distancias": [
+      "5km"
+    ],
+    "organizador": "Desafio do Sertão",
+    "categorias": [
+      "Kids"
+    ]
+  },
+  {
+    "_id": "6",
+    "nome_evento": "Corrida da Serra",
+    "data_realizacao": "2025-07-03T00:00:00.000Z",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-da-serra",
+    "url_imagem": "https://picsum.photos/seed/105/400/200",
+    "distancias": [
+      "7km",
+      "15km"
+    ],
+    "organizador": "Ativa Eventos",
+    "categorias": [
+      "Kids"
+    ]
+  },
+  {
+    "_id": "7",
+    "nome_evento": "Desafio Urbano",
+    "data_realizacao": "2025-04-16T00:00:00.000Z",
+    "cidade": "Sousa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/desafio-urbano",
+    "url_imagem": "https://picsum.photos/seed/106/400/200",
+    "distancias": [
+      "5km"
+    ],
+    "organizador": "Corrida Livre",
+    "categorias": [
+      "Noturna"
+    ]
+  },
+  {
+    "_id": "8",
+    "nome_evento": "Corrida Solidária",
+    "data_realizacao": "2025-08-06T00:00:00.000Z",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-solidária",
+    "url_imagem": "https://picsum.photos/seed/107/400/200",
+    "distancias": [
+      "7km",
+      "15km"
+    ],
+    "organizador": "Corrida Livre",
+    "categorias": [
+      "Trail"
+    ]
+  },
+  {
+    "_id": "9",
+    "nome_evento": "Desafio da Natureza",
+    "data_realizacao": "2025-06-07T00:00:00.000Z",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/desafio-da-natureza",
+    "url_imagem": "https://picsum.photos/seed/108/400/200",
+    "distancias": [
+      "3km",
+      "6km"
+    ],
+    "organizador": "Corrida Livre",
+    "categorias": [
+      "Kids"
+    ]
+  },
+  {
+    "_id": "10",
+    "nome_evento": "Corrida das Águas",
+    "data_realizacao": "2025-05-30T00:00:00.000Z",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-das-águas",
+    "url_imagem": "https://picsum.photos/seed/109/400/200",
+    "distancias": [
+      "10km"
+    ],
+    "organizador": "Ativa Eventos",
+    "categorias": [
+      "10K"
+    ]
+  },
+  {
+    "_id": "11",
+    "nome_evento": "Corrida da Independência",
+    "data_realizacao": "2025-04-12T00:00:00.000Z",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-da-independência",
+    "url_imagem": "https://picsum.photos/seed/110/400/200",
+    "distancias": [
+      "10km"
+    ],
+    "organizador": "RunPB",
+    "categorias": [
+      "Noturna"
+    ]
+  },
+  {
+    "_id": "12",
+    "nome_evento": "Corrida de Verão",
+    "data_realizacao": "2025-05-23T00:00:00.000Z",
+    "cidade": "Sousa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "url_inscricao": "https://example.com/corrida-de-verão",
+    "url_imagem": "https://picsum.photos/seed/111/400/200",
+    "distancias": [
+      "5km"
+    ],
+    "organizador": "RunPB",
+    "categorias": [
+      "Noturna"
+    ]
+  }
+]

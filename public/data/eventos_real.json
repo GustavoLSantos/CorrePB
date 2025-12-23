@@ -1,0 +1,845 @@
+[
+  {
+    "_id": "1",
+    "nome_evento": "MEIA MARATONA JAMPA 21K SUNRISE",
+    "url_inscricao": "https://zeniteesportes.com/jampa21ksunrise",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/4417ec51d3874a47834d9ba44f80bca9.png",
+    "data_realizacao": "08 de Junho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 21km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "2",
+    "nome_evento": "CORRIDA DAS NEVES",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/corrida-das-neves",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/8b76e8f5fab34f209e70a6c3e01d92a7.png",
+    "data_realizacao": "15 de Junho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "PARÓQUIA DE NOSSA SENHORA DAS NEVES",
+    "categorias": []
+  },
+  {
+    "_id": "3",
+    "nome_evento": "CORRIDA EXTREMO ORIENTAL",
+    "url_inscricao": "https://zeniteesportes.com/corridaextremooriental",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/b7b3a18c21354bab9b7a10468138e338.png",
+    "data_realizacao": "15 de Junho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "4",
+    "nome_evento": "TRAIL RUN SÃO SALVADOR",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/trail-run-so-salvador-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/7fef3455f4ad4c75945d03ad03a45968.png",
+    "data_realizacao": "15 de Junho de 2025",
+    "cidade": "5km, 10km e 18km (corrida - trail)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "ACLIVE SPORTS",
+    "categorias": []
+  },
+  {
+    "_id": "5",
+    "nome_evento": "IPG RUN",
+    "url_inscricao": "https://zeniteesportes.com/ipgrun",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/da6d6c4d1afc48a8a4145b9b7f68944f.png",
+    "data_realizacao": "29 de Junho de 2025",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "IGREJA PRESBITRIANA DE GUARABIRA",
+    "categorias": []
+  },
+  {
+    "_id": "6",
+    "nome_evento": "MEIA DOS PARQUES",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/meia-dos-parques-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e106d3d70c264ee58d72c65fe07e6729.png",
+    "data_realizacao": "29 de Junho de 2025",
+    "cidade": "3km (canicross)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "6km, 12km e 21km (corrida)"
+    ],
+    "organizador": "TRCRONO EVENTOS ESPORTIVOS",
+    "categorias": []
+  },
+  {
+    "_id": "7",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES INVERNO",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/paraiba/inverno/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/c411005ec8cd44fd83701902c7f79d02.png",
+    "data_realizacao": "06 de Julho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TTK MARKETING",
+    "categorias": []
+  },
+  {
+    "_id": "8",
+    "nome_evento": "5 MILHAS NIGHT ROCK",
+    "url_inscricao": "https://www.race83.com.br/evento/5-milhas-night-rock-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/7f32d61cd60f44e085602bbb03244d54.png",
+    "data_realizacao": "12 de Julho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 8km (corrida)"
+    ],
+    "organizador": "MAGNATA RUNNER",
+    "categorias": []
+  },
+  {
+    "_id": "9",
+    "nome_evento": "1ª CORRIDA PORTO EM MOVIMENTO",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/corrida-do-porto-em-movimento-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/a1c59871a49d43139d1ca561802f56c6.png",
+    "data_realizacao": "13 de Julho de 2025",
+    "cidade": "Cabedelo",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "PREFEITURA MUNICIPAL",
+    "categorias": []
+  },
+  {
+    "_id": "10",
+    "nome_evento": "CIRCUITO DAS ÁGUAS ETAPA CAMPINA GRANDE",
+    "url_inscricao": "https://www.race83.com.br/evento/circuito-das-aguas-etapa-campina-grande-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e8bcb319d1af41a09822d70e26278133.png",
+    "data_realizacao": "13 de Julho de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "MOVE IT SPORTS",
+    "categorias": []
+  },
+  {
+    "_id": "11",
+    "nome_evento": "SUNCITY TRAIL RUN",
+    "url_inscricao": "https://tiquet.com.br/evento/2025-33-suncity-trail-run-2025/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/916b5ba2d68a4819b0f8b94858720475.png",
+    "data_realizacao": "13 de Julho de 2025",
+    "cidade": "6km e 12km (corrida - trail)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "SERTÃO VIBE EVENTOS",
+    "categorias": []
+  },
+  {
+    "_id": "12",
+    "nome_evento": "1ª CORRIDA DA BIO FITNESS",
+    "url_inscricao": "https://www.correparaiba.com/evento/biofitness",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/4f565af34d944073a0a0369b1f96e87a.png",
+    "data_realizacao": "19 de Julho de 2025",
+    "cidade": "Carrapateira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "ACADEMIA BIO FITNESS",
+    "categorias": []
+  },
+  {
+    "_id": "13",
+    "nome_evento": "5K CORRE JP",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/5k-corre-jp",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/26b83c3403d84e1daeeef7c933d56efe.png",
+    "data_realizacao": "19 de Julho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "CORRE JP",
+    "categorias": []
+  },
+  {
+    "_id": "14",
+    "nome_evento": "4ª EDIÇÃO DO LITORAL EXTREMO ETAPA BAÍA DA TRAIÇÃO",
+    "url_inscricao": "https://www.correparaiba.com/evento/1364/4-edio-do-litoral-extremo-etapa-baa-da-traio-pb",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/185227009e4a4289ac49fbdaf2fd01f3.png",
+    "data_realizacao": "20 de Julho de 2025",
+    "cidade": "7km e 15km (corrida - trail)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "4km (caminhada)"
+    ],
+    "organizador": "WW ADVENTURE RUN",
+    "categorias": []
+  },
+  {
+    "_id": "15",
+    "nome_evento": "3ª CORRIDA ITA RUNNING",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/3-corrida-ita-running",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/5a486ffdc2a143aa8297d34f2592fe0e.png",
+    "data_realizacao": "20 de Julho de 2025",
+    "cidade": "Itabaiana",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "CORRE JP",
+    "categorias": []
+  },
+  {
+    "_id": "16",
+    "nome_evento": "CIRCUITO MUSIC RUN ETAPA SAMBA",
+    "url_inscricao": "https://zeniteesportes.com/circuitomusicrunsamba",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/42abaab303a04e5e98f17070246f8598.png",
+    "data_realizacao": "20 de Julho de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "17",
+    "nome_evento": "2ª CORRIDA PET",
+    "url_inscricao": "https://www.correparaiba.com/evento/pet/juru",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/4714c48179344a2197b9df902520a7e7.png",
+    "data_realizacao": "20 de Julho de 2025",
+    "cidade": "Juru",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "PREFEITURA MUNICIPAL",
+    "categorias": []
+  },
+  {
+    "_id": "18",
+    "nome_evento": "1ª CORRIDA DE ANIVERSÁRIO DO ARAÚJO SUPERMERCADOS",
+    "url_inscricao": "https://www.correparaiba.com/evento/AraujoSupermercados",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/b63b98b6cd4f440da61543828e416429.png",
+    "data_realizacao": "26 de Julho de 2025",
+    "cidade": "Cajazeiras",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "REDE DE SUPERMERCADOS ARAÚJO",
+    "categorias": []
+  },
+  {
+    "_id": "19",
+    "nome_evento": "CIRCUITO SUNSET RUN ETAPA CAMPINA GRANDE",
+    "url_inscricao": "https://www.ticketsports.com.br/e/circuito-sunset-run-etapa-campina-grande-72269",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/43609226c52d4f8db5db143ec99d7e3f.png",
+    "data_realizacao": "26 de Julho de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SOUL MAIS ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "20",
+    "nome_evento": "TRUN ETAPA SERRARIA",
+    "url_inscricao": "https://www.race83.com.br/evento/4558/trun-etapa-serraria-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/de452b5be06e499994d2a7ccd04051a1.png",
+    "data_realizacao": "26 de Julho de 2025",
+    "cidade": "10km, 18km, 28km e 56km (corrida - trail - ultra)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "TRUN",
+    "categorias": []
+  },
+  {
+    "_id": "21",
+    "nome_evento": "4ª CORRIDA DO CHOQUEANO",
+    "url_inscricao": "https://www.race83.com.br/evento/2637/4-corrida-do-choqueano",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/b59745a78f044cdfa560dfe07cb0fea3.png",
+    "data_realizacao": "27 de Julho de 2025",
+    "cidade": "5ª CIA DO BOPE",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": []
+  },
+  {
+    "_id": "22",
+    "nome_evento": "DESBRAVA ETAPA JOÃO PESSOA",
+    "url_inscricao": "https://page.ticketsports.com.br/centaurodesbrava2025joaopessoapb/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/ed0d53c33e30432bb16e8d2a5d4618a1.png",
+    "data_realizacao": "27 de Julho de 2025",
+    "cidade": "CENTAURO l X3M  ENTRETENIMENTO",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": []
+  },
+  {
+    "_id": "23",
+    "nome_evento": "5ª MARATONA INTERNACIONAL DE JOÃO PESSOA",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/maratona-internacional-de-joao-pessoa-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/1debe66dbbba46fba3294b252b41c612.png",
+    "data_realizacao": "02 e 03 de Agosto de 2025",
+    "cidade": "PREFEITURA MUNICIPAL l TRCRONO EVENTOS ESPORTIVOS",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km, 21km e 42km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": []
+  },
+  {
+    "_id": "24",
+    "nome_evento": "SERRA XTREME RUN OCR SERIES",
+    "url_inscricao": "https://www.atletis.com.br/evento/serra-xtreme-run-ocr-series-8664",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/a07a9f565598471f9ddb61234ad349d8.png",
+    "data_realizacao": "03 de Agosto de 2025",
+    "cidade": "5km + 15 obstáculos e 10km + 20 obstáculos (corrida - OCR)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "ALISSON CARDOSO",
+    "categorias": []
+  },
+  {
+    "_id": "25",
+    "nome_evento": "1ª CORRIDA DA MIX EMBALAGENS",
+    "url_inscricao": "https://www.084sports.com.br/evento/corridamixembalagens",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/6f707ff36b5744fcbdb9aa75947988c7.png",
+    "data_realizacao": "03 de Agosto de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "7km (corrida)"
+    ],
+    "organizador": "MIX EMBALAGENS l RUPTURA RUN",
+    "categorias": []
+  },
+  {
+    "_id": "26",
+    "nome_evento": "CIRCUITO DE CORRIDAS DE RUA DA ADVOCACIA ETAPA JOÃO PESSOA",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/circuito-de-corridas-de-rua-da-advocacia-etapa-joo-pessoa",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/52bb17bec6bf425a965e906c213bec5b.png",
+    "data_realizacao": "09 de Agosto de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "CAA-PB",
+    "categorias": []
+  },
+  {
+    "_id": "27",
+    "nome_evento": "3ª CORRIDA MEXA-SE PELA VIDA",
+    "url_inscricao": "https://tiquet.com.br/evento/2025-13-1a-corrida-mexa-se-pela-vida/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/2c713f1a6d3f44c09f192a262b60a71c.png",
+    "data_realizacao": "10 de Agosto de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "3km, 5km e 10km (corrida)"
+    ],
+    "organizador": "SUNSET ADVENTURE",
+    "categorias": []
+  },
+  {
+    "_id": "28",
+    "nome_evento": "2ª CORRIDA APOSTE NA SAÚDE",
+    "url_inscricao": "https://www.race83.com.br/evento/6212/2-corrida-aposte-na-sade",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/420f4e0e11594cd18b280089117ff144.png",
+    "data_realizacao": "10 de Agosto de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "AFRAFEP/LOTEP",
+    "categorias": []
+  },
+  {
+    "_id": "29",
+    "nome_evento": "1º CORRECIT JDF",
+    "url_inscricao": "https://www.correparaiba.com/evento/correcit",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/bf2b6cd4389644c1ac1ba7f5e7c89883.png",
+    "data_realizacao": "16 de Agosto de 2025",
+    "cidade": "Uiraúna",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "LIVIA KARLA",
+    "categorias": []
+  },
+  {
+    "_id": "30",
+    "nome_evento": "CORRIDA DA VITÓRIA",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/corrida-da-vitoria",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e2fbdfae6c7d4861860b65fc1f3ee368.png",
+    "data_realizacao": "17 de Agosto de 2025",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "CISOL GUARABIRA",
+    "categorias": []
+  },
+  {
+    "_id": "31",
+    "nome_evento": "CORRIDA VEM CUIDAR DE MIM",
+    "url_inscricao": "https://www.race83.com.br/evento/5829/vem-cuidar-de-mim-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e4be8e476a8349c29528f9e064d6644b.png",
+    "data_realizacao": "17 de Agosto de 2025",
+    "cidade": "500m (infantil)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "INSTITUTO VEM CUIDAR DE MIM",
+    "categorias": []
+  },
+  {
+    "_id": "32",
+    "nome_evento": "BEATS RUN SUNSET",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/beats-run-sunset",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/20361f61532548cc84af54c3f47b485e.png",
+    "data_realizacao": "23 de Agosto de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "CANTALOUPE ORGANIZAÇÃO DE EVENTOS",
+    "categorias": []
+  },
+  {
+    "_id": "33",
+    "nome_evento": "CAIXA CORRIDAS PELO NORDESTE ETAPA CAMPINA GRANDE",
+    "url_inscricao": "https://www.ticketsports.com.br/e/caixa-corridas-pelo-nordeste-campina-grande-pb-71813",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/4deca6b7b2904baeb02bdf1db3b7aa76.png",
+    "data_realizacao": "31 de Agosto de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "34",
+    "nome_evento": "MOGEIRO RUN",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/mogeiro-run-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/c4139f62aa6e4d1aa0bcd6a777f7b32e.png",
+    "data_realizacao": "31 de Agosto de 2025",
+    "cidade": "Mogeiro",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "3km e 5km (corrida)"
+    ],
+    "organizador": "ACADEMIA GSTARTFIT",
+    "categorias": []
+  },
+  {
+    "_id": "35",
+    "nome_evento": "SERTÃO DUAL RACE",
+    "url_inscricao": "https://www.correparaiba.com/evento/951/dual-race-serto",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/21a360427b9644f8aef7a7d6c1f03538.png",
+    "data_realizacao": "31 de Agosto de 2025",
+    "cidade": "7,5km (corrida - trail)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "CLIQUE DIGITAL",
+    "categorias": []
+  },
+  {
+    "_id": "36",
+    "nome_evento": "2ª CORRIDA DO EJC SAGRADA FAMÍLIA",
+    "url_inscricao": "https://www.correparaiba.com/evento/EJCSolanea",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/90dd4561f8cb4c57a29588a2f486bb3b.png",
+    "data_realizacao": "31 de Agosto de 2025",
+    "cidade": "Solânes",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "EJC SAGRADA FAMÍLIA",
+    "categorias": []
+  },
+  {
+    "_id": "37",
+    "nome_evento": "JAMPA RUN",
+    "url_inscricao": "https://www.ticketsports.com.br/e/jampa-run-5k-10k-2025-70637",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/107c1ba4ae36498d8bb1d1b55d226db9.png",
+    "data_realizacao": "07 de Setembro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "38",
+    "nome_evento": "1ª CORRIDA RUNDAY",
+    "url_inscricao": "https://www.correparaiba.com/evento/RunDay",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/94ebc7801e604c46a15154c5ff496e7e.png",
+    "data_realizacao": "07 de Setembro de 2025",
+    "cidade": "Uiraúna",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "LUAN ALENCAR",
+    "categorias": []
+  },
+  {
+    "_id": "39",
+    "nome_evento": "ULTRAMARATONA 12H DA LAGOA",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/ultramaratona-12h-da-lagoa",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/3bf67a945ec748409826949bcb593e3f.png",
+    "data_realizacao": "13 de Setembro de 2025",
+    "cidade": "12h (corrida - ultra)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [],
+    "organizador": "PACE4",
+    "categorias": []
+  },
+  {
+    "_id": "40",
+    "nome_evento": "CIRCUITO DAS ÁGUAS ETAPA CAJAZEIRAS",
+    "url_inscricao": "https://www.race83.com.br/evento/5314/circuito-das-guas-etapa-cajazeiras",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/6e16a5fddeac4693906f446b9a80a797.png",
+    "data_realizacao": "14 de Setembro de 2025",
+    "cidade": "Cajazeiras",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "MOVE IT SPORTS",
+    "categorias": []
+  },
+  {
+    "_id": "41",
+    "nome_evento": "CIRCUITO MUSIC RUN ETAPA ROCK",
+    "url_inscricao": "https://zeniteesportes.com/circuitomusicrunrock",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/82fc8652e82f4e49a3dfea129a446fb1.png",
+    "data_realizacao": "14 de Setembro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "42",
+    "nome_evento": "1ª CORRIDA DA MANDIOCA",
+    "url_inscricao": "https://www.race83.com.br/evento/2025/corrida-de-rua/1-corrida-da-mandioca-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/9388a318092b4a51b53f77425d415c29.png",
+    "data_realizacao": "14 de Setembro de 2025",
+    "cidade": "ACADEMIA PROFIT l CABO TELLECOM",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": []
+  },
+  {
+    "_id": "43",
+    "nome_evento": "1ª CORRIDA ATACAMIX RUN",
+    "url_inscricao": "https://zeniteesportes.com/atacamixrun",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/a7e72d29d0fe4c50a754980ed3b39ed2.png",
+    "data_realizacao": "21 de Setembro de 2025",
+    "cidade": "Sapé",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ATACAMIX RUN",
+    "categorias": []
+  },
+  {
+    "_id": "44",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES PRIMAVERA",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/paraiba/primavera/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/24121a8ea27f42ba8cebc98bfc42d40e.png",
+    "data_realizacao": "28 de Setembro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 15km (corrida)"
+    ],
+    "organizador": "TTK MARKETING",
+    "categorias": []
+  },
+  {
+    "_id": "45",
+    "nome_evento": "CAIXA CORRIDAS PELO NORDESTE ETAPA PATOS",
+    "url_inscricao": "https://www.ticketsports.com.br/e/caixa-corridas-pelo-nordeste-patos-pb-72376",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/dbc577068ed1418386a4dc177a7d40c6.png",
+    "data_realizacao": "28 de Setembro de 2025",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "46",
+    "nome_evento": "LIVE! RUN XP",
+    "url_inscricao": "https://liverun.com.br/etapa/live-run-joao-pessoa-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/c5be2c85a2014843aec36b0746597b71.png",
+    "data_realizacao": "05 de Outubro de 2025",
+    "cidade": "Use o cupom JAPAULTRA15 (15% de desconto)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "LIVE!",
+    "categorias": []
+  },
+  {
+    "_id": "47",
+    "nome_evento": "1ª CORRIDA DO PÃO DOCE",
+    "url_inscricao": "https://www.084sports.com.br/evento/corridadopaodoce",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/735c62795f6f46b289c63c91b9223446.png",
+    "data_realizacao": "12 de Outubro de 2025",
+    "cidade": "100m e 500m (infantil)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "RICARDO SILVA",
+    "categorias": []
+  },
+  {
+    "_id": "48",
+    "nome_evento": "JP CITY HALF MARATHON",
+    "url_inscricao": "https://www.race83.com.br/evento/3068/jp-city-half-marathon-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/5233bb18675046f087b591d75c320b39.png",
+    "data_realizacao": "12 de Outubro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 21km (corrida)"
+    ],
+    "organizador": "MOVE SPORTS",
+    "categorias": []
+  },
+  {
+    "_id": "49",
+    "nome_evento": "MEIA MARATONA DE PATOS",
+    "url_inscricao": "https://www.ticketsports.com.br/e/meia-maratona-de-patos-2025-71727",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/d8a1d4677155469eab4e0e70d13ca2fb.png",
+    "data_realizacao": "12 de Outubro de 2025",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 21km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "50",
+    "nome_evento": "MEIA MARATONA DE JOÃO PESSOA",
+    "url_inscricao": "https://www.ticketsports.com.br/e/meia-maratona-de-joao-pessoa-2025-70645",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/b1c3e12fb6b1430cbdb3438e35eee6ae.png",
+    "data_realizacao": "16 de Novembro de 2025",
+    "cidade": "João Pessoa / PB",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 21km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "51",
+    "nome_evento": "CIRCUITO DAS ÁGUAS ETAPA PATOS",
+    "url_inscricao": "https://www.race83.com.br/evento/3366/circuito-das-guas-etapa-patos",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/bd82472129ca41a1888a1f4202c2784c.png",
+    "data_realizacao": "22 de Novembro de 2025",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "MOVE IT SPORTS",
+    "categorias": []
+  },
+  {
+    "_id": "52",
+    "nome_evento": "CIRCUITO MUSIC RUN ETAPA AXÉ",
+    "url_inscricao": "https://zeniteesportes.com/circuitomusicrunaxe",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/0b9a2cfd0e9a44d489075fa31d09574b.png",
+    "data_realizacao": "23 de Novembro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "53",
+    "nome_evento": "2ª CORRIDA INTENSE DE VERÃO",
+    "url_inscricao": "https://www.race83.com.br/evento/4079/2-corrida-intense-de-vero",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/cd1b828db7354a8da3dba70a7ba7776c.png",
+    "data_realizacao": "23 de Novembro de 2025",
+    "cidade": "Pedras de Fogo",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "3km e 5km (corrida)"
+    ],
+    "organizador": "INTENSE BOX",
+    "categorias": []
+  },
+  {
+    "_id": "54",
+    "nome_evento": "1ª BUDEGA RUN MUSIC",
+    "url_inscricao": "https://www.correparaiba.com/evento/BudegaRun",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e74be6d830774a14a5776bf4e5b7cea1.png",
+    "data_realizacao": "29 de Novembro de 2025",
+    "cidade": "Cajazeiras",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "BUDEGA DA MÚSICA",
+    "categorias": []
+  },
+  {
+    "_id": "55",
+    "nome_evento": "CORRIDAS UNIMED CIRCUITO JOÃO PESSOA",
+    "url_inscricao": "https://www.race83.com.br/evento/2791/corridas-unimed-circuito-joo-pessoa-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/e7bb954e23664bbca2867d96210f2acf.png",
+    "data_realizacao": "30 de Novembro de 2025",
+    "cidade": "1km (infantil)",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km,10km e 15km (corrida)"
+    ],
+    "organizador": "UNIMED JOÃO PESSOA",
+    "categorias": []
+  },
+  {
+    "_id": "56",
+    "nome_evento": "CAMPINA BIG RUN",
+    "url_inscricao": "https://zeniteesportes.com/campinabigrun",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/24ccd9118b9e45b5aa3ddb1889cf6c23.png",
+    "data_realizacao": "14 de Dezembro de 2025",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "3km, 5km e 10km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": []
+  },
+  {
+    "_id": "57",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES VERÃO",
+    "url_inscricao": "https://circuitodasestacoes.com.br/paraiba/verao/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/cd24622b4f9641af86e371a5c777763c.png",
+    "data_realizacao": "14 de Dezembro de 2025",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2025-06-09T00:00:00.000Z",
+    "distancias": [
+      "5km, 10km e 15km (corrida)"
+    ],
+    "organizador": "TTK MARKETING",
+    "categorias": []
+  }
+]
