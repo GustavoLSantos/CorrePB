@@ -1,0 +1,49 @@
+﻿# Root .gitignore for CorrePB monorepo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.pdb
+*.egg-info/
+.python-version
+.venv/
+.venv-backend/
+venv/
+env/
+# Local env files
+.env
+.env.*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# Note: keep package-lock.json committed for reproducible installs
+
+# Frontend build
+frontend/build/
+
+# Logs and databases
+logs/
+*.log
+*.sqlite3
+
+# Editor configs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
