@@ -199,9 +199,10 @@ class EventoRepository(BaseRepository):
                 # Add timestamp
                 evento["atualizado_em"] = datetime.now()
 
-                # Use nome_evento and datas_realizacao as unique key
+                # Build unique key filter: nome_evento is required, datas_realizacao is optional
                 filter_query = {"nome_evento": evento.get("nome_evento")}
 
+                # Add datas_realizacao to unique key if present
                 if "datas_realizacao" in evento and evento["datas_realizacao"]:
                     filter_query["datas_realizacao"] = evento["datas_realizacao"]
 
