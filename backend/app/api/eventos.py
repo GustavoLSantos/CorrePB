@@ -1,89 +1,104 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from typing import List, Optional
+from fastapi import APIRouter, Depends, Query
+from typing import Optional
 from datetime import datetime
-from fastapi_pagination import Page, Params, paginate
-from app.core.database import Database, logger
-from app.models.evento import EventoBase, EventoCreate, EventoUpdate, EventoResponse
+from fastapi_pagination import Page, Params
+
+from app.schemas import EventoResponseSchema
 from app.services.evento_service import EventoService
+from app.core.dependencies import get_evento_service
 
 router = APIRouter()
 
 
-@router.get("/", response_model=Page[EventoResponse])
+@router.get("/", response_model=Page[EventoResponseSchema])
 async def listar_eventos(
-        estado: Optional[str] = None,
-        cidade: Optional[str] = None,
-        nome_evento: Optional[str] = None,
-        status: Optional[str] = None,  # "pendentes", "realizados" ou "todos"
-        ordenar_por: str = "datas_realizacao",
-        ordem: int = -1,
-        params: Params = Depends(),
+    estado: Optional[str] = None,
+    cidade: Optional[str] = None,
+    nome_evento: Optional[str] = None,
+    status_filter: Optional[str] = Query(None, alias="status"),
+    ordenar_por: str = "datas_realizacao",
+    ordem: int = -1,
+    params: Params = Depends(),
+    service: EventoService = Depends(get_evento_service),
 ):
     """
-    Lista eventos com filtros, ordenação e paginação.
+    List eventos with filters, sorting, and pagination.
+
+    Args:
+        estado: Filter by state
+        cidade: Filter by city
+        nome_evento: Filter by event name (regex search)
+        status_filter: Filter by status ("pendentes", "realizados", or "todos")
+        ordenar_por: Field to sort by
+        ordem: Sort order (1: ascending, -1: descending)
+        params: Pagination parameters
+        service: EventoService dependency
+
+    Returns:
+        Paginated list of eventos
     """
-    try:
-        # Construir filtro
-        filtro = {}
+    # Build filter
+    filtro = {}
 
-        if estado:
-            filtro["estado"] = estado
+    if estado:
+        filtro["estado"] = estado
 
-        if cidade:
-            filtro["cidade"] = cidade
+    if cidade:
+        filtro["cidade"] = cidade
 
-        if nome_evento:
-            filtro["nome_evento"] = {"$regex": nome_evento, "$options": "i"}
+    if nome_evento:
+        filtro["nome_evento"] = {"$regex": nome_evento, "$options": "i"}
 
-        # Filtrar por status (pendentes ou realizados)
-        if status:
-            hoje = datetime.now()
-            if status == "pendentes":
-                filtro["datas_realizacao"] = {"$gte": hoje}
-            elif status == "realizados":
-                filtro["datas_realizacao"] = {"$lt": hoje}
+    # Filter by status (upcoming or past events)
+    if status_filter:
+        hoje = datetime.now()
+        if status_filter == "pendentes":
+            filtro["datas_realizacao"] = {"$gte": hoje}
+        elif status_filter == "realizados":
+            filtro["datas_realizacao"] = {"$lt": hoje}
 
-        # Construir ordenação
-        order = {ordenar_por: ordem}
+    # Build sort specification
+    order = {ordenar_por: ordem}
 
-        # Buscar eventos
-        return await EventoService.listar_eventos(filtro, order, params)
-    except Exception as e:
-        logger.error(f"Erro ao listar eventos: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    # Get eventos
+    return await service.listar_eventos(filtro, order, params)
 
 
-@router.get("/sem-paginacao", response_model=List[EventoResponse])
+@router.get("/sem-paginacao", response_model=list[EventoResponseSchema])
 async def listar_eventos_sem_paginacao(
-        limit: Optional[int] = Query(100, description="Limite de eventos a retornar")
+    limit: Optional[int] = Query(100, description="Maximum number of eventos to return"),
+    service: EventoService = Depends(get_evento_service),
 ):
     """
-    Retorna uma lista de eventos sem paginação.
-    Útil para obter dados para filtros ou seleções.
+    Return a list of eventos without pagination.
+    Useful for getting data for filters or selections.
+
+    Args:
+        limit: Maximum number of eventos to return
+        service: EventoService dependency
+
+    Returns:
+        List of eventos
     """
-    try:
-        return await EventoService.listar_eventos_sem_paginacao(limit)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao buscar eventos: {str(e)}"
-        )
+    return await service.listar_eventos_sem_paginacao(limit)
 
 
-@router.get("/{id}", response_model=EventoResponse)
-async def obter_evento(id: str):
+@router.get("/{id}", response_model=EventoResponseSchema)
+async def obter_evento(
+    id: str,
+    service: EventoService = Depends(get_evento_service),
+):
     """
-    Obtém um evento pelo ID.
+    Get an evento by ID.
+
+    Args:
+        id: Evento ID
+        service: EventoService dependency
+
+    Returns:
+        Evento data
+
+    Raises:
+        NotFoundException: If evento is not found
     """
-    try:
-        evento = await EventoService.buscar_evento_por_id(id)
-
-        if not evento:
-            raise HTTPException(status_code=404, detail="Evento não encontrado")
-
-        return evento
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Erro ao obter evento: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await service.buscar_evento_por_id(id)

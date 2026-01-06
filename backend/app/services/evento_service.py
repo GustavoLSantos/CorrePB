@@ -1,310 +1,233 @@
-import errno
 import logging
-import re
 from datetime import datetime
-from fastapi_pagination.ext.motor import paginate
-from fastapi_pagination import Params
-from pymongo import UpdateOne, InsertOne
-from bson import ObjectId
-from typing import List, Dict, Any, Optional, Union
-from app.core.database import Database
-from app.utils.json_utils import convert_to_json
-from app.models.evento import EventoCreate, EventoUpdate, EventoResponse
+from typing import List, Dict, Any, Optional
+from fastapi_pagination import Params, Page
+
+from app.repositories import EventoRepository
+from app.schemas import (
+    EventoCreateSchema,
+    EventoUpdateSchema,
+    EventoResponseSchema,
+)
+from app.exceptions import NotFoundException, ValidationException
 from app.utils.pagination_utils import paginate_with_objectid_conversion
 
 logger = logging.getLogger(__name__)
 
+
 class EventoService:
-    """Serviço para operações relacionadas a eventos."""
+    """Service for evento business logic."""
 
-    collection_name = "eventos"
+    def __init__(self, repository: EventoRepository):
+        """Initialize service with repository."""
+        self.repository = repository
 
-    @classmethod
-    async def listar_eventos(cls, filtro: Dict[str, Any], order: Dict[str, int], params: Params):
+    async def listar_eventos(
+        self, filtro: Dict[str, Any], order: Dict[str, int], params: Params
+    ) -> Page[EventoResponseSchema]:
         """
-        Lista eventos com filtros, ordenação e paginação.
+        List eventos with filters, sorting, and pagination.
 
         Args:
-            filtro (dict): Filtros para a consulta
-            order (dict): Ordenação para a consulta
-            params (Params): Parâmetros de paginação
+            filtro: Filter query
+            order: Sort specification
+            params: Pagination parameters
 
         Returns:
-            Page: Página de eventos
+            Page of eventos
         """
         try:
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Usar a função personalizada
+            # Use the pagination utility
             return await paginate_with_objectid_conversion(
-                collection,
+                self.repository.collection,
                 query_filter=filtro,
                 sort=order,
                 params=params,
-                model_class=EventoResponse
+                model_class=EventoResponseSchema,
             )
         except Exception as e:
-            logger.error(f"Erro ao listar eventos: {e}")
+            logger.error(f"Error listing eventos: {e}")
             raise
 
-    @classmethod
-    async def listar_eventos_sem_paginacao(cls, limit: int = 100, filtro: Dict[str, Any] = None):
+    async def listar_eventos_sem_paginacao(
+        self, limit: int = 100, filtro: Dict[str, Any] = None
+    ) -> List[EventoResponseSchema]:
         """
-        Lista eventos sem paginação.
+        List eventos without pagination.
 
         Args:
-            limit (int): Limite de eventos a retornar
-            filtro (dict, optional): Filtros para a consulta
+            limit: Maximum number of eventos to return
+            filtro: Filter query
 
         Returns:
-            list: Lista de eventos
+            List of eventos
         """
         try:
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Criar um cursor para a coleção de eventos
-            cursor = collection.find(filtro or {})
-
-            # Ordenar por data de realização (decrescente)
-            cursor = cursor.sort("datas_realizacao", -1)
-
-            # Aplicar limite
-            cursor = cursor.limit(limit)
-
-            # Converter cursor para lista
-            eventos = await cursor.to_list(length=None)
-
-            # Converter para JSON
-            return convert_to_json(eventos)
-        except Exception as e:
-            logger.error(f"Erro ao listar eventos sem paginação: {e}")
-            raise
-
-    @classmethod
-    async def obter_evento(cls, evento_id: str):
-        """
-        Obtém um evento pelo ID.
-
-        Args:
-            evento_id (str): ID do evento
-
-        Returns:
-            dict: Evento encontrado ou None
-        """
-        try:
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Buscar evento pelo ID
-            evento = await collection.find_one({"_id": ObjectId(evento_id)})
-
-            # Converter para JSON
-            return convert_to_json(evento)
-        except Exception as e:
-            logger.error(f"Erro ao obter evento {evento_id}: {e}")
-            raise
-
-    @classmethod
-    async def criar_evento(cls, evento: EventoCreate):
-        """
-        Cria um novo evento.
-
-        Args:
-            evento (EventoCreate): Dados do evento a ser criado
-
-        Returns:
-            dict: Evento criado
-        """
-        try:
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Converter modelo para dicionário
-            evento_dict = evento.dict()
-
-            # Adicionar timestamps
-            now = datetime.now()
-            evento_dict["importado_em"] = now
-            evento_dict["atualizado_em"] = now
-            evento_dict["origem"] = "api"
-
-            # Inserir evento
-            result = await collection.insert_one(evento_dict)
-
-            # Buscar evento inserido
-            novo_evento = await collection.find_one({"_id": result.inserted_id})
-
-            # Converter para JSON
-            return convert_to_json(novo_evento)
-        except Exception as e:
-            logger.error(f"Erro ao criar evento: {e}")
-            raise
-
-    @classmethod
-    async def atualizar_evento(cls, evento_id: str, evento: EventoUpdate):
-        """
-        Atualiza um evento existente.
-
-        Args:
-            evento_id (str): ID do evento a ser atualizado
-            evento (EventoUpdate): Dados do evento a serem atualizados
-
-        Returns:
-            dict: Evento atualizado ou None se não encontrado
-        """
-        try:
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Converter modelo para dicionário, removendo campos None
-            evento_dict = {k: v for k, v in evento.dict().items() if v is not None}
-
-            # Adicionar timestamp de atualização
-            evento_dict["atualizado_em"] = datetime.now()
-
-            # Atualizar evento
-            result = await collection.update_one(
-                {"_id": ObjectId(evento_id)},
-                {"$set": evento_dict}
+            eventos = await self.repository.find_all(
+                filter_query=filtro,
+                limit=limit,
+                sort={"datas_realizacao": -1},
             )
-
-            if result.modified_count == 0:
-                # Verificar se o evento existe
-                evento_existe = await collection.find_one({"_id": ObjectId(evento_id)})
-                if not evento_existe:
-                    return None
-
-            # Buscar evento atualizado
-            evento_atualizado = await collection.find_one({"_id": ObjectId(evento_id)})
-
-            # Converter para JSON
-            return convert_to_json(evento_atualizado)
+            return eventos
         except Exception as e:
-            logger.error(f"Erro ao atualizar evento {evento_id}: {e}")
+            logger.error(f"Error listing eventos without pagination: {e}")
             raise
 
-    @classmethod
-    async def excluir_evento(cls, evento_id: str):
+    async def buscar_evento_por_id(self, id: str) -> Optional[EventoResponseSchema]:
         """
-        Exclui um evento.
+        Find an evento by ID.
 
         Args:
-            evento_id (str): ID do evento a ser excluído
+            id: Evento ID
 
         Returns:
-            bool: True se excluído com sucesso, False se não encontrado
+            Evento data or None if not found
+
+        Raises:
+            NotFoundException: If evento is not found
         """
         try:
-            collection = await Database.get_collection(cls.collection_name)
+            evento = await self.repository.find_by_id(id)
 
-            # Excluir evento
-            result = await collection.delete_one({"_id": ObjectId(evento_id)})
+            if not evento:
+                raise NotFoundException(f"Evento with ID {id} not found")
 
-            return result.deleted_count > 0
+            return evento
+        except NotFoundException:
+            raise
         except Exception as e:
-            logger.error(f"Erro ao excluir evento {evento_id}: {e}")
+            logger.error(f"Error finding evento by ID {id}: {e}")
             raise
 
-    @classmethod
-    async def importar_eventos(cls, eventos: List[Dict[str, Any]]):
+    async def criar_evento(
+        self, evento: EventoCreateSchema
+    ) -> EventoResponseSchema:
         """
-        Importa múltiplos eventos (upsert).
+        Create a new evento.
 
         Args:
-            eventos (List[Dict]): Lista de eventos a serem importados
+            evento: Evento creation data
 
         Returns:
-            dict: Resultado da operação
+            Created evento
+
+        Raises:
+            ValidationException: If validation fails
+        """
+        try:
+            # Convert schema to dict
+            evento_dict = evento.model_dump()
+
+            # Create evento
+            novo_evento = await self.repository.create(evento_dict)
+
+            return novo_evento
+        except Exception as e:
+            logger.error(f"Error creating evento: {e}")
+            raise
+
+    async def atualizar_evento(
+        self, evento_id: str, evento: EventoUpdateSchema
+    ) -> EventoResponseSchema:
+        """
+        Update an existing evento.
+
+        Args:
+            evento_id: ID of the evento to update
+            evento: Update data
+
+        Returns:
+            Updated evento
+
+        Raises:
+            NotFoundException: If evento is not found
+        """
+        try:
+            # Convert schema to dict, removing None values
+            evento_dict = {
+                k: v for k, v in evento.model_dump().items() if v is not None
+            }
+
+            if not evento_dict:
+                raise ValidationException("No fields to update")
+
+            # Update evento
+            evento_atualizado = await self.repository.update(evento_id, evento_dict)
+
+            if not evento_atualizado:
+                raise NotFoundException(f"Evento with ID {evento_id} not found")
+
+            return evento_atualizado
+        except NotFoundException:
+            raise
+        except ValidationException:
+            raise
+        except Exception as e:
+            logger.error(f"Error updating evento {evento_id}: {e}")
+            raise
+
+    async def excluir_evento(self, evento_id: str) -> bool:
+        """
+        Delete an evento.
+
+        Args:
+            evento_id: ID of the evento to delete
+
+        Returns:
+            True if deleted successfully
+
+        Raises:
+            NotFoundException: If evento is not found
+        """
+        try:
+            deleted = await self.repository.delete(evento_id)
+
+            if not deleted:
+                raise NotFoundException(f"Evento with ID {evento_id} not found")
+
+            return True
+        except NotFoundException:
+            raise
+        except Exception as e:
+            logger.error(f"Error deleting evento {evento_id}: {e}")
+            raise
+
+    async def importar_eventos(
+        self, eventos: List[Dict[str, Any]]
+    ) -> Dict[str, int]:
+        """
+        Import multiple eventos (upsert).
+
+        Args:
+            eventos: List of evento data
+
+        Returns:
+            Dictionary with operation counts
         """
         try:
             if not eventos:
                 return {"inserted": 0, "updated": 0, "total": 0}
 
-            collection = await Database.get_collection(cls.collection_name)
-
-            # Preparar operações em lote (bulk)
-            operations = []
-            for evento in eventos:
-                # Adicionar timestamp de atualização
-                evento["atualizado_em"] = datetime.now()
-
-                # Usar nome e data como chave única
-                filter_query = {
-                    "nome": evento["nome"]
-                }
-
-                if "datas_realizacao" in evento and evento["datas_realizacao"]:
-                    filter_query["datas_realizacao"] = evento["datas_realizacao"]
-
-                # Operação upsert (inserir se não existir, atualizar se existir)
-                operations.append(
-                    UpdateOne(
-                        filter_query,
-                        {"$set": evento},
-                        upsert=True
-                    )
-                )
-
-            # Executar operações em lote
-            if operations:
-                result = await collection.bulk_write(operations)
-                return {
-                    "inserted": result.upserted_count,
-                    "updated": result.modified_count,
-                    "total": len(operations)
-                }
-            return {"inserted": 0, "updated": 0, "total": 0}
+            return await self.repository.bulk_upsert(eventos)
         except Exception as e:
-            logger.error(f"Erro ao importar eventos: {e}")
+            logger.error(f"Error importing eventos: {e}")
             raise
 
-    @classmethod
-    async def obter_estatisticas(cls):
+    async def obter_estatisticas(self) -> Dict[str, Any]:
         """
-        Obtém estatísticas sobre os eventos.
+        Get statistics about eventos.
 
         Returns:
-            dict: Estatísticas dos eventos
+            Dictionary with statistics
         """
         try:
-            collection = await Database.get_collection(cls.collection_name)
+            # Total eventos
+            total_eventos = await self.repository.count()
 
-            # Total de eventos
-            total_eventos = await collection.count_documents({})
-
-            # Eventos por estado
-            pipeline_estados = [
-                {"$group": {"_id": "$estado", "count": {"$sum": 1}}},
-                {"$sort": {"count": -1}}
-            ]
-            estados_cursor = collection.aggregate(pipeline_estados)
-            eventos_por_estado = await estados_cursor.to_list(length=None)
-
-        except:
-            return errno.EEXIST
-
-    @classmethod
-    async def buscar_evento_por_id(cls, id: str):
-        """
-        Busca um evento pelo ID.
-
-        Args:
-            id (str): ID do evento
-
-        Returns:
-            dict: Evento encontrado ou None
-        """
-        try:
-            # Validar se o ID é um ObjectId válido
-            if not ObjectId.is_valid(id):
-                return None
-
-            collection = await Database.get_collection(cls.collection_name)
-            evento = await collection.find_one({"_id": ObjectId(id)})
-
-            if evento:
-                # Converter ObjectId para string
-                evento["_id"] = str(evento["_id"])
-                return evento
-
-            return None
+            # This can be expanded with more statistics as needed
+            return {
+                "total_eventos": total_eventos,
+            }
         except Exception as e:
-            logger.error(f"Erro ao buscar evento por ID: {e}")
+            logger.error(f"Error getting statistics: {e}")
             raise
