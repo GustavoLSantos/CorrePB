@@ -14,3 +14,6 @@
 2025-06-27 12:59:57,289 - main - INFO - Conexão com o banco de dados fechada
 2025-06-27 13:02:54,502 - app.core.database - INFO - Conectado ao banco de dados corridas_db
 2025-06-27 18:10:35,018 - app.core.database - INFO - Conectado ao banco de dados corridas_db
+2026-01-05 19:10:08,230 - app.core.database - ERROR - Erro ao conectar ao banco de dados: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
+2026-01-05 19:10:08,231 - app.services.evento_service - ERROR - Erro ao listar eventos: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
+2026-01-05 19:10:08,231 - app.core.database - ERROR - Erro ao listar eventos: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
