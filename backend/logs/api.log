@@ -17,3 +17,67 @@
 2026-01-05 19:10:08,230 - app.core.database - ERROR - Erro ao conectar ao banco de dados: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
 2026-01-05 19:10:08,231 - app.services.evento_service - ERROR - Erro ao listar eventos: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
 2026-01-05 19:10:08,231 - app.core.database - ERROR - Erro ao listar eventos: Port contains non-digit characters. Hint: username and password must be escaped according to RFC 3986, use urllib.parse.quote_plus
+2026-01-12 20:18:24,878 - app.core.database - INFO - Conectado ao banco de dados correpb
+2026-01-12 20:19:37,208 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:19:37,208 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:29,524 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:29,524 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:30,198 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:30,199 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:30,825 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:30,825 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:31,259 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:31,259 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:31,699 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:31,699 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:32,423 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:20:32,423 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [], 'total': 0, 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-12 20:24:34,228 - app.core.database - INFO - Conectado ao banco de dados correpb
+2026-01-12 20:24:58,494 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-12 20:27:32,336 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-12 20:33:52,840 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
+2026-01-12 20:35:07,116 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
+2026-01-12 20:35:55,891 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
+2026-01-12 20:36:12,678 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI

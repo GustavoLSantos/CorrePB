@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from bson import ObjectId
 
@@ -23,6 +23,11 @@ class Evento(BaseModel):
     atualizado_em: Optional[datetime] = None
     origem: Optional[str] = None
 
+    # Preço em formato legível (compatível com o que o scraper grava em CSV)
+    preco: Optional[str] = None
+    # Entradas de preço estruturadas (lista de dicionários com label/price/tax/formatted/raw)
+    precos_entries: Optional[List[Dict[str, Any]]] = None
+
     class Config:
         populate_by_name = True
         json_encoders = {
@@ -41,6 +46,10 @@ class EventoBase(BaseModel):
     url_inscricao: str
     url_imagem: Optional[str] = None
     categorias_premiadas: Optional[str] = None
+
+    # Campos de preço (opcionais)
+    preco: Optional[str] = None
+    precos_entries: Optional[List[Dict[str, Any]]] = None
 
 class EventoCreate(EventoBase):
     """Modelo para criação de eventos."""
@@ -61,6 +70,9 @@ class EventoUpdate(BaseModel):
     data_coleta: Optional[datetime] = None
     categorias_premiadas: Optional[str] = None
 
+    preco: Optional[str] = None
+    precos_entries: Optional[List[Dict[str, Any]]] = None
+
 class EventoResponse(EventoBase):
     """Modelo para resposta de eventos."""
     id: str = Field(alias="_id")
@@ -69,6 +81,9 @@ class EventoResponse(EventoBase):
     importado_em: Optional[datetime] = None
     atualizado_em: Optional[datetime] = None
     origem: Optional[str] = None
+
+    preco: Optional[str] = None
+    precos_entries: Optional[List[Dict[str, Any]]] = None
 
     class Config:
         populate_by_name = True

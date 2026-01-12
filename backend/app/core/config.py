@@ -1,7 +1,7 @@
 import os
 from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
-from typing import List
+from typing import List, Optional
 
 load_dotenv()
 
@@ -17,6 +17,8 @@ class Settings(BaseSettings):
 
     MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
     MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "correpb")
+    MONGODB_REMOTE_URI: Optional[str] = None
+    MONGODB_REMOTE_DB_NAME: Optional[str] = None
 
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",

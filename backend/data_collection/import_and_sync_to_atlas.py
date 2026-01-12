@@ -9,12 +9,13 @@ from pymongo import MongoClient
 env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.env'))
 load_dotenv(env_path)
 
-# Conexão remota (Atlas)
-REMOTE_URI = os.getenv('MONGODB_REMOTE_URI')
+REMOTE_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
 if not REMOTE_URI:
-    raise Exception('A variável MONGODB_REMOTE_URI não está definida no .env')
+    raise Exception('A variável MONGODB_REMOTE_URI ou MONGODB_URI não está definida no .env')
 remote_client = MongoClient(REMOTE_URI)
-remote_db = remote_client['corridas_db']
+
+REMOTE_DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or 'correpb'
+remote_db = remote_client[REMOTE_DB_NAME]
 remote_collection = remote_db['eventos']
 
 def import_csv_to_mongodb(db, csv_file, fonte):
@@ -79,4 +80,4 @@ def main():
         print(f"❌ Erro geral: {str(e)}")
 
 if __name__ == "__main__":
-    main() 
+    main()

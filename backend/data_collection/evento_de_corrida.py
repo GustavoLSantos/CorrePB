@@ -1,5 +1,6 @@
+import json
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 
 from bson import ObjectId
 
@@ -20,6 +21,8 @@ class EventoDeCorrida:
         categoria: Optional[str] = None,
         link_edital: Optional[str] = None,
         categorias_premiadas: Optional[str] = None,
+        preco: Optional[str] = None,
+        precos_entries: Optional[List[Dict[str, Any]]] = None,
         _id: Optional[ObjectId] = None
     ):
         # Propriedades obrigatórias
@@ -39,6 +42,8 @@ class EventoDeCorrida:
         self.categoria = categoria
         self.link_edital = link_edital
         self.categorias_premiadas = categorias_premiadas
+        self.preco = preco
+        self.precos_entries = precos_entries or []
 
     def to_dict(self) -> dict:
         """Converte o objeto para um dicionário compatível com MongoDB"""
@@ -65,6 +70,12 @@ class EventoDeCorrida:
         if self.categorias_premiadas is not None:
             documento['categorias_premiadas'] = self.categorias_premiadas
 
+        # Preço (legível) e entradas estruturadas
+        if self.preco is not None:
+            documento['preco'] = self.preco
+        if self.precos_entries:
+            documento['precos_entries'] = self.precos_entries
+
         return documento
 
     def __eq__(self, other):
@@ -76,7 +87,7 @@ class EventoDeCorrida:
         campos_comparacao = [
             'nome_evento', 'datas_realizacao', 'cidade', 'estado',
             'organizador', 'site_coleta', 'distancias', 'url_inscricao',
-            'url_imagem', 'categoria'
+            'url_imagem', 'categoria', 'preco'
         ]
         
         # Compara cada campo
@@ -138,6 +149,16 @@ class EventoDeCorrida:
         else:
             distancias = str(distancias_val).strip()
 
+        # Preço e entradas estruturadas (se vierem no CSV)
+        preco_val = row.get('Preço') or row.get('preco') or ''
+        precos_entries_val = None
+        # Se houver um JSON serializado nas entradas de preço (coluna 'precos_entries'), tenta carregar
+        if 'precos_entries' in row and row.get('precos_entries'):
+            try:
+                precos_entries_val = json.loads(row.get('precos_entries'))
+            except Exception:
+                precos_entries_val = None
+
         return cls(
             nome_evento=get_value('Nome do Evento'),
             datas_realizacao=datas_realizacao,
@@ -151,5 +172,7 @@ class EventoDeCorrida:
             url_imagem=get_value('Link da Imagem'),
             categoria=get_value('Categoria'),
             link_edital=link_edital,
-            categorias_premiadas=categorias_premiadas
-        ) 
+            categorias_premiadas=categorias_premiadas,
+            preco=preco_val,
+            precos_entries=precos_entries_val
+        )
