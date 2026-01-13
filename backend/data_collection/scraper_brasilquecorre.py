@@ -16,6 +16,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from data_collection.core.Driver import setup_driver
 from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
+from data_collection.utils.PrizeDetection import entry_is_prize
 
 def open_regulation_modals(driver):
     """
@@ -96,34 +97,6 @@ def open_regulation_modals(driver):
                 continue
     except Exception:
         return
-
-
-def is_prize_text(text):
-    """
-    Detecta se um candidato a preço é provavelmente um prêmio/premiação,
-    não uma taxa de inscrição.
-    """
-    if not text:
-        return False
-    text_l = text.lower()
-
-    # Palavras-chave diretas relacionadas a prêmios
-    if re.search(r'\b(prêmio|premiação|premio|prize|award|prêmios|premiações|awards)\b', text_l):
-        return True
-
-    # Padrões como "lugar", "colocado", "classificado" com preço
-    if re.search(r'\b(lugar|colocado|classificado|classificação|ranking|posição|podium|pódio)\b', text_l):
-        return True
-
-    # Padrões como "destinada a quantia", "será destinada", "distribuída da seguinte forma"
-    if re.search(r'(destinada a quantia|será destinada|distribuída da seguinte forma)', text_l):
-        return True
-
-    # Padrões como "masculino e feminino", "prova de", "km" com preço
-    if re.search(r'(masculino|feminino|prova de|km)', text_l) and re.search(r'R\$\s*[\d.,]+', text_l):
-        return True
-
-    return False
 
 
 #Extração de preços
@@ -358,54 +331,7 @@ def extract_price_entries(soup, domain):
     # Após coletar candidatos, filtra valores de prêmios/premiações usando verificação contextual
     # Usa verificação sensível ao contexto: o raw/label do candidato pode não conter palavras-chave de prêmio,
     # então inspeciona o HTML da página ao redor de onde o preço ocorre também.
-    def entry_is_prize(entry):
-        raw = (entry.get('raw') or '').lower()
-        label = (entry.get('label') or '')
-        if is_prize_text(raw) or is_prize_text(label):
-            return True
-
-        # Se temos um preço numérico, procura ocorrências deste preço no HTML da página
-        # e verifica uma janela de contexto ao redor de cada ocorrência para palavras-chave de prêmio.
-        price = entry.get('price')
-        if price is None:
-            return False
-        try:
-            pv = float(price)
-        except Exception:
-            return False
-
-        # Constrói variantes de string comuns para corresponder como preços aparecem na página
-        # Formato brasileiro (1.234,56) e decimal com ponto (1234.56)
-        price_br = f"{pv:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-        price_dot = f"{pv:.2f}"
-
-        # Padrões que podem aparecer: 'R$ 50,00', '50,00 reais', ou apenas '50,00'
-        patterns = [
-            rf"R\$\s*{re.escape(price_br)}",
-            rf"R\$\s*{re.escape(price_dot)}",
-            rf"{re.escape(price_br)}\s*reais",
-            rf"{re.escape(price_dot)}\s*reais",
-            rf"{re.escape(price_br)}",
-            rf"{re.escape(price_dot)}",
-        ]
-
-        prize_context_re = re.compile(
-            r"\b(prêmio|premiação|premio|prize|award|prêmios|premiações|awards|"
-            r"lugar|colocado|classificado|classificação|posição|podium|pódio|"
-            r"destinada a quantia|será destinada|distribuída da seguinte forma)\b",
-            re.IGNORECASE
-        )
-
-        for pat in patterns:
-            for m in re.finditer(pat, page_html, re.IGNORECASE):
-                start = max(0, m.start() - 120)
-                end = min(len(page_html), m.end() + 120)
-                context = page_html[start:end]
-                if prize_context_re.search(context):
-                    return True
-        return False
-
-    candidates = [e for e in candidates if not entry_is_prize(e)]
+    candidates = [e for e in candidates if not entry_is_prize(e, page_html)]
 
     # Se temos preços rotulados de tabelas/grids estruturados, prefere eles e descarta duplicatas não rotuladas
     labeled_prices = {e.get('price') for e in candidates if e.get('label')}
