@@ -14,6 +14,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from data_collection.core.Driver import setup_driver
+from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
+from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 
 def open_regulation_modals(driver):
     """
@@ -52,7 +54,7 @@ def open_regulation_modals(driver):
             try:
                 # tenta encontrar e clicar gatilho
                 tried = False
-                selectors = [f'a[href="#{mid}"]', f'[data-target="#{mid}"]', f'button[data-target="#{mid}"]', f'a[href*="#{mid}"]', '#btn-modal']
+                selectors = [f'a[href="#%s"]' % mid, f'[data-target="#%s"]' % mid, f'button[data-target="#%s"]' % mid, f'a[href*="#%s"]' % mid, '#btn-modal']
                 for sel in selectors:
                     try:
                         elems = driver.find_elements(By.CSS_SELECTOR, sel)
@@ -94,34 +96,6 @@ def open_regulation_modals(driver):
                 continue
     except Exception:
         return
-
-
-def parse_price_str(text):
-    """
-    Normaliza uma string de preço e retorna float ou None.
-
-    Lida com separadores de milhares (.) e decimais (,) ou (.).
-    Exemplos: '1.234,56' -> 1234.56, '89,90' -> 89.9, '50' -> 50.0
-    """
-    if not text:
-        return None
-    s = re.sub(r'[^\d.,]', '', str(text))
-    if not s:
-        return None
-
-    # Se ambos separadores presentes, assume '.' para milhares e ',' para decimais
-    if '.' in s and ',' in s:
-        s = s.replace('.', '').replace(',', '.')
-    # Se apenas '.' presente e último grupo não tem 2 dígitos, provavelmente é separador de milhares
-    elif '.' in s and len(s.split('.')[-1]) != 2:
-        s = s.replace('.', '')
-    # Substitui vírgula decimal por ponto
-    s = s.replace(',', '.')
-
-    try:
-        return float(s)
-    except Exception:
-        return None
 
 
 def is_prize_text(text):
@@ -168,6 +142,21 @@ def extract_price_entries(soup, domain):
     page_html = str(soup)
     candidates = []
 
+    # Se for um domínio Sympla, delega toda extração de ticket-grid ao módulo dedicado
+    try:
+        from data_collection.sources.Sympla import extract_sympla_ticket_prices, is_sympla_domain as _is_sympla
+        if _is_sympla(domain):
+            try:
+                sym_entries = extract_sympla_ticket_prices(soup)
+                for e in sym_entries:
+                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
+            except Exception:
+                # se o extractor falhar, segue com heurísticas genéricas abaixo
+                pass
+    except Exception:
+        # import falhou ou Sympla module indisponível: segue com heurísticas genéricas
+        pass
+
     #Elementos de preço por classe
     def has_price_class(classes):
         if not classes:
@@ -196,18 +185,6 @@ def extract_price_entries(soup, domain):
                 tax = parse_price_str(tax_m.group(1))
             candidates.append({'label': None, 'price': v, 'tax': tax, 'raw': txt})
 
-    #Tenta seletores CSS explícitos usados por circuitodasestacoes e similares
-    try:
-        selectors = ['.kit-price-desktop', '.kit-price-wrapper-desktop p', '.kit-price-wrapper-desktop']
-        for sel in selectors:
-            for elem in soup.select(sel):
-                txt = elem.get_text(separator=' ', strip=True)
-                if 'R$' in txt:
-                    for m in re.findall(r'R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)', txt):
-                        v = parse_price_str(m)
-                        candidates.append({'label': None, 'price': v, 'tax': None, 'raw': txt})
-    except Exception:
-        pass
 
     #Detecta elementos com font-size inline grande que contêm R$
     try:
@@ -220,31 +197,6 @@ def extract_price_entries(soup, domain):
                     for m in re.findall(r'R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)', txt):
                         v = parse_price_str(m)
                         candidates.append({'label': None, 'price': v, 'tax': None, 'raw': txt})
-    except Exception:
-        pass
-
-    #Items de ticket-grid (estruturado, comum em Sympla e similares)
-    try:
-        for grid in soup.find_all(attrs={'data-testid': re.compile(r'ticket-grid', re.IGNORECASE)}):
-            items = grid.find_all(attrs={'data-testid': re.compile(r'ticket-grid-item', re.IGNORECASE)})
-            if not items:
-                items = grid.find_all(True, recursive=False)
-            for item in items:
-                # Tenta encontrar um label/título dentro do item
-                label = None
-                for candidate in item.find_all(['h5', 'strong', 'span', 'div']):
-                    t = candidate.get_text(separator=' ', strip=True)
-                    if t and 'R$' not in t and not re.match(r'^[\d\s,-/]+$', t):
-                        label = t
-                        break
-                item_text = item.get_text(separator=' ', strip=True)
-                for m in re.findall(r'R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)', item_text):
-                    v = parse_price_str(m)
-                    tax = None
-                    tax_m = re.search(r'\(\s*\+?([\d.,]+)\s*(?:taxa|tax|fee)\s*\)', item_text, re.IGNORECASE)
-                    if tax_m:
-                        tax = parse_price_str(tax_m.group(1))
-                    candidates.append({'label': label, 'price': v, 'tax': tax, 'raw': item_text})
     except Exception:
         pass
 
@@ -471,7 +423,9 @@ def extract_price_entries(soup, domain):
         # Se não há preços pagos, verifica indicadores de gratuito
         if re.search(r'\b(grátis|gratis|gratuito|gratuita|isento|free)\b', page_html, re.IGNORECASE):
             return [{'label': None, 'price': 0.0, 'tax': None, 'formatted': 'R$ 0,00', 'raw': page_html}]
-        return []
+        # Se não foi encontrado indicador de gratuidade, devolve uma entry informativa
+        # para que o campo legível 'preco' seja preenchido com 'Valor não encontrado'.
+        return [{'label': None, 'price': None, 'tax': None, 'formatted': 'Valor não encontrado', 'raw': page_html}]
 
     # Deduplica por (label, price, tax)
     seen = set()
@@ -485,30 +439,6 @@ def extract_price_entries(soup, domain):
     # Ordena por preço crescente
     unique_sorted = sorted(unique, key=lambda x: (x.get('price') or 0))
 
-    def fmt_entry(e):
-        """Formata uma entrada de preço para exibição."""
-        v = e.get('price')
-        tax = e.get('tax')
-        label = (e.get('label') or '').strip()
-        price_s = f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-        if tax is not None:
-            tax_s = f"(+{tax:,.2f} taxa)".replace(',', 'X').replace('.', ',').replace('X', '.')
-            if label:
-                formatted = f"{label} — {price_s} {tax_s}"
-            else:
-                formatted = f"{price_s} {tax_s}"
-        else:
-            if label:
-                formatted = f"{label} — {price_s}"
-            else:
-                formatted = f"{price_s}"
-        return {
-            'label': label or None,
-            'price': float(v),
-            'tax': float(tax) if tax is not None else None,
-            'formatted': formatted,
-            'raw': e.get('raw')
-        }
 
     return [fmt_entry(e) for e in unique_sorted]
 
@@ -562,36 +492,31 @@ def process_event_details(events):
             try:
                 domain = urlparse(url).netloc
                 soup = None
+                # variáveis relacionadas ao loader Sympla — inicializa aqui para não depender do branch
+                created = False
+                sym_driver = None
 
                 # Sites que requerem JavaScript precisam de Selenium
-                if 'circuitodasestacoes.com' in domain or 'sympla' in domain or 'liverun' in domain:
+                if is_sympla_domain(domain):
+                    # Usa o loader específico para Sympla (pode criar/quitar driver internamente)
+                    try:
+                        soup, created, sym_driver = load_sympla_soup(url)
+                    except Exception:
+                        soup, created, sym_driver = None, False, None
+                    # sym_driver será fechado mais abaixo se criado
+                elif 'circuitodasestacoes.com' in domain or 'liverun' in domain:
                     # Reutiliza a configuração centralizada do Selenium via setup_driver()
                     temp_driver = setup_driver()
                     try:
                         temp_driver.get(url)
-                        # Aguarda seletor adequado dependendo do site
-                        # Sympla usa ticket-grid
-                        if 'sympla' in domain:
-                            wait_selector = '[data-testid="ticket-grid"]'
-                            WebDriverWait(temp_driver, 30).until(
-                                EC.presence_of_element_located((By.CSS_SELECTOR, wait_selector))
-                            )
-                            # scroll leve para forçar carregamento lazy
-                            try:
-                                temp_driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                                time.sleep(1)
-                            except Exception:
-                                pass
                         # LiveRun: precisa abrir o modal com id 'modal-regulation' para exibir a <ul> de preços
-                        elif 'liverun' in domain:
+                        if 'liverun' in domain:
                             # tenta clicar no gatilho do modal usando seletores comuns
                             try:
                                 trigger = None
                                 try:
-                                    # incluir seletor do botão específico #btn-modal entre os candidatos
                                     trigger = temp_driver.find_element(By.CSS_SELECTOR, '[data-toggle="modal"], [data-target="#modal-regulation"], a[href="#modal-regulation"], button[data-target="#modal-regulation"], #btn-modal')
                                 except Exception:
-                                    # procura por links/anchors que contenham '#modal-regulation' no href
                                     try:
                                         trigger = temp_driver.find_element(By.XPATH, "//a[contains(@href, '#modal-regulation') or contains(@data-target, 'modal-regulation')]")
                                     except Exception:
@@ -600,33 +525,28 @@ def process_event_details(events):
                                     try:
                                         trigger.click()
                                     except Exception:
-                                        # fallback pra dispatch de evento via JS
                                         try:
                                             temp_driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true}));", trigger)
                                         except Exception:
                                             pass
                                 else:
-                                    # se não encontrou gatilho, força exibição do modal pelo DOM
                                     try:
                                         temp_driver.execute_script("var m=document.getElementById('modal-regulation'); if(m){ m.style.display='block'; m.classList.add('show'); }")
                                     except Exception:
                                         pass
                             except Exception:
                                 pass
-                            # aguarda a UL dentro do modal ficar disponível
                             try:
                                 WebDriverWait(temp_driver, 15).until(
                                     EC.presence_of_element_located((By.CSS_SELECTOR, '#modal-regulation ul'))
                                 )
                                 time.sleep(0.5)
                             except Exception:
-                                # não achou a ul, mas segue em frente para capturar o que estiver disponível
                                 pass
                         else:
                             WebDriverWait(temp_driver, 20).until(
                                 EC.presence_of_element_located((By.CSS_SELECTOR, ".kit-price-desktop"))
                             )
-                        # tenta abrir modais de regulamento/genéricos que contenham listas de preços
                         try:
                             open_regulation_modals(temp_driver)
                         except Exception:
@@ -638,6 +558,14 @@ def process_event_details(events):
                     # Sites estáticos podem usar requests simples
                     response = requests.get(url, timeout=5)
                     soup = BeautifulSoup(response.text, 'html.parser')
+
+                # Se o Sympla loader criou um driver, certifica-se de fechá-lo após usar o soup
+                if 'sym_driver' in locals() and sym_driver and 'created' in locals() and created:
+                    try:
+                        # Fecha aqui para liberar recursos; sym_driver pode ter sido compartilhado, por isso verifica 'created'
+                        sym_driver.quit()
+                    except Exception:
+                        pass
 
                 if soup:
                     # Extrai edital
