@@ -8,47 +8,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from bs4 import BeautifulSoup
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
 
-#Configuração do Selenium
-def setup_driver():
-    """Configura o driver do Selenium."""
-    options = webdriver.ChromeOptions()
-    options.add_argument("--headless=new")
-    options.add_argument('--disable-gpu')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-extensions')
-    options.add_argument('--blink-settings=imagesEnabled=false')
-    options.add_argument('--disable-software-rasterizer')
-    options.add_argument('--remote-allow-origins=*')
-
-    prefs = {
-        'profile.default_content_setting_values': {
-            'images': 2,
-            'plugins': 2,
-            'popups': 2,
-            'geolocation': 2,
-            'notifications': 2,
-            'media_stream': 2,
-        },
-        'profile.managed_default_content_settings': {
-            'images': 2,
-            'stylesheets': 2,
-        }
-    }
-    options.add_experimental_option('prefs', prefs)
-    options.add_experimental_option('excludeSwitches', ['enable-automation', 'enable-logging'])
-    options.page_load_strategy = 'eager'
-
-    driver = webdriver.Chrome(options=options)
-    driver.set_page_load_timeout(30)
-    return driver
-
+from data_collection.core.Driver import setup_driver
 
 def open_regulation_modals(driver):
     """
