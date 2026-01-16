@@ -81,3 +81,25 @@ pages
 2026-01-12 20:35:07,116 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
 2026-01-12 20:35:55,891 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
 2026-01-12 20:36:12,678 - app.core.database - INFO - Conectado ao banco de dados corridas_db usando URI: MONGODB_URI
+2026-01-16 11:51:53,394 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-16 11:51:53,497 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [EventoResponse..., 'page': 1, 'size': 12}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-16 11:51:53,498 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [EventoResponse..., 'page': 1, 'size': 12}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-16 12:09:56,024 - app.services.evento_service - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [EventoResponse..., 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-16 12:09:56,026 - app.core.database - ERROR - Erro ao listar eventos: 1 validation error for Page
+pages
+  Field required [type=missing, input_value={'items': [EventoResponse..., 'page': 1, 'size': 50}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.11/v/missing
+2026-01-16 12:47:29,647 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-16 12:52:17,710 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-16 12:52:38,470 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-16 13:15:04,266 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
+2026-01-16 13:18:26,955 - app.core.database - INFO - Conectado ao banco de dados correpb usando URI: MONGODB_URI
