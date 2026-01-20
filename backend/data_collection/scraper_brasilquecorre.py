@@ -15,89 +15,10 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 
 from data_collection.core.Driver import setup_driver
 from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
+from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
+from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
-
-def open_regulation_modals(driver):
-    """
-    Detecta modais relacionados a regulamento/preços e tenta abri-los.
-    - Analisa o HTML inicial procurando por elementos com id/class contendo 'modal' e
-      palavras-chave como 'regul', 'regulation', 'regulamento', ou que contenham uma <ul>
-      com itens que mencionam 'lote' ou 'R$'.
-    - Para cada modal candidato tenta localizar um gatilho (a[href="#id"], [data-target="#id"], #btn-modal)
-      e clicar; se não houver gatilho, força exibição via JS (display/block + add 'show').
-    - Aguarda brevemente para que o conteúdo fique disponível.
-    """
-    try:
-        html = driver.page_source
-        soup = BeautifulSoup(html, 'html.parser')
-        # procura por possíveis modais cujo id contenha 'modal' + palavra regulatória
-        modal_candidates = []
-        for elem in soup.find_all(attrs={'id': re.compile(r'.*modal.*', re.IGNORECASE)}):
-            mid = elem.get('id')
-            text = ' '.join(elem.stripped_strings) or ''
-            # heurística: id ou texto que sugira regulamento/price list
-            if re.search(r'regul|regulation|regulamento|rule|reglas|reglamento', mid, re.IGNORECASE) or re.search(r'regul|lote|lotes|R\$', text, re.IGNORECASE):
-                modal_candidates.append(mid)
-
-        # também busca por elementos com classe 'modal' que contenham <ul> com 'lote' ou 'R$'
-        for m in soup.select('.modal'):
-            inner = ' '.join(m.stripped_strings) or ''
-            if re.search(r'lote|lotes|R\$|regul', inner, re.IGNORECASE):
-                mid = m.get('id')
-                if mid:
-                    modal_candidates.append(mid)
-
-        # dedup
-        modal_candidates = list(dict.fromkeys([m for m in modal_candidates if m]))
-
-        for mid in modal_candidates:
-            try:
-                # tenta encontrar e clicar gatilho
-                tried = False
-                selectors = [f'a[href="#%s"]' % mid, f'[data-target="#%s"]' % mid, f'button[data-target="#%s"]' % mid, f'a[href*="#%s"]' % mid, '#btn-modal']
-                for sel in selectors:
-                    try:
-                        elems = driver.find_elements(By.CSS_SELECTOR, sel)
-                    except Exception:
-                        elems = []
-                    for el in elems:
-                        try:
-                            el.click()
-                            tried = True
-                            time.sleep(0.4)
-                            break
-                        except Exception:
-                            try:
-                                driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true}));", el)
-                                tried = True
-                                time.sleep(0.4)
-                                break
-                            except Exception:
-                                pass
-                    if tried:
-                        break
-
-                if not tried:
-                    # força exibição via JS
-                    try:
-                        driver.execute_script("var m=document.getElementById('%s'); if(m){ m.style.display='block'; m.classList.add('show'); }" % mid)
-                        time.sleep(0.4)
-                    except Exception:
-                        pass
-
-                # aguarda se possível a presença de uma UL dentro do modal
-                try:
-                    WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, f'#{mid} ul')))
-                    time.sleep(0.2)
-                except Exception:
-                    # não encontrou UL, segue
-                    pass
-            except Exception:
-                continue
-    except Exception:
-        return
-
 
 #Extração de preços
 def extract_price_entries(soup, domain):
@@ -115,7 +36,6 @@ def extract_price_entries(soup, domain):
     page_html = str(soup)
     candidates = []
 
-    # Se for um domínio Sympla, delega toda extração de ticket-grid ao módulo dedicado
     try:
         from data_collection.sources.Sympla import extract_sympla_ticket_prices, is_sympla_domain as _is_sympla
         if _is_sympla(domain):
@@ -421,6 +341,8 @@ def process_event_details(events):
                 # variáveis relacionadas ao loader Sympla — inicializa aqui para não depender do branch
                 created = False
                 sym_driver = None
+                temp_driver = None
+                liverun_driver = None
 
                 # Sites que requerem JavaScript precisam de Selenium
                 if is_sympla_domain(domain):
@@ -429,57 +351,16 @@ def process_event_details(events):
                         soup, created, sym_driver = load_sympla_soup(url)
                     except Exception:
                         soup, created, sym_driver = None, False, None
-                    # sym_driver será fechado mais abaixo se criado
-                elif 'circuitodasestacoes.com' in domain or 'liverun' in domain:
-                    # Reutiliza a configuração centralizada do Selenium via setup_driver()
-                    temp_driver = setup_driver()
+                elif is_circuito_domain(domain):
                     try:
-                        temp_driver.get(url)
-                        # LiveRun: precisa abrir o modal com id 'modal-regulation' para exibir a <ul> de preços
-                        if 'liverun' in domain:
-                            # tenta clicar no gatilho do modal usando seletores comuns
-                            try:
-                                trigger = None
-                                try:
-                                    trigger = temp_driver.find_element(By.CSS_SELECTOR, '[data-toggle="modal"], [data-target="#modal-regulation"], a[href="#modal-regulation"], button[data-target="#modal-regulation"], #btn-modal')
-                                except Exception:
-                                    try:
-                                        trigger = temp_driver.find_element(By.XPATH, "//a[contains(@href, '#modal-regulation') or contains(@data-target, 'modal-regulation')]")
-                                    except Exception:
-                                        trigger = None
-                                if trigger:
-                                    try:
-                                        trigger.click()
-                                    except Exception:
-                                        try:
-                                            temp_driver.execute_script("arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true}));", trigger)
-                                        except Exception:
-                                            pass
-                                else:
-                                    try:
-                                        temp_driver.execute_script("var m=document.getElementById('modal-regulation'); if(m){ m.style.display='block'; m.classList.add('show'); }")
-                                    except Exception:
-                                        pass
-                            except Exception:
-                                pass
-                            try:
-                                WebDriverWait(temp_driver, 15).until(
-                                    EC.presence_of_element_located((By.CSS_SELECTOR, '#modal-regulation ul'))
-                                )
-                                time.sleep(0.5)
-                            except Exception:
-                                pass
-                        else:
-                            WebDriverWait(temp_driver, 20).until(
-                                EC.presence_of_element_located((By.CSS_SELECTOR, ".kit-price-desktop"))
-                            )
-                        try:
-                            open_regulation_modals(temp_driver)
-                        except Exception:
-                            pass
-                        soup = BeautifulSoup(temp_driver.page_source, 'html.parser')
-                    finally:
-                        temp_driver.quit()
+                        soup, created, temp_driver = load_circuito_soup(url)
+                    except Exception:
+                        soup, created, temp_driver = None, False, None
+                elif is_liverun_domain(domain):
+                    try:
+                        soup, created, liverun_driver = load_liverun_soup(url)
+                    except Exception:
+                        soup, created, liverun_driver = None, False, None
                 else:
                     # Sites estáticos podem usar requests simples
                     response = requests.get(url, timeout=5)
@@ -492,7 +373,18 @@ def process_event_details(events):
                         sym_driver.quit()
                     except Exception:
                         pass
-
+                # Fecha driver criado pelo loader de circuito, se houver
+                if 'temp_driver' in locals() and temp_driver and 'created' in locals() and created:
+                    try:
+                        temp_driver.quit()
+                    except Exception:
+                        pass
+                # Fecha driver criado pelo loader de liverun, se houver
+                if 'liverun_driver' in locals() and liverun_driver and 'created' in locals() and created:
+                    try:
+                        liverun_driver.quit()
+                    except Exception:
+                        pass
                 if soup:
                     # Extrai edital
                     event_info['link_edital'] = extract_edital(url)
@@ -586,6 +478,15 @@ def get_event_data(driver):
                 name_element = box.find_element(By.CSS_SELECTOR, "h5 a")
                 event_info['nome'] = name_element.text
                 event_info['link_inscricao'] = name_element.get_attribute('href')
+
+                # Ignorar URL liverun/calendario porque não é uma página de evento
+                try:
+                    link_insc = event_info.get('link_inscricao', '') or ''
+                    if link_insc.startswith('https://www.liverun.com.br/calendario'):
+                        print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_insc}")
+                        continue
+                except Exception:
+                    pass
 
                 # Imagem do evento
                 img_element = box.find_element(By.CSS_SELECTOR, "img.cs-chosen-image")
