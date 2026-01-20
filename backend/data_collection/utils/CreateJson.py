@@ -64,34 +64,7 @@ def transformar_evento(evento_mongo):
         "organizador": evento_mongo.get('organizador', ''),
         "categorias": [],
         "preco": preco_raw, 
-        "lista_precos": lista_precos 
-    }
-    datas = evento_mongo.get('datas_realizacao', [])
-    data_formatada = ""
-    if datas and isinstance(datas, list) and len(datas) > 0:
-        data_formatada = formatar_data_ptbr(datas[0])
-    
-    dist = evento_mongo.get('distancias', [])
-    if isinstance(dist, str):
-        dist = [dist]
-    
-    data_col = evento_mongo.get('data_coleta')
-    if isinstance(data_col, datetime):
-        data_col = data_col.isoformat() + "Z"
-
-    return {
-        "_id": str(evento_mongo.get('_id')),
-        "nome_evento": evento_mongo.get('nome_evento', ''),
-        "url_inscricao": evento_mongo.get('url_inscricao', ''),
-        "url_imagem": evento_mongo.get('url_imagem', ''),
-        "data_realizacao": data_formatada,
-        "cidade": evento_mongo.get('cidade', ''),
-        "estado": evento_mongo.get('estado', 'PB'),
-        "data_coleta": data_col,
-        "distancias": dist,
-        "organizador": evento_mongo.get('organizador', ''),
-        "categorias": [],
-        "preco": evento_mongo.get('preco', '')
+        "lista_precos": lista_precos
     }
 
 def gerar_json_customizado():
