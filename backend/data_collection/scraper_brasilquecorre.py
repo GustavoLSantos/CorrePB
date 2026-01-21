@@ -17,6 +17,7 @@ from data_collection.core.Driver import setup_driver
 from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
 from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
+from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -343,8 +344,18 @@ def process_event_details(events):
                 sym_driver = None
                 temp_driver = None
                 liverun_driver = None
+                race_driver = None
 
-                # Sites que requerem JavaScript precisam de Selenium
+                # Se o domínio é do race83, detecta redirecionamentos para a listagem genérica
+                try:
+                    if is_race83_domain(domain):
+                        is_listing, final = detect_redirects_to_listing(url, timeout=5)
+                        if is_listing:
+                            print(f"[SKIP] URL do Race83 redirecionou para listagem /eventos, pulando: {url} -> {final}")
+                            return None
+                except Exception:
+                    pass
+
                 if is_sympla_domain(domain):
                     # Usa o loader específico para Sympla (pode criar/quitar driver internamente)
                     try:
@@ -361,15 +372,22 @@ def process_event_details(events):
                         soup, created, liverun_driver = load_liverun_soup(url)
                     except Exception:
                         soup, created, liverun_driver = None, False, None
+                elif is_race83_domain(domain):
+                    try:
+                        soup, created, race_driver = load_race83_soup(url)
+                    except Exception:
+                        soup, created, race_driver = None, False, None
                 else:
                     # Sites estáticos podem usar requests simples
-                    response = requests.get(url, timeout=5)
-                    soup = BeautifulSoup(response.text, 'html.parser')
+                    try:
+                        response = requests.get(url, timeout=5)
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                    except Exception:
+                        soup = None
 
                 # Se o Sympla loader criou um driver, certifica-se de fechá-lo após usar o soup
                 if 'sym_driver' in locals() and sym_driver and 'created' in locals() and created:
                     try:
-                        # Fecha aqui para liberar recursos; sym_driver pode ter sido compartilhado, por isso verifica 'created'
                         sym_driver.quit()
                     except Exception:
                         pass
@@ -383,6 +401,12 @@ def process_event_details(events):
                 if 'liverun_driver' in locals() and liverun_driver and 'created' in locals() and created:
                     try:
                         liverun_driver.quit()
+                    except Exception:
+                        pass
+                # Fecha driver criado pelo loader de race83, se houver
+                if 'race_driver' in locals() and race_driver and 'created' in locals() and created:
+                    try:
+                        race_driver.quit()
                     except Exception:
                         pass
                 if soup:
@@ -418,6 +442,9 @@ def process_event_details(events):
         for idx, future in enumerate(as_completed(futures), 1):
             try:
                 result = future.result()
+                # Se fetch_details retornou None, significa que o evento deve ser pulado
+                if result is None:
+                    continue
                 results.append(result)
                 print(f"[{idx}/{len(events)}] ✓ {result.get('nome', '')}")
                 print(f"   Edital: {result.get('link_edital', '')[:50]}")
@@ -479,11 +506,15 @@ def get_event_data(driver):
                 event_info['nome'] = name_element.text
                 event_info['link_inscricao'] = name_element.get_attribute('href')
 
-                # Ignorar URL liverun/calendario porque não é uma página de evento
+                # Ignorar URLs redirecionadas/que não são de evento
                 try:
                     link_insc = event_info.get('link_inscricao', '') or ''
                     if link_insc.startswith('https://www.liverun.com.br/calendario'):
                         print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_insc}")
+                        continue
+                    # Também ignora listagem genérica de eventos do Race83 (usa helper específico)
+                    if is_race83_listing_url(link_insc):
+                        print(f"[SKIP] Pulando link de eventos genérico do Race83: {link_insc}")
                         continue
                 except Exception:
                     pass

@@ -10,7 +10,6 @@ from data_collection.core.Driver import setup_driver
 
 
 def is_circuito_domain(domain: str) -> bool:
-    """Return True if the given domain belongs to CircuitoDasEstacoes."""
     if not domain:
         return False
     domain = domain.lower()
