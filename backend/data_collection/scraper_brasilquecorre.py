@@ -18,6 +18,7 @@ from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
 from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
+from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -37,18 +38,34 @@ def extract_price_entries(soup, domain):
     page_html = str(soup)
     candidates = []
 
+    # Tenta rodar extractors site-specific apenas se o domínio corresponder explicitamente
     try:
-        from data_collection.sources.Sympla import extract_sympla_ticket_prices, is_sympla_domain as _is_sympla
-        if _is_sympla(domain):
+        try:
+            from data_collection.sources.Sympla import extract_sympla_ticket_prices
+        except Exception:
+            extract_sympla_ticket_prices = None
+        try:
+            from data_collection.sources.Ticketsports import extract_ticketsports_ticket_prices
+        except Exception:
+            extract_ticketsports_ticket_prices = None
+
+        d = (domain or '').lower()
+        if 'sympla' in d and extract_sympla_ticket_prices:
             try:
                 sym_entries = extract_sympla_ticket_prices(soup)
                 for e in sym_entries:
                     candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
             except Exception:
-                # se o extractor falhar, segue com heurísticas genéricas abaixo
+                pass
+        elif 'ticketsports' in d and extract_ticketsports_ticket_prices:
+            try:
+                ts_entries = extract_ticketsports_ticket_prices(soup)
+                for e in ts_entries:
+                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
+            except Exception:
                 pass
     except Exception:
-        # import falhou ou Sympla module indisponível: segue com heurísticas genéricas
+        # falha ao importar/executar extractors: segue com heurísticas genéricas
         pass
 
     #Elementos de preço por classe
@@ -377,6 +394,14 @@ def process_event_details(events):
                         soup, created, race_driver = load_race83_soup(url)
                     except Exception:
                         soup, created, race_driver = None, False, None
+                elif is_ticketsports_domain(domain):
+                    # Usa o loader específico para Ticketsports (renderiza com Selenium)
+                    try:
+                        soup, created, temp_driver = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
+                    except Exception:
+                        import traceback
+                        traceback.print_exc()
+                        soup, created, temp_driver = None, False, None
                 else:
                     # Sites estáticos podem usar requests simples
                     try:
@@ -413,14 +438,18 @@ def process_event_details(events):
                     # Extrai edital
                     event_info['link_edital'] = extract_edital(url)
 
-                    # Extrai preços estruturados e formatados
-                    entries = extract_price_entries(soup, domain)
-                    event_info['precos_entries'] = entries
-
-                    # String legível para humanos (compatibilidade retroativa)
-                    if entries:
-                        event_info['preco'] = '; '.join(e.get('formatted', '') for e in entries)
-                    else:
+                    try:
+                        if is_ticketsports_domain(domain):
+                            ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
+                            event_info['precos_entries'] = ts_entries
+                            event_info['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                        else:
+                            entries = extract_price_entries(soup, domain)
+                            event_info['precos_entries'] = entries
+                            event_info['preco'] = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
+                    except Exception:
+                        # fallback final: marca como não encontrado
+                        event_info['precos_entries'] = []
                         event_info['preco'] = 'preço não encontrado'
                 else:
                     event_info['link_edital'] = 'edital não encontrado'
@@ -436,25 +465,71 @@ def process_event_details(events):
             event_info['precos_entries'] = []
         return event_info
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {executor.submit(fetch_details, event): event for event in events}
-        results = []
-        for idx, future in enumerate(as_completed(futures), 1):
+    def _process_parallel(evts):
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(fetch_details, event): event for event in evts}
+            results = []
+            for idx, future in enumerate(as_completed(futures), 1):
+                try:
+                    result = future.result()
+                    # Se fetch_details retornou None, significa que o evento deve ser pulado
+                    if result is None:
+                        continue
+                    results.append(result)
+                    print(f"[{idx}/{len(evts)}] ✓ {result.get('nome', '')}")
+                    print(f"   Edital: {result.get('link_edital', '')[:50]}")
+                    print(f"   Preço: {result.get('preco', '')}")
+                except Exception:
+                    event = futures[future]
+                    event['link_edital'] = 'edital não encontrado'
+                    event['preco'] = 'preço não encontrado'
+                    results.append(event)
+            return results
+
+    from urllib.parse import urlparse as _urlparse
+    tickets = [e for e in events if is_ticketsports_domain(_urlparse(e.get('link_inscricao', '')).netloc)]
+    others = [e for e in events if e not in tickets]
+
+    processed = []
+    for ev in tickets:
+        try:
+            url = ev.get('link_inscricao', '')
             try:
-                result = future.result()
-                # Se fetch_details retornou None, significa que o evento deve ser pulado
-                if result is None:
-                    continue
-                results.append(result)
-                print(f"[{idx}/{len(events)}] ✓ {result.get('nome', '')}")
-                print(f"   Edital: {result.get('link_edital', '')[:50]}")
-                print(f"   Preço: {result.get('preco', '')}")
-            except Exception as e:
-                event = futures[future]
-                event['link_edital'] = 'edital não encontrado'
-                event['preco'] = 'preço não encontrado'
-                results.append(event)
-        return results
+                soup, created, driver = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
+            except Exception as ex:
+                soup = None
+                driver = None
+            if soup:
+                try:
+                    ev['link_edital'] = extract_edital(url)
+                except Exception:
+                    ev['link_edital'] = 'edital não encontrado'
+                try:
+                    ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
+                    ev['precos_entries'] = ts_entries
+                    ev['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                except Exception:
+                    entries = extract_price_entries(soup, urlparse(url).netloc)
+                    ev['precos_entries'] = entries
+                    ev['preco'] = '; '.join(en.get('formatted', '') for en in entries) or 'preço não encontrado'
+            else:
+                ev['link_edital'] = 'edital não encontrado'
+                ev['preco'] = 'preço não encontrado'
+            processed.append(ev)
+            # ensure driver cleanup
+            try:
+                if driver:
+                    driver.quit()
+            except Exception:
+                pass
+        except Exception as e:
+            processed.append(ev)
+
+    # process remaining events in parallel
+    if others:
+        processed += _process_parallel(others)
+
+    return processed
 
 # EXTRAÇÃO DE DADOS DOS EVENTOS
 def get_event_data(driver):
