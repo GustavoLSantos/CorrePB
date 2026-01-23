@@ -663,7 +663,7 @@ def main():
     """
     driver = setup_driver()
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, 'eventos_brasilquecorre.csv')
+    csv_path = os.path.join(base_dir, 'data/eventos_brasilquecorre.csv')
 
     try:
         event_data = get_event_data(driver)

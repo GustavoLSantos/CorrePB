@@ -6,7 +6,7 @@ from evento_de_corrida import EventoDeCorrida
 from pymongo import MongoClient
 
 # Carregar o .env da raiz do projeto
-env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.env'))
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
 load_dotenv(env_path)
 
 REMOTE_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
@@ -70,8 +70,8 @@ def main():
     try:
         db = remote_db
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        csv_brasilcorrida = os.path.join(base_dir, 'eventos_brasilcorrida.csv')
-        csv_brasilquecorre = os.path.join(base_dir, 'eventos_brasilquecorre.csv')
+        csv_brasilcorrida = os.path.join(base_dir, '../data/eventos_brasilcorrida.csv')
+        csv_brasilquecorre = os.path.join(base_dir, '../data/eventos_brasilquecorre.csv')
         import_csv_to_mongodb(db, csv_brasilcorrida, 'brasilcorrida')
         import_csv_to_mongodb(db, csv_brasilquecorre, 'brasilquecorre')
         total = db.eventos.count_documents({})

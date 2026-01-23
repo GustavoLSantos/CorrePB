@@ -7,7 +7,7 @@ from bson import ObjectId
 MONGO_URI = "mongodb://admin:password@127.0.0.1:27018/?authSource=admin"
 DB_NAME = "correpb"
 COLLECTION_NAME = "eventos"
-CAMINHO_SAIDA = "./eventos_compilados.json"
+CAMINHO_SAIDA = "./data/eventos_compilados.json"
 
 MESES = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',

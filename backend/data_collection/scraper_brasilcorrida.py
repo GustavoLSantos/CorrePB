@@ -263,7 +263,7 @@ def main():
     # Configurar driver
     driver = setup_driver()
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, 'eventos_brasilcorrida.csv')
+    csv_path = os.path.join(base_dir, 'data/eventos_brasilcorrida.csv')
 
     try:
         # Criar arquivo CSV
