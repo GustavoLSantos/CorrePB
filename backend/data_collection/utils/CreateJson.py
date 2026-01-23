@@ -2,12 +2,15 @@ import json
 import os
 from datetime import datetime
 from pymongo import MongoClient
-from bson import ObjectId
+from dotenv import load_dotenv
 
-MONGO_URI = "mongodb://admin:password@127.0.0.1:27018/?authSource=admin"
-DB_NAME = "correpb"
-COLLECTION_NAME = "eventos"
-CAMINHO_SAIDA = "./data/eventos_compilados.json"
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
+load_dotenv(env_path)
+
+MONGO_URI = os.getenv('MONGODB_URI')
+DB_NAME = os.getenv('MONGODB_DB_NAME')
+COLLECTION_NAME = os.getenv('MONGODB_COLLECTION')
+CAMINHO_SAIDA = '../data/eventos_compilados.json'
 
 MESES = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
@@ -68,24 +71,19 @@ def transformar_evento(evento_mongo):
     }
 
 def gerar_json_customizado():
-    
     client = MongoClient(MONGO_URI)
     try:
         db = client[DB_NAME]
         collection = db[COLLECTION_NAME]
-        
         cursor = collection.find({})
-        
         eventos_processados = []
         for doc in cursor:
             novo_doc = transformar_evento(doc)
             eventos_processados.append(novo_doc)
-            
         os.makedirs(os.path.dirname(CAMINHO_SAIDA), exist_ok=True)
-        
+
         with open(CAMINHO_SAIDA, 'w', encoding='utf-8') as f:
             json.dump(eventos_processados, f, ensure_ascii=False, indent=2)
-                    
     finally:
         client.close()
 
