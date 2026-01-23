@@ -19,7 +19,7 @@ from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices
-from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup, extract_nightrun_ticket_prices
+from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -695,6 +695,16 @@ def main():
                 ])
 
         print(f"\nDados salvos com sucesso em: {csv_path}")
+
+        # Tenta sincronizar o CSV para o MongoDB Atlas
+        try:
+            from data_collection.utils import ImportToDB as sync_module
+            try:
+                sync_module.import_csv_to_mongodb(sync_module.remote_db, csv_path, 'brasilquecorre')
+            except Exception as e:
+                print(f"Falha ao sincronizar CSV para MongoDB: {e}")
+        except Exception as e:
+            print(f"Sincronização com MongoDB ignorada (import failed): {e}")
 
     finally:
         driver.quit()

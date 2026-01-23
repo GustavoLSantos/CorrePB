@@ -2,7 +2,7 @@ import csv
 import os
 
 from dotenv import load_dotenv
-from evento_de_corrida import EventoDeCorrida
+from data_collection.evento_de_corrida import EventoDeCorrida
 from pymongo import MongoClient
 
 # Carregar o .env da raiz do projeto
