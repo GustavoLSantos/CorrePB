@@ -19,6 +19,7 @@ from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices
+from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup, extract_nightrun_ticket_prices
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -48,6 +49,10 @@ def extract_price_entries(soup, domain):
             from data_collection.sources.Ticketsports import extract_ticketsports_ticket_prices
         except Exception:
             extract_ticketsports_ticket_prices = None
+        try:
+            from data_collection.sources.Nightrun import extract_nightrun_ticket_prices
+        except Exception:
+            extract_nightrun_ticket_prices = None
 
         d = (domain or '').lower()
         if 'sympla' in d and extract_sympla_ticket_prices:
@@ -64,9 +69,16 @@ def extract_price_entries(soup, domain):
                     candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
             except Exception:
                 pass
+        elif 'nightrun' in d and extract_nightrun_ticket_prices:
+            try:
+                nr_entries = extract_nightrun_ticket_prices(soup)
+                for e in nr_entries:
+                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
+            except Exception:
+                pass
     except Exception:
-        # falha ao importar/executar extractors: segue com heurísticas genéricas
-        pass
+         # falha ao importar/executar extractors: segue com heurísticas genéricas
+         pass
 
     #Elementos de preço por classe
     def has_price_class(classes):
@@ -401,6 +413,11 @@ def process_event_details(events):
                     except Exception:
                         import traceback
                         traceback.print_exc()
+                        soup, created, temp_driver = None, False, None
+                elif is_nightrun_domain(domain):
+                    try:
+                        soup, created, temp_driver = load_nightrun_soup(url, driver=None, wait_seconds=30)
+                    except Exception:
                         soup, created, temp_driver = None, False, None
                 else:
                     # Sites estáticos podem usar requests simples
