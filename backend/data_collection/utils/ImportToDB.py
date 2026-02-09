@@ -1,5 +1,6 @@
 import csv
 import os
+from datetime import datetime
 
 from dotenv import load_dotenv
 from data_collection.evento_de_corrida import EventoDeCorrida
@@ -18,6 +19,7 @@ REMOTE_DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NA
 remote_db = remote_client[REMOTE_DB_NAME]
 remote_collection = remote_db['eventos']
 
+
 def import_csv_to_mongodb(db, csv_file, fonte):
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
@@ -31,9 +33,29 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                         row['link_edital'] = row['Link do Edital']
                     # O campo 'Categorias Premiadas' será tratado automaticamente pelo EventoDeCorrida
                     evento = EventoDeCorrida.from_csv_row(row, fonte)
+
+                    # Checa se já existe pelo nome
                     evento_existente = db.eventos.find_one({'nome_evento': evento.nome_evento})
                     if not evento_existente:
-                        db.eventos.insert_one(evento.to_dict())
+                        # Gerar _id customizado no formato YYYYMMXXXX (ex: 2026020001)
+                        now = datetime.now()
+                        prefix = f"{now.year}{now.month:02d}"
+                        # Buscar o último _id com este prefixo, ordenando decrescente
+                        last = db.eventos.find_one({'_id': {'$regex': f'^{prefix}'}}, sort=[('_id', -1)])
+                        if last and isinstance(last.get('_id'), str) and len(last['_id']) >= len(prefix) + 4:
+                            try:
+                                last_seq = int(last['_id'][-4:])
+                            except Exception:
+                                last_seq = 0
+                        else:
+                            last_seq = 0
+                        new_seq = last_seq + 1
+                        new_id = f"{prefix}{new_seq:04d}"
+
+                        evento_dict = evento.to_dict()
+                        evento_dict['_id'] = new_id
+
+                        db.eventos.insert_one(evento_dict)
                         novos_eventos += 1
                     else:
                         evento_dict = evento.to_dict()
@@ -65,6 +87,7 @@ def import_csv_to_mongodb(db, csv_file, fonte):
         print(f"🔄 {eventos_atualizados} eventos atualizados")
     except Exception as e:
         print(f"❌ Erro ao importar dados de {fonte}: {str(e)}")
+
 
 def main():
     try:
