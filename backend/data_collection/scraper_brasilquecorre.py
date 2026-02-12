@@ -41,6 +41,11 @@ def extract_price_entries(soup, domain):
     candidates = []
 
     # Tenta rodar extractors site-specific apenas se o domínio corresponder explicitamente
+    # Inicializa variáveis para evitar avisos de referência antes de atribuição
+    extract_sympla_ticket_prices = None
+    extract_ticketsports_ticket_prices = None
+    extract_nightrun_ticket_prices = None
+    extract_zenite_ticket_prices = None
     try:
         try:
             from data_collection.sources.Sympla import extract_sympla_ticket_prices
@@ -55,35 +60,28 @@ def extract_price_entries(soup, domain):
         except Exception:
             extract_nightrun_ticket_prices = None
         try:
-            from data_collection.sources.Zenite import extract_zenite_schedule
+            from data_collection.sources.Zenite import extract_zenite_ticket_prices
         except Exception:
-            extract_zenite_schedule = None
-
-        d = (domain or '').lower()
-        if 'sympla' in d and extract_sympla_ticket_prices:
-            try:
-                sym_entries = extract_sympla_ticket_prices(soup)
-                for e in sym_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
-        elif 'ticketsports' in d and extract_ticketsports_ticket_prices:
-            try:
-                ts_entries = extract_ticketsports_ticket_prices(soup)
-                for e in ts_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
-        elif 'nightrun' in d and extract_nightrun_ticket_prices:
-            try:
-                nr_entries = extract_nightrun_ticket_prices(soup)
-                for e in nr_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
+            extract_zenite_ticket_prices = None
     except Exception:
          # falha ao importar/executar extractors: segue com heurísticas genéricas
          pass
+
+    # Se o domínio for conhecido e houver um extractor específico, usa-o imediatamente
+    try:
+        if domain:
+            if 'extract_sympla_ticket_prices' in locals() and extract_sympla_ticket_prices and is_sympla_domain(domain):
+                return extract_sympla_ticket_prices(soup)
+            if 'extract_ticketsports_ticket_prices' in locals() and extract_ticketsports_ticket_prices and is_ticketsports_domain(domain):
+                # Ticketsports normalmente usa seu próprio loader/flow; keep generic fallback
+                return extract_ticketsports_ticket_prices(soup)
+            if 'extract_nightrun_ticket_prices' in locals() and extract_nightrun_ticket_prices and is_nightrun_domain(domain):
+                return extract_nightrun_ticket_prices(soup)
+            if 'extract_zenite_ticket_prices' in locals() and extract_zenite_ticket_prices and is_zenite_domain(domain):
+                return extract_zenite_ticket_prices(soup)
+    except Exception:
+        # Se o extractor específico falhar, segue com heurísticas genéricas abaixo
+        pass
 
     #Elementos de preço por classe
     def has_price_class(classes):
