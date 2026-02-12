@@ -16,6 +16,7 @@ class EventoDeCorrida:
         site_coleta: str,
         data_coleta: datetime,
         distancias: str,
+        horario: Optional[str] = None,
         url_inscricao: Optional[str] = None,
         url_imagem: Optional[str] = None,
         categoria: Optional[str] = None,
@@ -37,6 +38,7 @@ class EventoDeCorrida:
         self.distancias = distancias
 
         # Propriedades opcionais
+        self.horario = horario
         self.url_inscricao = url_inscricao
         self.url_imagem = url_imagem
         self.categoria = categoria
@@ -59,6 +61,8 @@ class EventoDeCorrida:
         }
 
         # Adiciona campos opcionais apenas se não forem None ou vazios
+        if self.horario and self.horario.strip():
+            documento['horario'] = self.horario
         if self.url_inscricao and self.url_inscricao.strip():
             documento['url_inscricao'] = self.url_inscricao
         if self.url_imagem and self.url_imagem.strip():
@@ -86,7 +90,7 @@ class EventoDeCorrida:
         # Campos a serem comparados
         campos_comparacao = [
             'nome_evento', 'datas_realizacao', 'cidade', 'estado',
-            'organizador', 'site_coleta', 'distancias', 'url_inscricao',
+            'organizador', 'site_coleta', 'distancias', 'horario', 'url_inscricao',
             'url_imagem', 'categoria', 'preco'
         ]
         
@@ -168,6 +172,7 @@ class EventoDeCorrida:
             site_coleta=fonte,
             data_coleta=datetime.now(),
             distancias=distancias,
+            horario=get_value('Horário'),
             url_inscricao=get_value('Link de Inscrição'),
             url_imagem=get_value('Link da Imagem'),
             categoria=get_value('Categoria'),

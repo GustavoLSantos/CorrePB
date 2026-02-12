@@ -1,5 +1,7 @@
 from bs4 import BeautifulSoup
 import time
+import re
+import unicodedata
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -22,10 +24,11 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
     Além disso, conta quantas `div.card` existem (cada card representa uma modalidade)
     e tenta clicar no primeiro elemento `.display-modality` para expandir/selecionar a modalidade.
 
-    Retorna (soup, created, driver) - segue o mesmo contrato dos outros loaders.
+    Retorna (soup, created, driver, horario) - horário extraído da página inicial.
     """
     created = False
     local_driver = driver
+    horario = ''
     try:
         if local_driver is None:
             local_driver = setup_driver()
@@ -38,6 +41,10 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
         except Exception:
             # se o carregamento falhar por timeout, tenta prosseguir com a página atual
             pass
+
+        # Extrai horário da página inicial
+        initial_soup = BeautifulSoup(local_driver.page_source, 'html.parser')
+        horario = extract_ticketsports_schedule(initial_soup)
 
         wait = WebDriverWait(local_driver, wait_seconds)
 
@@ -139,15 +146,15 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
 
         soup = BeautifulSoup(local_driver.page_source, 'html.parser')
         if return_counts:
-            return soup, created, local_driver, num_cards
-        return soup, created, local_driver
+            return soup, created, local_driver, horario, num_cards
+        return soup, created, local_driver, horario
     except Exception as e:
         if created and local_driver:
             try:
                 local_driver.quit()
             except Exception:
                 pass
-        return None, created, None
+        return None, created, None, horario
 
 
 def extract_ticketsports_modalities(soup, debug: bool = False):
@@ -397,6 +404,96 @@ def extract_ticketsports_ticket_prices(soup, debug: bool = False):
 
     # já estão no formato do fmt_entry
     return valid
+
+
+def extract_ticketsports_schedule(soup) -> str:
+    """Extrai o horário do evento a partir do HTML do Ticketsports (ex.: <b>HORÁRIO</b>: 04h00)."""
+    if not soup:
+        return ''
+
+    page_text = soup.get_text(' ', strip=True)
+
+    # Direct search in full text for horário followed by time
+    m = re.search(r'hor[áa]?rio[^\d]{0,20}(\d{1,2})\s*[:hH]\s*(\d{0,2})', page_text, re.IGNORECASE)
+    if m:
+        hh = m.group(1)
+        mm = m.group(2) or '00'
+        try:
+            h = int(hh)
+            min_val = int(mm)
+            if 0 <= h <= 23 and 0 <= min_val <= 59:
+                return f"{h:02d}:{min_val:02d}"
+        except Exception:
+            pass
+
+    # Fallback: look for <b>/<strong> labels
+    def normalize_time(hour_str, minute_str=None):
+        try:
+            h = int(hour_str)
+            m = int(minute_str) if minute_str not in (None, '') else 0
+        except Exception:
+            return None
+        if h < 0 or h > 23 or m < 0 or m > 59:
+            return None
+        return f"{h:02d}:{m:02d}"
+
+    def normalize_label(s: str) -> str:
+        if not s:
+            return ''
+        s = unicodedata.normalize('NFD', s)
+        s = ''.join(ch for ch in s if not unicodedata.category(ch).startswith('M'))
+        return s.lower()
+
+    time_patterns = [
+        re.compile(r'(?<!\d)(\d{1,2})\s*[:hH]\s*(\d{0,2})(?!\d)'),
+        re.compile(r'(?<!\d)(\d{1,2})\s*h\s*(\d{0,2})\b(?!\d)')
+    ]
+
+    # Procura labels em <b> ou <strong> com texto "HORÁRIO"
+    for label in soup.find_all(['b', 'strong']):
+        label_text = normalize_label(label.get_text(' ', strip=True))
+        if 'horario' not in label_text:
+            continue
+        # Junta texto dos irmãos seguintes até encontrar outro label forte
+        collected_parts = []
+        for sib in label.next_siblings:
+            if getattr(sib, 'name', '').lower() in ('b', 'strong'):
+                break
+            txt = ''
+            if isinstance(sib, str):
+                txt = sib
+            else:
+                try:
+                    txt = sib.get_text(' ', strip=True)
+                except Exception:
+                    txt = ''
+            txt = (txt or '').strip()
+            if txt:
+                collected_parts.append(txt)
+        candidate_zone = ' '.join(collected_parts).strip()
+        for pat in time_patterns:
+            m = pat.search(candidate_zone)
+            if m:
+                hh = m.group(1)
+                mm = m.group(2) if m.lastindex and m.lastindex >= 2 and m.group(2) else None
+                norm = normalize_time(hh, mm)
+                if norm:
+                    return norm
+        # fallback: tenta no texto do pai
+        try:
+            parent_text = label.parent.get_text(' ', strip=True)
+            for pat in time_patterns:
+                m = pat.search(parent_text)
+                if m:
+                    hh = m.group(1)
+                    mm = m.group(2) if m.lastindex and m.lastindex >= 2 and m.group(2) else None
+                    norm = normalize_time(hh, mm)
+                    if norm:
+                        return norm
+        except Exception:
+            pass
+
+    return ''
 
 
 def click_closebtn(driver, debug: bool = False) -> bool:

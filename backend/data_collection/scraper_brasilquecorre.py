@@ -18,7 +18,7 @@ from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
 from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
-from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices
+from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices, extract_ticketsports_schedule
 from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
@@ -455,6 +455,15 @@ def process_event_details(events):
                     # Extrai edital
                     event_info['link_edital'] = extract_edital(url)
 
+                    # Extrai horário do Ticketsports se ainda não temos
+                    try:
+                        if is_ticketsports_domain(domain):
+                            horario_ts = extract_ticketsports_schedule(soup)
+                            if horario_ts and not event_info.get('horario'):
+                                event_info['horario'] = horario_ts
+                    except Exception:
+                        pass
+
                     try:
                         if is_ticketsports_domain(domain):
                             ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
@@ -512,10 +521,11 @@ def process_event_details(events):
         try:
             url = ev.get('link_inscricao', '')
             try:
-                soup, created, driver = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
+                soup, created, driver, horario = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
             except Exception as ex:
                 soup = None
                 driver = None
+                horario = ''
             if soup:
                 try:
                     ev['link_edital'] = extract_edital(url)
@@ -529,10 +539,13 @@ def process_event_details(events):
                     entries = extract_price_entries(soup, urlparse(url).netloc)
                     ev['precos_entries'] = entries
                     ev['preco'] = '; '.join(en.get('formatted', '') for en in entries) or 'preço não encontrado'
+                ev['horario'] = horario
             else:
                 ev['link_edital'] = 'edital não encontrado'
                 ev['preco'] = 'preço não encontrado'
+                ev['horario'] = horario
             processed.append(ev)
+
             # ensure driver cleanup
             try:
                 if driver:
@@ -585,6 +598,20 @@ def get_event_data(driver):
 
         event_data = []
         data_pattern = re.compile(r'\d{1,2}\s+de\s+[A-Za-zçÇ]+\s+de\s+\d{4}')
+        time_patterns = [
+            re.compile(r'(?<!\d)(\d{1,2})\s*[:hH]\s*(\d{2})(?!\d)'),
+            re.compile(r'(?<!\d)(\d{1,2})\s*h\b(?!\d)')
+        ]
+
+        def normalize_time(hour_str, minute_str=None):
+            try:
+                h = int(hour_str)
+                m = int(minute_str) if minute_str not in (None, '') else 0
+            except Exception:
+                return None
+            if h < 0 or h > 23 or m < 0 or m > 59:
+                return None
+            return f"{h:02d}:{m:02d}"
 
         total_events = len(event_boxes)
         print(f"\nEncontrados {total_events} eventos. Iniciando extração\n")
@@ -618,6 +645,9 @@ def get_event_data(driver):
                 # Extrai informações textuais (data, cidade, distâncias, organizador)
                 text_elements = box.find_elements(By.CSS_SELECTOR, "div.text-editor p")
                 distancias_encontradas = []
+                horarios_encontrados = []
+
+                horario_pattern = re.compile(r'hor[áa]?rio(?:\s+de\s+largada)?[^\d]{0,20}(\d{1,2})\s*[:hH]\s*(\d{0,2})', re.IGNORECASE)
 
                 for idx_elem, element in enumerate(text_elements):
                     text = element.text.strip()
@@ -632,8 +662,30 @@ def get_event_data(driver):
                         elif 'cidade' not in event_info:
                             event_info['cidade'] = text
 
+                        # Check for labeled horario
+                        m = horario_pattern.search(text)
+                        if m:
+                            hora = m.group(1)
+                            minuto = m.group(2) or '00'
+                            horario_fmt = normalize_time(hora, minuto)
+                            if horario_fmt and horario_fmt not in horarios_encontrados:
+                                horarios_encontrados.append(horario_fmt)
+
+                        # Also search for any time patterns in the text
+                        for pat in time_patterns:
+                            for match in pat.finditer(text):
+                                hora = match.group(1)
+                                minuto = match.group(2) if match.lastindex and match.lastindex >= 2 else None
+                                horario_fmt = normalize_time(hora, minuto)
+                                if horario_fmt and horario_fmt not in horarios_encontrados:
+                                    horarios_encontrados.append(horario_fmt)
+
                 if distancias_encontradas:
                     event_info['distancia'] = ', '.join(distancias_encontradas)
+                if horarios_encontrados:
+                    event_info['horario'] = ', '.join(horarios_encontrados)
+                else:
+                    event_info['horario'] = ''
 
                 event_data.append(event_info)
                 print(f"[{idx}/{total_events}] ✓ Dados básicos: {event_info.get('nome', '')}")
@@ -676,7 +728,7 @@ def main():
 
         # Salva dados em CSV
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Nome do Evento', 'Link de Inscrição', 'Link da Imagem', 'Data', 'Cidade', 'Distância',
+            fieldnames = ['Nome do Evento', 'Link de Inscrição', 'Link da Imagem', 'Data', 'Horário', 'Cidade', 'Distância',
                           'Organizador', 'Preço', 'Link do Edital']
             writer = csv.writer(csvfile, delimiter=';')
             writer.writerow(fieldnames)
@@ -687,6 +739,7 @@ def main():
                     event.get('link_inscricao', ''),
                     event.get('link_imagem', ''),
                     event.get('data', ''),
+                    event.get('horario', ''),
                     event.get('cidade', ''),
                     event.get('distancia', ''),
                     event.get('organizador', ''),
