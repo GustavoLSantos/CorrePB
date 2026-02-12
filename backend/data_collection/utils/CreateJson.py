@@ -50,9 +50,29 @@ def transformar_evento(evento_mongo):
 
     preco_raw = evento_mongo.get('preco', '')
     lista_precos = []
-    
-    if preco_raw and isinstance(preco_raw, str):
-        lista_precos = [p.strip() for p in preco_raw.split(';') if p.strip()]
+
+    # Novo: prioriza precos estruturados em 'precos_entries' (se existirem)
+    horario = evento_mongo.get('horario') or ''
+    precos_entries = evento_mongo.get('precos_entries', [])
+    if precos_entries and isinstance(precos_entries, list) and any(isinstance(p, dict) for p in precos_entries):
+        lista_precos = []
+        for p in precos_entries:
+            if isinstance(p, dict):
+                formatted = p.get('formatted') or p.get('raw') or ''
+                ph = p.get('horario') or horario
+                lista_precos.append({
+                    'formatted': formatted,
+                    'horario': ph
+                })
+            else:
+                lista_precos.append({
+                    'formatted': str(p),
+                    'horario': horario
+                })
+    else:
+        # Fallback antigo: string 'preco' separado por ';'
+        if preco_raw and isinstance(preco_raw, str):
+            lista_precos = [p.strip() for p in preco_raw.split(';') if p.strip()]
 
     return {
         "_id": str(evento_mongo.get('_id')),
@@ -67,7 +87,8 @@ def transformar_evento(evento_mongo):
         "organizador": evento_mongo.get('organizador', ''),
         "categorias": [],
         "preco": preco_raw, 
-        "lista_precos": lista_precos
+        "lista_precos": lista_precos,
+        "horario": horario
     }
 
 def gerar_json_customizado():

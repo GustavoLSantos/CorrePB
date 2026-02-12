@@ -489,6 +489,15 @@ def process_event_details(events):
                             event_info['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
                         else:
                             entries = extract_price_entries(soup, domain)
+                            # Se temos um horário carregado pelo loader (p.ex. Zenite), injeta em cada entry
+                            if loader_horario:
+                                for ent in entries:
+                                    try:
+                                        # só injeta se não existir
+                                        if not ent.get('horario'):
+                                            ent['horario'] = loader_horario
+                                    except Exception:
+                                        pass
                             event_info['precos_entries'] = entries
                             event_info['preco'] = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
                     except Exception:
@@ -551,6 +560,14 @@ def process_event_details(events):
                     ev['link_edital'] = 'edital não encontrado'
                 try:
                     ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
+                    # injeta horario se disponível
+                    if horario and isinstance(horario, str):
+                        for ent in ts_entries:
+                            try:
+                                if not ent.get('horario'):
+                                    ent['horario'] = horario
+                            except Exception:
+                                pass
                     ev['precos_entries'] = ts_entries
                     ev['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
                 except Exception:

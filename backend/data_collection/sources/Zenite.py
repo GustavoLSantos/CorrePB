@@ -55,16 +55,10 @@ def load_zenite_soup(url: str, driver=None, wait_seconds: int = 30, debug: bool 
 
 
 def extract_zenite_schedule(soup) -> str:
-    """Extrai o horário a partir do primeiro <span class="disc1"> encontrado.
-
-    Retorna somente o horário no formato HH:MM (ex: '06:00'). Procura primeiro por
-    um <li> cujo <span class="disc"> contenha 'Data da corrida' e usa o
-    <span class="disc1"> associado; caso não encontre, usa o primeiro span.disc1.
-    """
     if not soup:
         return ''
 
-    # Primeiro: procura por um <li> que contenha o label esperado (Data da corrida)
+
     try:
         for li in soup.find_all('li'):
             span_disc = li.find('span', class_='disc')
@@ -84,19 +78,16 @@ def extract_zenite_schedule(soup) -> str:
                                 return f"{h:02d}:{mi:02d}"
                         except Exception:
                             pass
-                # If label matched but no disc1/time found, continue searching other lis
+
     except Exception:
-        # Se algo falhar, segue para o fallback
         pass
 
-    # Fallback: encontra o primeiro span.disc1 na página e extrai a primeira ocorrência HH:MM
     span = soup.find('span', class_='disc1')
     if not span:
         return ''
 
     text = (span.get_text() or '').strip()
     if text:
-        # Procura a primeira ocorrência de HH:MM no texto (ignora a data)
         m = re.search(r'(\d{1,2}):(\d{2})', text)
         if m:
             try:
