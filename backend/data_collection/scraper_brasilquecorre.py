@@ -20,6 +20,7 @@ from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices, extract_ticketsports_schedule
 from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
+from data_collection.sources.Zenite import is_zenite_domain, load_zenite_soup, extract_zenite_schedule
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -53,6 +54,10 @@ def extract_price_entries(soup, domain):
             from data_collection.sources.Nightrun import extract_nightrun_ticket_prices
         except Exception:
             extract_nightrun_ticket_prices = None
+        try:
+            from data_collection.sources.Zenite import extract_zenite_schedule
+        except Exception:
+            extract_zenite_schedule = None
 
         d = (domain or '').lower()
         if 'sympla' in d and extract_sympla_ticket_prices:
@@ -368,6 +373,7 @@ def process_event_details(events):
             try:
                 domain = urlparse(url).netloc
                 soup = None
+                loader_horario = None
                 # variáveis relacionadas ao loader Sympla — inicializa aqui para não depender do branch
                 created = False
                 sym_driver = None
@@ -419,6 +425,12 @@ def process_event_details(events):
                         soup, created, temp_driver = load_nightrun_soup(url, driver=None, wait_seconds=30)
                     except Exception:
                         soup, created, temp_driver = None, False, None
+                elif is_zenite_domain(domain):
+                    try:
+                        # load_zenite_soup returns (soup, created, driver, horario)
+                        soup, created, temp_driver, loader_horario = load_zenite_soup(url, driver=None, wait_seconds=30)
+                    except Exception:
+                        soup, created, temp_driver, loader_horario = None, False, None, None
                 else:
                     # Sites estáticos podem usar requests simples
                     try:
@@ -451,6 +463,10 @@ def process_event_details(events):
                         race_driver.quit()
                     except Exception:
                         pass
+
+                if loader_horario:
+                    event_info['horario'] = loader_horario
+
                 if soup:
                     # Extrai edital
                     event_info['link_edital'] = extract_edital(url)
@@ -461,6 +477,10 @@ def process_event_details(events):
                             horario_ts = extract_ticketsports_schedule(soup)
                             if horario_ts and not event_info.get('horario'):
                                 event_info['horario'] = horario_ts
+                        elif is_zenite_domain(domain):
+                            horario_zenite = extract_zenite_schedule(soup)
+                            if horario_zenite:
+                                event_info['horario'] = horario_zenite
                     except Exception:
                         pass
 
@@ -662,7 +682,6 @@ def get_event_data(driver):
                         elif 'cidade' not in event_info:
                             event_info['cidade'] = text
 
-                        # Check for labeled horario
                         m = horario_pattern.search(text)
                         if m:
                             hora = m.group(1)
@@ -671,7 +690,6 @@ def get_event_data(driver):
                             if horario_fmt and horario_fmt not in horarios_encontrados:
                                 horarios_encontrados.append(horario_fmt)
 
-                        # Also search for any time patterns in the text
                         for pat in time_patterns:
                             for match in pat.finditer(text):
                                 hora = match.group(1)
