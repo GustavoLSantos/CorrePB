@@ -1,3 +1,5 @@
+import sys
+
 import csv
 import re
 import os
@@ -5,7 +7,7 @@ import json
 import time
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import requests
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
@@ -397,6 +399,9 @@ def process_event_details(events):
                     except Exception:
                         soup, created, temp_driver = None, False, None
                 elif is_liverun_domain(domain):
+                    if soup:
+                            from data_collection.sources.Liverun import extract_liverun_date
+                            event_info['data'] = extract_liverun_date(soup)
                     try:
                         soup, created, liverun_driver = load_liverun_soup(url)
                     except Exception:

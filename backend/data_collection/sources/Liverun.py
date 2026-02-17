@@ -8,6 +8,45 @@ from selenium.webdriver.support import expected_conditions as EC
 
 from data_collection.core.Driver import setup_driver
 
+def extract_liverun_date(soup):
+    """
+    Extrai a data do evento de uma página Liverun.
+    Procura por <h3>Data</h3> seguido de <p> com a data.
+    """
+    if not soup:
+        return ""
+    
+    try:
+        h3_data = soup.find('h3', string=re.compile(r'Data', re.IGNORECASE))
+        if h3_data:
+            parent = h3_data.find_parent('div')
+            if parent:
+                p_date = parent.find('p')
+                if p_date:
+                    date_text = p_date.get_text(strip=True)
+                    if re.match(r'\d{2}/\d{2}$', date_text):
+                        page_text = soup.get_text()
+                        year_match = re.search(r'202[4-9]|203\d', page_text)
+                        if year_match:
+                            return f"{date_text}/{year_match.group(0)}"
+                    return date_text
+        
+        text = soup.get_text(separator=' ', strip=True)
+        match = re.search(r'\b(\d{2}/\d{2}/\d{4})\b', text)
+        if match:
+            return match.group(1)
+        
+        match = re.search(r'\b(\d{2}/\d{2})\b', text)
+        if match:
+            year_match = re.search(r'202[4-9]|203\d', text)
+            if year_match:
+                return f"{match.group(1)}/{year_match.group(0)}"
+            return match.group(1)
+        
+    except Exception:
+        pass
+    
+    return ""
 
 def is_liverun_domain(domain: str) -> bool:
     if not domain:
