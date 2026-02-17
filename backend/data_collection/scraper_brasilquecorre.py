@@ -22,6 +22,7 @@ from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices, extract_ticketsports_schedule
 from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
+from data_collection.sources.Zenite import is_zenite_domain, load_zenite_soup, extract_zenite_schedule
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -42,6 +43,11 @@ def extract_price_entries(soup, domain):
     candidates = []
 
     # Tenta rodar extractors site-specific apenas se o domínio corresponder explicitamente
+    # Inicializa variáveis para evitar avisos de referência antes de atribuição
+    extract_sympla_ticket_prices = None
+    extract_ticketsports_ticket_prices = None
+    extract_nightrun_ticket_prices = None
+    extract_zenite_ticket_prices = None
     try:
         try:
             from data_collection.sources.Sympla import extract_sympla_ticket_prices
@@ -55,32 +61,29 @@ def extract_price_entries(soup, domain):
             from data_collection.sources.Nightrun import extract_nightrun_ticket_prices
         except Exception:
             extract_nightrun_ticket_prices = None
-
-        d = (domain or '').lower()
-        if 'sympla' in d and extract_sympla_ticket_prices:
-            try:
-                sym_entries = extract_sympla_ticket_prices(soup)
-                for e in sym_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
-        elif 'ticketsports' in d and extract_ticketsports_ticket_prices:
-            try:
-                ts_entries = extract_ticketsports_ticket_prices(soup)
-                for e in ts_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
-        elif 'nightrun' in d and extract_nightrun_ticket_prices:
-            try:
-                nr_entries = extract_nightrun_ticket_prices(soup)
-                for e in nr_entries:
-                    candidates.append({'label': e.get('label'), 'price': e.get('price'), 'tax': e.get('tax'), 'raw': e.get('raw')})
-            except Exception:
-                pass
+        try:
+            from data_collection.sources.Zenite import extract_zenite_ticket_prices
+        except Exception:
+            extract_zenite_ticket_prices = None
     except Exception:
          # falha ao importar/executar extractors: segue com heurísticas genéricas
          pass
+
+    # Se o domínio for conhecido e houver um extractor específico, usa-o imediatamente
+    try:
+        if domain:
+            if 'extract_sympla_ticket_prices' in locals() and extract_sympla_ticket_prices and is_sympla_domain(domain):
+                return extract_sympla_ticket_prices(soup)
+            if 'extract_ticketsports_ticket_prices' in locals() and extract_ticketsports_ticket_prices and is_ticketsports_domain(domain):
+                # Ticketsports normalmente usa seu próprio loader/flow; keep generic fallback
+                return extract_ticketsports_ticket_prices(soup)
+            if 'extract_nightrun_ticket_prices' in locals() and extract_nightrun_ticket_prices and is_nightrun_domain(domain):
+                return extract_nightrun_ticket_prices(soup)
+            if 'extract_zenite_ticket_prices' in locals() and extract_zenite_ticket_prices and is_zenite_domain(domain):
+                return extract_zenite_ticket_prices(soup)
+    except Exception:
+        # Se o extractor específico falhar, segue com heurísticas genéricas abaixo
+        pass
 
     #Elementos de preço por classe
     def has_price_class(classes):
@@ -370,6 +373,7 @@ def process_event_details(events):
             try:
                 domain = urlparse(url).netloc
                 soup = None
+                loader_horario = None
                 # variáveis relacionadas ao loader Sympla — inicializa aqui para não depender do branch
                 created = False
                 sym_driver = None
@@ -424,6 +428,12 @@ def process_event_details(events):
                         soup, created, temp_driver = load_nightrun_soup(url, driver=None, wait_seconds=30)
                     except Exception:
                         soup, created, temp_driver = None, False, None
+                elif is_zenite_domain(domain):
+                    try:
+                        # load_zenite_soup returns (soup, created, driver, horario)
+                        soup, created, temp_driver, loader_horario = load_zenite_soup(url, driver=None, wait_seconds=30)
+                    except Exception:
+                        soup, created, temp_driver, loader_horario = None, False, None, None
                 else:
                     # Sites estáticos podem usar requests simples
                     try:
@@ -456,6 +466,10 @@ def process_event_details(events):
                         race_driver.quit()
                     except Exception:
                         pass
+
+                if loader_horario:
+                    event_info['horario'] = loader_horario
+
                 if soup:
                     # Extrai edital
                     event_info['link_edital'] = extract_edital(url)
@@ -466,6 +480,10 @@ def process_event_details(events):
                             horario_ts = extract_ticketsports_schedule(soup)
                             if horario_ts and not event_info.get('horario'):
                                 event_info['horario'] = horario_ts
+                        elif is_zenite_domain(domain):
+                            horario_zenite = extract_zenite_schedule(soup)
+                            if horario_zenite:
+                                event_info['horario'] = horario_zenite
                     except Exception:
                         pass
 
@@ -476,6 +494,15 @@ def process_event_details(events):
                             event_info['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
                         else:
                             entries = extract_price_entries(soup, domain)
+                            # Se temos um horário carregado pelo loader (p.ex. Zenite), injeta em cada entry
+                            if loader_horario:
+                                for ent in entries:
+                                    try:
+                                        # só injeta se não existir
+                                        if not ent.get('horario'):
+                                            ent['horario'] = loader_horario
+                                    except Exception:
+                                        pass
                             event_info['precos_entries'] = entries
                             event_info['preco'] = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
                     except Exception:
@@ -538,6 +565,14 @@ def process_event_details(events):
                     ev['link_edital'] = 'edital não encontrado'
                 try:
                     ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
+                    # injeta horario se disponível
+                    if horario and isinstance(horario, str):
+                        for ent in ts_entries:
+                            try:
+                                if not ent.get('horario'):
+                                    ent['horario'] = horario
+                            except Exception:
+                                pass
                     ev['precos_entries'] = ts_entries
                     ev['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
                 except Exception:
@@ -667,7 +702,6 @@ def get_event_data(driver):
                         elif 'cidade' not in event_info:
                             event_info['cidade'] = text
 
-                        # Check for labeled horario
                         m = horario_pattern.search(text)
                         if m:
                             hora = m.group(1)
@@ -676,7 +710,6 @@ def get_event_data(driver):
                             if horario_fmt and horario_fmt not in horarios_encontrados:
                                 horarios_encontrados.append(horario_fmt)
 
-                        # Also search for any time patterns in the text
                         for pat in time_patterns:
                             for match in pat.finditer(text):
                                 hora = match.group(1)
