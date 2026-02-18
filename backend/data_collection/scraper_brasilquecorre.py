@@ -448,11 +448,12 @@ def process_event_details(events):
                 elif is_ticketsports_domain(domain):
                     # Usa o loader específico para Ticketsports (renderiza com Selenium)
                     try:
-                        soup, created, temp_driver = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
+                        # load_ticketsports_soup returns (soup, created, driver, horario)
+                        soup, created, temp_driver, loader_horario = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
                     except Exception:
                         import traceback
                         traceback.print_exc()
-                        soup, created, temp_driver = None, False, None
+                        soup, created, temp_driver, loader_horario = None, False, None, None
                 elif is_nightrun_domain(domain):
                     try:
                         soup, created, temp_driver = load_nightrun_soup(url, driver=None, wait_seconds=30)
@@ -656,6 +657,7 @@ def process_event_details(events):
     for ev in tickets:
         try:
             url = ev.get('link_inscricao', '')
+            prev_horario = ev.get('horario', '')
             try:
                 soup, created, driver, horario = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=True)
             except Exception as ex:
@@ -672,6 +674,14 @@ def process_event_details(events):
                     ev['link_edital'] = 'edital não encontrado'
                 try:
                     ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
+                    # Se o loader não extraiu horário, tenta extrair do HTML atual
+                    if not horario:
+                        try:
+                            horario_extra = extract_ticketsports_schedule(soup)
+                            if horario_extra:
+                                horario = horario_extra
+                        except Exception:
+                            pass
                     # injeta horario se disponível
                     if horario and isinstance(horario, str):
                         for ent in ts_entries:
@@ -680,7 +690,6 @@ def process_event_details(events):
                                     ent['horario'] = horario
                             except Exception:
                                 pass
-                    ev['precos_entries'] = ts_entries
                     # monta preco (menor e maior) e precos_entries como JSON com lista completa
                     try:
                         if ts_entries and len(ts_entries) > 0:
@@ -697,7 +706,22 @@ def process_event_details(events):
                                 else:
                                     str_preco = f"{_fmt_price_br(min_price)} a {_fmt_price_br(max_price)}"
                             else:
-                                str_preco = 'preço não encontrado'
+                                min_p = ts_entries[0].get('formatted')
+                                max_p = ts_entries[-1].get('formatted')
+                                if min_p == max_p:
+                                    str_preco = min_p
+                                else:
+                                    str_preco = f"{min_p} a {max_p}"
+                            # lista completa das entradas formatadas
+                            try:
+                                safe_prices = []
+                                for p in ts_entries:
+                                    label_atual = (p.get('label') or '').strip() or 'GERAL'
+                                    preco_atual = str(p.get('formatted', '') or '')
+                                    texto_formatado = f"{preco_atual} | {label_atual}"
+                                    safe_prices.append(texto_formatado)
+                                json_precos_entries = json.dumps(safe_prices, ensure_ascii=False) if safe_prices else '[]'
+                            except Exception:
                                 json_precos_entries = '[]'
                     except Exception:
                         str_preco = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
@@ -706,13 +730,43 @@ def process_event_details(events):
                     ev['preco'] = str_preco
                 except Exception:
                     entries = extract_price_entries(soup, urlparse(url).netloc)
-                    ev['precos_entries'] = entries
-                    ev['preco'] = '; '.join(en.get('formatted', '') for en in entries) or 'preço não encontrado'
-                ev['horario'] = horario
+                    try:
+                        prices = [p.get('price') for p in entries if isinstance(p, dict) and p.get('price') is not None]
+                    except Exception:
+                        prices = []
+                    if prices:
+                        min_price = prices[0]
+                        max_price = prices[-1]
+                        str_preco = _fmt_price_br(min_price) if min_price == max_price else f"{_fmt_price_br(min_price)} a {_fmt_price_br(max_price)}"
+                    elif entries:
+                        min_p = entries[0].get('formatted')
+                        max_p = entries[-1].get('formatted')
+                        str_preco = min_p if min_p == max_p else f"{min_p} a {max_p}"
+                    else:
+                        str_preco = 'preço não encontrado'
+                    try:
+                        safe_prices = []
+                        for p in entries:
+                            label_atual = (p.get('label') or '').strip() or 'GERAL'
+                            preco_atual = str(p.get('formatted', '') or '')
+                            texto_formatado = f"{preco_atual} | {label_atual}"
+                            safe_prices.append(texto_formatado)
+                        json_precos_entries = json.dumps(safe_prices, ensure_ascii=False) if safe_prices else '[]'
+                    except Exception:
+                        json_precos_entries = '[]'
+                    ev['precos_entries'] = json_precos_entries
+                    ev['preco'] = str_preco
+                if horario:
+                    ev['horario'] = horario
+                elif prev_horario:
+                    ev['horario'] = prev_horario
             else:
                 ev['link_edital'] = 'edital não encontrado'
                 ev['preco'] = 'preço não encontrado'
-                ev['horario'] = horario
+                if horario:
+                    ev['horario'] = horario
+                elif prev_horario:
+                    ev['horario'] = prev_horario
             processed.append(ev)
 
             # ensure driver cleanup
