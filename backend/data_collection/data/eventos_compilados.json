@@ -7,7 +7,7 @@
     "data_realizacao": "22 de Fevereiro de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:42.343000Z",
+    "data_coleta": "2026-02-18T15:35:32.455000Z",
     "distancias": [
       "3km (caminhada), 5km e 10km (corrida)"
     ],
@@ -27,18 +27,15 @@
     "data_realizacao": "1 de Março de 2026",
     "cidade": "Catolé do Rocha",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.196000Z",
+    "data_coleta": "2026-02-18T15:24:09.492000Z",
     "distancias": [
       "5km (corrida)"
     ],
     "organizador": "AMIGOS DA CORRIDA",
     "categorias": [],
-    "preco": "CORRIDA 5KM — PCD — R$ 40,00; CORRIDA 5KM — LOCAL — R$ 80,00; CORRIDA 5KM — GERAL — R$ 80,00; CORRIDA 5KM — SEGURANÇA PÚBLICA — R$ 80,00",
+    "preco": "R$ 40,00 a R$ 80,00",
     "lista_precos": [
-      "CORRIDA 5KM — PCD — R$ 40,00",
-      "CORRIDA 5KM — LOCAL — R$ 80,00",
-      "CORRIDA 5KM — GERAL — R$ 80,00",
-      "CORRIDA 5KM — SEGURANÇA PÚBLICA — R$ 80,00"
+      "R$ 40,00 a R$ 80,00"
     ],
     "horario": ""
   },
@@ -50,26 +47,15 @@
     "data_realizacao": "8 de Março de 2026",
     "cidade": "Sousa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.323000Z",
+    "data_coleta": "2026-02-18T15:24:09.629000Z",
     "distancias": [
       "3km e 5km (corrida)"
     ],
     "organizador": "ACADEMIA S3 FITNESS",
     "categorias": [],
-    "preco": "CATEGORIA PCD 3 KM - MASCULINO — R$ 39,95; CATEGORIA PCD 5 KM - FEMININO — R$ 44,94; CATEGORIA PCD 3 KM - FEMININO — R$ 44,95; CATEGORIA PCD 5 KM - MASCULINO — R$ 44,95; CATEGORIA ALUNO ISIS FITNESS 3 KM - FEMININO — R$ 89,90; CATEGORIA ALUNO ISIS FITNESS 3 KM - MASCULINO — R$ 89,90; CATEGORIA ALUNO ISIS FITNESS 5 KM - FEMININO — R$ 89,90; CATEGORIA ALUNO ISIS FITNESS 5 KM - MASCULINO — R$ 89,90; CATEGORIA GERAL 3 KM - FEMININO — R$ 89,90; CATEGORIA GERAL 3 KM - MASCULINO — R$ 89,90; CATEGORIA GERAL 5 KM - FEMININO — R$ 89,90; CATEGORIA GERAL 5 KM - MASCULINO — R$ 89,90",
+    "preco": "R$ 39,95 a R$ 89,90",
     "lista_precos": [
-      "CATEGORIA PCD 3 KM - MASCULINO — R$ 39,95",
-      "CATEGORIA PCD 5 KM - FEMININO — R$ 44,94",
-      "CATEGORIA PCD 3 KM - FEMININO — R$ 44,95",
-      "CATEGORIA PCD 5 KM - MASCULINO — R$ 44,95",
-      "CATEGORIA ALUNO ISIS FITNESS 3 KM - FEMININO — R$ 89,90",
-      "CATEGORIA ALUNO ISIS FITNESS 3 KM - MASCULINO — R$ 89,90",
-      "CATEGORIA ALUNO ISIS FITNESS 5 KM - FEMININO — R$ 89,90",
-      "CATEGORIA ALUNO ISIS FITNESS 5 KM - MASCULINO — R$ 89,90",
-      "CATEGORIA GERAL 3 KM - FEMININO — R$ 89,90",
-      "CATEGORIA GERAL 3 KM - MASCULINO — R$ 89,90",
-      "CATEGORIA GERAL 5 KM - FEMININO — R$ 89,90",
-      "CATEGORIA GERAL 5 KM - MASCULINO — R$ 89,90"
+      "R$ 39,95 a R$ 89,90"
     ],
     "horario": ""
   },
@@ -81,22 +67,15 @@
     "data_realizacao": "14 de Março de 2026",
     "cidade": "Itaporanga",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.447000Z",
+    "data_coleta": "2026-02-18T15:24:09.767000Z",
     "distancias": [
       "5km (corrida)"
     ],
     "organizador": "ACADEMIA R1 BODY CENTER",
     "categorias": [],
-    "preco": "CATEGORIA 5 KM PCD - FEMININO — R$ 45,00; CATEGORIA 5 KM PCD - MASCULINO — R$ 45,00; CATEGORIA 5 KM ALUNO R1 ACADEMIA – FEMININO — R$ 70,00; CATEGORIA 5 KM ALUNO R1 ACADEMIA – MASCULINO — R$ 70,00; CATEGORIA 5 KM GERAL - FEMININO — R$ 90,00; CATEGORIA 5 KM GERAL - MASCULINO — R$ 90,00; CATEGORIA 5 KM LOCAL – FEMININO — R$ 90,00; CATEGORIA 5 KM LOCAL – MASCULINO — R$ 90,00",
+    "preco": "R$ 45,00 a R$ 90,00",
     "lista_precos": [
-      "CATEGORIA 5 KM PCD - FEMININO — R$ 45,00",
-      "CATEGORIA 5 KM PCD - MASCULINO — R$ 45,00",
-      "CATEGORIA 5 KM ALUNO R1 ACADEMIA – FEMININO — R$ 70,00",
-      "CATEGORIA 5 KM ALUNO R1 ACADEMIA – MASCULINO — R$ 70,00",
-      "CATEGORIA 5 KM GERAL - FEMININO — R$ 90,00",
-      "CATEGORIA 5 KM GERAL - MASCULINO — R$ 90,00",
-      "CATEGORIA 5 KM LOCAL – FEMININO — R$ 90,00",
-      "CATEGORIA 5 KM LOCAL – MASCULINO — R$ 90,00"
+      "R$ 45,00 a R$ 90,00"
     ],
     "horario": ""
   },
@@ -108,16 +87,15 @@
     "data_realizacao": "15 de Março de 2026",
     "cidade": "Baraúna",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.690000Z",
+    "data_coleta": "2026-02-18T15:35:32.641000Z",
     "distancias": [
       "5km (corrida)"
     ],
     "organizador": "PREFEITURA MUNICIPAL",
     "categorias": [],
-    "preco": "R$ 70,00; R$ 80,00",
+    "preco": "R$ 70,00 a R$ 80,00",
     "lista_precos": [
-      "R$ 70,00",
-      "R$ 80,00"
+      "R$ 70,00 a R$ 80,00"
     ],
     "horario": ""
   },
@@ -129,18 +107,15 @@
     "data_realizacao": "7 de Março de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.936000Z",
+    "data_coleta": "2026-02-18T15:24:10.170000Z",
     "distancias": [
       ""
     ],
     "organizador": "5km (corrida - feminina)",
     "categorias": [],
-    "preco": "5KM — PÚBLICO GERAL — R$ 89,90; 5KM — SÓCIO CAIXA BENEFICENTE — R$ 89,90; 3KM CAMINHADA — PÚBLICO GERAL — R$ 89,90; 3KM CAMINHADA — SÓCIO CAIXA BENEFICENTE — R$ 89,90",
+    "preco": "R$ 89,90",
     "lista_precos": [
-      "5KM — PÚBLICO GERAL — R$ 89,90",
-      "5KM — SÓCIO CAIXA BENEFICENTE — R$ 89,90",
-      "3KM CAMINHADA — PÚBLICO GERAL — R$ 89,90",
-      "3KM CAMINHADA — SÓCIO CAIXA BENEFICENTE — R$ 89,90"
+      "R$ 89,90"
     ],
     "horario": ""
   },
@@ -152,20 +127,15 @@
     "data_realizacao": "14 de Março de 2026",
     "cidade": "Sapé",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.313000Z",
+    "data_coleta": "2026-02-18T15:24:10.725000Z",
     "distancias": [
       "3km (caminhada), 6km (corrida)"
     ],
     "organizador": "+ SPORTS",
     "categorias": [],
-    "preco": "6KM — PCD NAO CADEIRANTE (Anexar foto comprovante) — R$ 85,00; 6KM — PCD CADEIRANTE (Anexar foto comprovante) — R$ 85,00; CORRIDA KIDS — R$ 95,00; 6KM — PÚBLICO GERAL — R$ 120,00; 6KM — LOCAL (vide regulamento) — R$ 120,00; 3KM CAMINHADA — PÚBLICO GERAL — R$ 120,00",
+    "preco": "R$ 85,00 a R$ 120,00",
     "lista_precos": [
-      "6KM — PCD NAO CADEIRANTE (Anexar foto comprovante) — R$ 85,00",
-      "6KM — PCD CADEIRANTE (Anexar foto comprovante) — R$ 85,00",
-      "CORRIDA KIDS — R$ 95,00",
-      "6KM — PÚBLICO GERAL — R$ 120,00",
-      "6KM — LOCAL (vide regulamento) — R$ 120,00",
-      "3KM CAMINHADA — PÚBLICO GERAL — R$ 120,00"
+      "R$ 85,00 a R$ 120,00"
     ],
     "horario": ""
   },
@@ -177,19 +147,15 @@
     "data_realizacao": "29 de Março de 2026",
     "cidade": "Campina Grande",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.191000Z",
+    "data_coleta": "2026-02-18T15:35:32.892000Z",
     "distancias": [
       ""
     ],
     "organizador": "ANDREZA VELEZ",
     "categorias": [],
-    "preco": "Público 60+ — R$ 69,90; PCD — R$ 69,90; Público Geral — R$ 89,90; R$ 99,90; R$ 109,90",
+    "preco": "R$ 69,90 a R$ 109,90",
     "lista_precos": [
-      "Público 60+ — R$ 69,90",
-      "PCD — R$ 69,90",
-      "Público Geral — R$ 89,90",
-      "R$ 99,90",
-      "R$ 109,90"
+      "R$ 69,90 a R$ 109,90"
     ],
     "horario": ""
   },
@@ -201,21 +167,15 @@
     "data_realizacao": "15 de Março de 2026",
     "cidade": "Itabaiana",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.447000Z",
+    "data_coleta": "2026-02-18T15:24:10.860000Z",
     "distancias": [
       "3km  (caminhada), 5km e 10km (corrida)"
     ],
     "organizador": "8º BATALHÃO PMPB l AMEVP",
     "categorias": [],
-    "preco": "5KM — PCD NÃO CADEIRANTE — R$ 50,00; 10KM — PCD NÃO CADEIRANTE — R$ 50,00; 5KM — GERAL — R$ 100,00; 5KM — SEGURANÇA PÚBLICA — R$ 100,00; 10KM — GERAL — R$ 100,00; 10KM — SEGURANÇA PÚBLICA — R$ 100,00; 3KM CAMINHADA — CAMINHADA 3KM — R$ 100,00",
+    "preco": "R$ 50,00 a R$ 100,00",
     "lista_precos": [
-      "5KM — PCD NÃO CADEIRANTE — R$ 50,00",
-      "10KM — PCD NÃO CADEIRANTE — R$ 50,00",
-      "5KM — GERAL — R$ 100,00",
-      "5KM — SEGURANÇA PÚBLICA — R$ 100,00",
-      "10KM — GERAL — R$ 100,00",
-      "10KM — SEGURANÇA PÚBLICA — R$ 100,00",
-      "3KM CAMINHADA — CAMINHADA 3KM — R$ 100,00"
+      "R$ 50,00 a R$ 100,00"
     ],
     "horario": ""
   },
@@ -227,20 +187,15 @@
     "data_realizacao": "29 de Março de 2026",
     "cidade": "Pedras de Fogo",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.608000Z",
+    "data_coleta": "2026-02-18T15:24:11.269000Z",
     "distancias": [
       "3km (corrida)"
     ],
     "organizador": "ENCONTRO DE JOVENS COM CRISTO",
     "categorias": [],
-    "preco": "PCD 3KM FEMININO — R$ 40,00; PCD 3KM MASCULINO — R$ 40,00; CATEGORIA GERAL FEMININO – 3 KM: — R$ 80,00; CATEGORIA GERAL FEMININO – 5 KM: — R$ 80,00; CATEGORIA GERAL MASCULINO – 3 KM: — R$ 80,00; CATEGORIA GERAL MASCULINO – 5 KM: — R$ 80,00",
+    "preco": "R$ 40,00 a R$ 80,00",
     "lista_precos": [
-      "PCD 3KM FEMININO — R$ 40,00",
-      "PCD 3KM MASCULINO — R$ 40,00",
-      "CATEGORIA GERAL FEMININO – 3 KM: — R$ 80,00",
-      "CATEGORIA GERAL FEMININO – 5 KM: — R$ 80,00",
-      "CATEGORIA GERAL MASCULINO – 3 KM: — R$ 80,00",
-      "CATEGORIA GERAL MASCULINO – 5 KM: — R$ 80,00"
+      "R$ 40,00 a R$ 80,00"
     ],
     "horario": ""
   },
@@ -252,18 +207,15 @@
     "data_realizacao": "22 de Março de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.736000Z",
+    "data_coleta": "2026-02-18T15:24:10.997000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
     "organizador": "MOVE SPORTS",
     "categorias": [],
-    "preco": "5KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90; 5KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90; 10KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90; 10KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90",
+    "preco": "R$ 89,90",
     "lista_precos": [
-      "5KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90",
-      "5KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90",
-      "10KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90",
-      "10KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90"
+      "R$ 89,90"
     ],
     "horario": ""
   },
@@ -275,20 +227,15 @@
     "data_realizacao": "22 de Março de 2026",
     "cidade": "Ingá",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.861000Z",
+    "data_coleta": "2026-02-18T15:35:33.137000Z",
     "distancias": [
       "3km, 5km e 10km (corrida)"
     ],
     "organizador": "STUDIO VIDA ATIVA",
     "categorias": [],
-    "preco": "5KM — PCD NÃO CADEIRANTE — R$ 40,00; R$ 59,90; R$ 70,00; 3KM — PÚBLICO GERAL — R$ 80,00; 5KM — PÚBLICO GERAL — R$ 80,00; 10KM — PÚBLICO GERAL — R$ 80,00",
+    "preco": "R$ 40,00 a R$ 80,00",
     "lista_precos": [
-      "5KM — PCD NÃO CADEIRANTE — R$ 40,00",
-      "R$ 59,90",
-      "R$ 70,00",
-      "3KM — PÚBLICO GERAL — R$ 80,00",
-      "5KM — PÚBLICO GERAL — R$ 80,00",
-      "10KM — PÚBLICO GERAL — R$ 80,00"
+      "R$ 40,00 a R$ 80,00"
     ],
     "horario": ""
   },
@@ -300,7 +247,7 @@
     "data_realizacao": "12 de Abril de 2026",
     "cidade": "Campina Grande",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:43.428000Z",
+    "data_coleta": "2026-02-18T15:35:33.826000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -320,32 +267,15 @@
     "data_realizacao": "12 de Abril de 2026",
     "cidade": "Várzea de Sousa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:44.263000Z",
+    "data_coleta": "2026-02-18T15:24:11.672000Z",
     "distancias": [
       "5km, 10km e 21km (corrida)"
     ],
     "organizador": "FRANCISCA GOMES",
     "categorias": [],
-    "preco": "GERAL 10KM – FEMININO — R$ 59,00; GERAL 10KM – MASCULINO — R$ 59,00; GERAL 21KM – FEMININO — R$ 59,00; GERAL 21KM – MASCULINO — R$ 59,00; GERAL 5KM – FEMININO — R$ 59,00; GERAL 5KM – MASCULINO — R$ 59,00; MASTER 45+ 10KM – FEMININO — R$ 59,00; MASTER 45+ 10KM – MASCULINO — R$ 59,00; MASTER 45+ 21KM – FEMININO — R$ 59,00; MASTER 45+ 21KM – MASCULINO — R$ 59,00; MASTER 45+ 5KM – FEMININO — R$ 59,00; MASTER 45+ 5KM – MASCULINO — R$ 59,00; PCD 10KM – FEMININO — R$ 59,00; PCD 10KM – MASCULINO — R$ 59,00; PCD 21KM – FEMININO — R$ 59,00; PCD 21KM – MASCULINO — R$ 59,00; PCD 5KM – FEMININO — R$ 59,00; PCD 5KM – MASCULINO — R$ 59,00",
+    "preco": "R$ 59,00",
     "lista_precos": [
-      "GERAL 10KM – FEMININO — R$ 59,00",
-      "GERAL 10KM – MASCULINO — R$ 59,00",
-      "GERAL 21KM – FEMININO — R$ 59,00",
-      "GERAL 21KM – MASCULINO — R$ 59,00",
-      "GERAL 5KM – FEMININO — R$ 59,00",
-      "GERAL 5KM – MASCULINO — R$ 59,00",
-      "MASTER 45+ 10KM – FEMININO — R$ 59,00",
-      "MASTER 45+ 10KM – MASCULINO — R$ 59,00",
-      "MASTER 45+ 21KM – FEMININO — R$ 59,00",
-      "MASTER 45+ 21KM – MASCULINO — R$ 59,00",
-      "MASTER 45+ 5KM – FEMININO — R$ 59,00",
-      "MASTER 45+ 5KM – MASCULINO — R$ 59,00",
-      "PCD 10KM – FEMININO — R$ 59,00",
-      "PCD 10KM – MASCULINO — R$ 59,00",
-      "PCD 21KM – FEMININO — R$ 59,00",
-      "PCD 21KM – MASCULINO — R$ 59,00",
-      "PCD 5KM – FEMININO — R$ 59,00",
-      "PCD 5KM – MASCULINO — R$ 59,00"
+      "R$ 59,00"
     ],
     "horario": ""
   },
@@ -357,7 +287,7 @@
     "data_realizacao": "21 de Abril de 2026",
     "cidade": "Cabedelo",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:43.837000Z",
+    "data_coleta": "2026-02-18T15:35:34.266000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -377,7 +307,7 @@
     "data_realizacao": "21 de Abril de 2026",
     "cidade": "Guarabira",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:43.973000Z",
+    "data_coleta": "2026-02-18T15:35:34.389000Z",
     "distancias": [
       "5km (corrida)"
     ],
@@ -397,26 +327,15 @@
     "data_realizacao": "3 de Maio de 2026",
     "cidade": "Pitimbu",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45Z",
+    "data_coleta": "2026-02-18T15:35:34.142000Z",
     "distancias": [
       "3km (caminhada), 6km (corrida)"
     ],
     "organizador": "MIQUEIAS MELO",
     "categorias": [],
-    "preco": "R$ 75,00; R$ 85,00; 3KM — Caminhada Local (Pitimbu) — R$ 95,00; 3KM — Caminhada Visitantes — R$ 95,00; 3KM — Caminhada PCD Local (Pitimbu) — R$ 95,00; 3KM — Caminhada PCD Visitantes — R$ 95,00; 6KM — Corrida Local (Pitimbu) — R$ 95,00; 6KM — Corrida Visitantes — R$ 95,00; 6KM — Corrida PCD Local (Pitimbu) — R$ 95,00; 6KM — Corrida PCD Visitantes — R$ 95,00; R$ 110,00; R$ 125,00",
+    "preco": "R$ 75,00 a R$ 125,00",
     "lista_precos": [
-      "R$ 75,00",
-      "R$ 85,00",
-      "3KM — Caminhada Local (Pitimbu) — R$ 95,00",
-      "3KM — Caminhada Visitantes — R$ 95,00",
-      "3KM — Caminhada PCD Local (Pitimbu) — R$ 95,00",
-      "3KM — Caminhada PCD Visitantes — R$ 95,00",
-      "6KM — Corrida Local (Pitimbu) — R$ 95,00",
-      "6KM — Corrida Visitantes — R$ 95,00",
-      "6KM — Corrida PCD Local (Pitimbu) — R$ 95,00",
-      "6KM — Corrida PCD Visitantes — R$ 95,00",
-      "R$ 110,00",
-      "R$ 125,00"
+      "R$ 75,00 a R$ 125,00"
     ],
     "horario": ""
   },
@@ -428,26 +347,15 @@
     "data_realizacao": "17 de Maio de 2026",
     "cidade": "Santa Rita",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.377000Z",
+    "data_coleta": "2026-02-18T15:24:13.136000Z",
     "distancias": [
       "3km (caminhada), 5km (corrida)"
     ],
     "organizador": "RICARDO SILVA",
     "categorias": [],
-    "preco": "CORRIDA 5KM — PCD SEM CAMISA — R$ 25,00; CAMINHADA 3KM — PCD SEM CAMISA — R$ 25,00; CORRIDA 5KM — PCD COM CAMISA — R$ 35,00; CAMINHADA 3KM — PCD COM CAMISA — R$ 35,00; CORRIDA 5KM — GERAL SEM CAMISA — R$ 50,00; CORRIDA 5KM — SEGURANÇA PÚBLICA SEM CAMISA — R$ 50,00; CAMINHADA 3KM — GERAL SEM CAMISA — R$ 50,00; CAMINHADA 3KM — SEGURANÇA PÚBLICA SEM CAMISA — R$ 50,00; CORRIDA 5KM — GERAL COM CAMISA — R$ 70,00; CORRIDA 5KM — SEGURANÇA PÚBLICA COM CAMISA — R$ 70,00; CAMINHADA 3KM — GERAL COM CAMISA — R$ 70,00; CAMINHADA 3KM — SEGURANÇA PÚBLICA COM CAMISA — R$ 70,00",
+    "preco": "R$ 25,00 a R$ 70,00",
     "lista_precos": [
-      "CORRIDA 5KM — PCD SEM CAMISA — R$ 25,00",
-      "CAMINHADA 3KM — PCD SEM CAMISA — R$ 25,00",
-      "CORRIDA 5KM — PCD COM CAMISA — R$ 35,00",
-      "CAMINHADA 3KM — PCD COM CAMISA — R$ 35,00",
-      "CORRIDA 5KM — GERAL SEM CAMISA — R$ 50,00",
-      "CORRIDA 5KM — SEGURANÇA PÚBLICA SEM CAMISA — R$ 50,00",
-      "CAMINHADA 3KM — GERAL SEM CAMISA — R$ 50,00",
-      "CAMINHADA 3KM — SEGURANÇA PÚBLICA SEM CAMISA — R$ 50,00",
-      "CORRIDA 5KM — GERAL COM CAMISA — R$ 70,00",
-      "CORRIDA 5KM — SEGURANÇA PÚBLICA COM CAMISA — R$ 70,00",
-      "CAMINHADA 3KM — GERAL COM CAMISA — R$ 70,00",
-      "CAMINHADA 3KM — SEGURANÇA PÚBLICA COM CAMISA — R$ 70,00"
+      "R$ 25,00 a R$ 70,00"
     ],
     "horario": ""
   },
@@ -459,24 +367,15 @@
     "data_realizacao": "24 de Maio de 2026",
     "cidade": "Várzea da Ema",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.239000Z",
+    "data_coleta": "2026-02-18T15:24:12.999000Z",
     "distancias": [
       ""
     ],
     "organizador": "CORRE PARAÍBA",
     "categorias": [],
-    "preco": "7 KM PCD - FEMININO — R$ 34,95; 7 KM PCD - MASCULINO — R$ 34,95; 15 KM GERAL - FEMININO — R$ 69,90; 15 KM GERAL - MASCULINO — R$ 69,90; 15 KM SEGURANÇA PÚBLICA - FEMININO — R$ 69,90; 15 KM SEGURANÇA PÚBLICA - MASCULINO — R$ 69,90; 7 KM GERAL - FEMININO — R$ 69,90; 7 KM GERAL - MASCULINO — R$ 69,90; 7 KM SEGURANÇA PÚBLICA - FEMININO — R$ 69,90; 7 KM SEGURANÇA PÚBLICA - MASCULINO — R$ 69,90",
+    "preco": "R$ 34,95 a R$ 69,90",
     "lista_precos": [
-      "7 KM PCD - FEMININO — R$ 34,95",
-      "7 KM PCD - MASCULINO — R$ 34,95",
-      "15 KM GERAL - FEMININO — R$ 69,90",
-      "15 KM GERAL - MASCULINO — R$ 69,90",
-      "15 KM SEGURANÇA PÚBLICA - FEMININO — R$ 69,90",
-      "15 KM SEGURANÇA PÚBLICA - MASCULINO — R$ 69,90",
-      "7 KM GERAL - FEMININO — R$ 69,90",
-      "7 KM GERAL - MASCULINO — R$ 69,90",
-      "7 KM SEGURANÇA PÚBLICA - FEMININO — R$ 69,90",
-      "7 KM SEGURANÇA PÚBLICA - MASCULINO — R$ 69,90"
+      "R$ 34,95 a R$ 69,90"
     ],
     "horario": ""
   },
@@ -488,18 +387,15 @@
     "data_realizacao": "17 de Maio de 2026",
     "cidade": "Guarabira",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.867000Z",
+    "data_coleta": "2026-02-18T15:24:13.558000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
     "organizador": "MOVE SPORTS",
     "categorias": [],
-    "preco": "5KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90; 5KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90; 10KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90; 10KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90",
+    "preco": "R$ 89,90",
     "lista_precos": [
-      "5KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90",
-      "5KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90",
-      "10KM (Obrigatório 1kg de alimento na entrega de kit) — PÚBLICO GERAL — R$ 89,90",
-      "10KM (Obrigatório 1kg de alimento na entrega de kit) — FUNCIONÁRIO CAGEPA (EXCLUSIVO) — R$ 89,90"
+      "R$ 89,90"
     ],
     "horario": ""
   },
@@ -511,7 +407,7 @@
     "data_realizacao": "14 de Junho de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:44.518000Z",
+    "data_coleta": "2026-02-18T15:35:35.011000Z",
     "distancias": [
       "100m à 400m (infantil), 4km (caminhada), 7km (corrida)"
     ],
@@ -531,19 +427,15 @@
     "data_realizacao": "20 de Setembro de 2026",
     "cidade": "Itabaiana",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:46.232000Z",
+    "data_coleta": "2026-02-18T15:24:14.251000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
     "organizador": "SEM LIMITES",
     "categorias": [],
-    "preco": "5KM — PCD CADEIRANTE — R$ 42,50; 5KM — PCD NÃO CADEIRANTE — R$ 42,50; 5KM — PÚBLICO GERAL — R$ 85,00; 5KM — LOCAL — R$ 85,00; 10KM — PÚBLICO GERAL — R$ 85,00",
+    "preco": "R$ 42,50 a R$ 85,00",
     "lista_precos": [
-      "5KM — PCD CADEIRANTE — R$ 42,50",
-      "5KM — PCD NÃO CADEIRANTE — R$ 42,50",
-      "5KM — PÚBLICO GERAL — R$ 85,00",
-      "5KM — LOCAL — R$ 85,00",
-      "10KM — PÚBLICO GERAL — R$ 85,00"
+      "R$ 42,50 a R$ 85,00"
     ],
     "horario": ""
   },
@@ -752,21 +644,15 @@
     "data_realizacao": "1 de Março de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:42.814000Z",
+    "data_coleta": "2026-02-18T15:24:10.441000Z",
     "distancias": [
       "3km (caminhada), 5km e 10km (corrida)"
     ],
     "organizador": "PACE4 l TRCRONO",
     "categorias": [],
-    "preco": "5KM — PCD NÃO CADEIRANTE — R$ 64,95; 5KM — PÚBLICO GERAL — R$ 99,90; 5KM — PCD CADEIRANTE — R$ 99,90; FAMILY RUN (KIDS) ATÉ 12 ANOS — R$ 99,90; CAMINHADA 3KM — PÚBLICO GERAL — R$ 99,90; CAMINHADA 3KM — PCD CADEIRANTE — R$ 99,90; CAMINHADA 3KM — PCD NÃO CADEIRANTE — R$ 99,90",
+    "preco": "R$ 64,95 a R$ 99,90",
     "lista_precos": [
-      "5KM — PCD NÃO CADEIRANTE — R$ 64,95",
-      "5KM — PÚBLICO GERAL — R$ 99,90",
-      "5KM — PCD CADEIRANTE — R$ 99,90",
-      "FAMILY RUN (KIDS) ATÉ 12 ANOS — R$ 99,90",
-      "CAMINHADA 3KM — PÚBLICO GERAL — R$ 99,90",
-      "CAMINHADA 3KM — PCD CADEIRANTE — R$ 99,90",
-      "CAMINHADA 3KM — PCD NÃO CADEIRANTE — R$ 99,90"
+      "R$ 64,95 a R$ 99,90"
     ],
     "horario": ""
   },
@@ -778,22 +664,15 @@
     "data_realizacao": "7 de Março de 2026",
     "cidade": "Lucena",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:43.069000Z",
+    "data_coleta": "2026-02-18T15:24:10.304000Z",
     "distancias": [
       ""
     ],
     "organizador": "PACE4",
     "categorias": [],
-    "preco": "50KM — SOLO — R$ 169,00; 25KM — SOLO — R$ 169,00; 50KM — DUPLA MASCULINO — R$ 260,00; 50KM — DUPLA FEMININO — R$ 260,00; 50KM — DUPLA MISTA — R$ 260,00; 25KM — DUPLA MASCULINO — R$ 260,00; 25KM — DUPLA FEMININO — R$ 260,00; 25KM — DUPLA MISTA — R$ 260,00",
+    "preco": "R$ 200,00 a R$ 400,00",
     "lista_precos": [
-      "50KM — SOLO — R$ 169,00",
-      "25KM — SOLO — R$ 169,00",
-      "50KM — DUPLA MASCULINO — R$ 260,00",
-      "50KM — DUPLA FEMININO — R$ 260,00",
-      "50KM — DUPLA MISTA — R$ 260,00",
-      "25KM — DUPLA MASCULINO — R$ 260,00",
-      "25KM — DUPLA FEMININO — R$ 260,00",
-      "25KM — DUPLA MISTA — R$ 260,00"
+      "R$ 200,00 a R$ 400,00"
     ],
     "horario": ""
   },
@@ -805,26 +684,15 @@
     "data_realizacao": "12 de Abril de 2026",
     "cidade": "Caaporã",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:44.010000Z",
+    "data_coleta": "2026-02-18T15:35:33.386000Z",
     "distancias": [
       "5km e 8km (corrida)"
     ],
     "organizador": "FÁBIO SANTOS",
     "categorias": [],
-    "preco": "R$ 69,99; CORRIDA - 8 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99; CORRIDA - 8 KM - (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99; CORRIDA - 5 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99; CORRIDA - 5 KM (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99; CORRIDA - 8 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99; CORRIDA - 5 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99; 8 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99; 8 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99; 5 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99; 5 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99; R$ 89,99",
+    "preco": "R$ 69,99 a R$ 89,99",
     "lista_precos": [
-      "R$ 69,99",
-      "CORRIDA - 8 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99",
-      "CORRIDA - 8 KM - (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99",
-      "CORRIDA - 5 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99",
-      "CORRIDA - 5 KM (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99",
-      "CORRIDA - 8 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99",
-      "CORRIDA - 5 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99",
-      "8 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99",
-      "8 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99",
-      "5 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99",
-      "5 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99",
-      "R$ 89,99"
+      "R$ 69,99 a R$ 89,99"
     ],
     "horario": ""
   },
@@ -836,7 +704,7 @@
     "data_realizacao": "12 de Abril de 2026",
     "cidade": "Solânea",
     "estado": "PB",
-    "data_coleta": "2026-02-12T20:08:43.567000Z",
+    "data_coleta": "2026-02-18T15:35:33.951000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -856,26 +724,15 @@
     "data_realizacao": "19 de Abril de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T18:04:59.723000Z",
+    "data_coleta": "2026-02-18T15:35:31.409000Z",
     "distancias": [
       "5km, 10km, 21km e 42km (corrida)"
     ],
     "organizador": "ZENITE ESPORTES",
     "categorias": [],
-    "preco": "KIT ATLETA PADRÃO — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA PADRÃO — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA PADRÃO — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA PADRÃO — 42km — R$ 150,00 (+12,00 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 42km — R$ 150,00 (+12,00 taxa); KIT ATLETA +60 ANOS — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA +60 ANOS — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA +60 ANOS — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA +60 ANOS — 42km — R$ 150,00 (+12,00 taxa)",
+    "preco": "preço não encontrado",
     "lista_precos": [
-      "KIT ATLETA PADRÃO — 5km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA PADRÃO — 10km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA PADRÃO — 21km — R$ 130,00 (+10,40 taxa)",
-      "KIT ATLETA PADRÃO — 42km — R$ 150,00 (+12,00 taxa)",
-      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 5km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 10km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 21km — R$ 130,00 (+10,40 taxa)",
-      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 42km — R$ 150,00 (+12,00 taxa)",
-      "KIT ATLETA +60 ANOS — 5km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA +60 ANOS — 10km — R$ 110,00 (+8,80 taxa)",
-      "KIT ATLETA +60 ANOS — 21km — R$ 130,00 (+10,40 taxa)",
-      "KIT ATLETA +60 ANOS — 42km — R$ 150,00 (+12,00 taxa)"
+      "preço não encontrado"
     ],
     "horario": "04:00"
   },
@@ -887,22 +744,15 @@
     "data_realizacao": "1 de Maio de 2026",
     "cidade": "Patos",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:44.759000Z",
+    "data_coleta": "2026-02-18T15:24:12.080000Z",
     "distancias": [
       "1km (infantil), 5km e 10km (corrida)"
     ],
     "organizador": "ALAN JONH",
     "categorias": [],
-    "preco": "CATEGORIA 10 KM GERAL FEMININO — R$ 90,00; CATEGORIA 10 KM GERAL MASCULINO — R$ 90,00; CATEGORIA 10 KM LOCAL FEMININO — R$ 90,00; CATEGORIA 10 KM LOCAL MASCULINO — R$ 90,00; CATEGORIA 5 KM GERAL FEMININO — R$ 90,00; CATEGORIA 5 KM GERAL MASCULINO — R$ 90,00; CATEGORIA 5 KM LOCAL FEMININO — R$ 90,00; CATEGORIA 5 KM LOCAL MASCULINO — R$ 90,00",
+    "preco": "R$ 90,00",
     "lista_precos": [
-      "CATEGORIA 10 KM GERAL FEMININO — R$ 90,00",
-      "CATEGORIA 10 KM GERAL MASCULINO — R$ 90,00",
-      "CATEGORIA 10 KM LOCAL FEMININO — R$ 90,00",
-      "CATEGORIA 10 KM LOCAL MASCULINO — R$ 90,00",
-      "CATEGORIA 5 KM GERAL FEMININO — R$ 90,00",
-      "CATEGORIA 5 KM GERAL MASCULINO — R$ 90,00",
-      "CATEGORIA 5 KM LOCAL FEMININO — R$ 90,00",
-      "CATEGORIA 5 KM LOCAL MASCULINO — R$ 90,00"
+      "R$ 90,00"
     ],
     "horario": ""
   },
@@ -914,17 +764,15 @@
     "data_realizacao": "26 de Abril de 2026",
     "cidade": "Conde",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.499000Z",
+    "data_coleta": "2026-02-18T15:24:13.275000Z",
     "distancias": [
       ""
     ],
     "organizador": "MOVE SPORTS",
     "categorias": [],
-    "preco": "PÚBLICO GERAL — 7KM — R$ 138,90; PÚBLICO GERAL — 12KM — R$ 138,90; PÚBLICO GERAL — 21KM — R$ 150,90",
+    "preco": "R$ 138,90 a R$ 150,90",
     "lista_precos": [
-      "PÚBLICO GERAL — 7KM — R$ 138,90",
-      "PÚBLICO GERAL — 12KM — R$ 138,90",
-      "PÚBLICO GERAL — 21KM — R$ 150,90"
+      "R$ 138,90 a R$ 150,90"
     ],
     "horario": ""
   },
@@ -936,7 +784,7 @@
     "data_realizacao": "16 de Maio de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.625000Z",
+    "data_coleta": "2026-02-18T15:35:34.696000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -981,17 +829,15 @@
     "data_realizacao": "17 de Maio de 2026",
     "cidade": "Patos",
     "estado": "PB",
-    "data_coleta": "2026-02-12T17:40:53.309000Z",
+    "data_coleta": "2026-02-18T15:35:32.140000Z",
     "distancias": [
       "5km, 10km e 21km (corrida)"
     ],
     "organizador": "RUN",
     "categorias": [],
-    "preco": "KIT ATLETA PADRÃO — 5km — R$ 59,90 (+5,00 taxa); KIT ATLETA PADRÃO — 10km — R$ 59,90 (+5,00 taxa); KIT ATLETA PADRÃO — 21km — R$ 69,90 (+5,59 taxa)",
+    "preco": "preço não encontrado",
     "lista_precos": [
-      "KIT ATLETA PADRÃO — 5km — R$ 59,90 (+5,00 taxa)",
-      "KIT ATLETA PADRÃO — 10km — R$ 59,90 (+5,00 taxa)",
-      "KIT ATLETA PADRÃO — 21km — R$ 69,90 (+5,59 taxa)"
+      "preço não encontrado"
     ],
     "horario": "05:00"
   },
@@ -1003,19 +849,15 @@
     "data_realizacao": "29 de Março de 2026",
     "cidade": "Campina Grande",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:44.385000Z",
+    "data_coleta": "2026-02-18T15:35:33.700000Z",
     "distancias": [
       "50m à 400m (infantil), 5km e 10km (corrida)"
     ],
     "organizador": "LIVE!",
     "categorias": [],
-    "preco": "R$ 70,00; R$ 119,90; R$ 159,90; R$ 169,90; R$ 179,90",
+    "preco": "R$ 70,00 a R$ 179,90",
     "lista_precos": [
-      "R$ 70,00",
-      "R$ 119,90",
-      "R$ 159,90",
-      "R$ 169,90",
-      "R$ 179,90"
+      "R$ 70,00 a R$ 179,90"
     ],
     "horario": ""
   },
@@ -1027,7 +869,7 @@
     "data_realizacao": "7 de Junho de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:45.746000Z",
+    "data_coleta": "2026-02-18T15:35:34.879000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -1047,7 +889,7 @@
     "data_realizacao": "29 de Março de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:44.133000Z",
+    "data_coleta": "2026-02-18T15:35:33.573000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -1107,7 +949,7 @@
     "data_realizacao": "13 de Dezembro de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:46.354000Z",
+    "data_coleta": "2026-02-18T15:35:35.320000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -1127,7 +969,7 @@
     "data_realizacao": "27 de Setembro de 2026",
     "cidade": "João Pessoa",
     "estado": "PB",
-    "data_coleta": "2026-02-12T19:49:46.113000Z",
+    "data_coleta": "2026-02-18T15:35:35.199000Z",
     "distancias": [
       "5km e 10km (corrida)"
     ],
@@ -1138,5 +980,645 @@
       "R$ 119,90"
     ],
     "horario": ""
+  },
+  {
+    "_id": "2026020028",
+    "nome_evento": "Corrida Power Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corrida-power-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-9bd0e3ea51155400aef8d6fd29594d44.jpeg",
+    "data_realizacao": "26 de Abril de 2026",
+    "cidade": "Alagoa Nova",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.358000Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 69,90",
+    "lista_precos": [
+      "R$ 69,90"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020029",
+    "nome_evento": "1 Corrida Acan Run Alagoa Nova Pb",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/1-corrida-acan-run-alagoa-nova-pb",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-5a21c79e224f76064a6cc322eb5e7362.jpg",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Alagoa Nova",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.036000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020030",
+    "nome_evento": "Corrida Nacional De Remigio",
+    "url_inscricao": "https://www.smcrono.com.br/evento/3834/corrida-nacional-de-remigio",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-567-9f38c9eeb10562cb132ce0f7f1b97109.jpeg",
+    "data_realizacao": "29 de Março de 2026",
+    "cidade": "Remígio",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.945000Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 20,00 a R$ 25,00",
+    "lista_precos": [
+      "R$ 20,00 a R$ 25,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020031",
+    "nome_evento": "2 Corrida Jogos De Vero 2026",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-corrida-jogos-de-vero-2026",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-a9b7f87f05526a3eed239196ecb6f4e0.jpeg",
+    "data_realizacao": "1 de Fevereiro de 2026",
+    "cidade": "São João Do Rio Do Peixe",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:01:19.092000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020032",
+    "nome_evento": "1 Desafio Gurjao Mtb",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/enduro-mtb/1-desafio-gurjao-mtb",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-6461a0c099d2a2cbab72bf7fd19f8236.jpeg",
+    "data_realizacao": "2 de Janeiro de 2026",
+    "cidade": "Gurjão",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:10.182000Z",
+    "distancias": [
+      "65km (corrida), 37km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "07h00"
+  },
+  {
+    "_id": "2026020033",
+    "nome_evento": "4 Milhas Night",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/4-milhas-night",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-9ef765a80bf741875a8a62a411e996d6.jpeg",
+    "data_realizacao": "11 de Abril de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.550000Z",
+    "distancias": [
+      "4km (corrida), 8km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 45,00 a R$ 89,00",
+    "lista_precos": [
+      "R$ 45,00 a R$ 89,00"
+    ],
+    "horario": "20h30"
+  },
+  {
+    "_id": "2026020034",
+    "nome_evento": "Corre Cariri",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corre-cariri",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-7804a3016714912d233e024ca0003cbd.png",
+    "data_realizacao": "3 de Maio de 2026",
+    "cidade": "Santo Andre",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:50.824000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 60,00 a R$ 80,00",
+    "lista_precos": [
+      "R$ 60,00 a R$ 80,00"
+    ],
+    "horario": "16h30"
+  },
+  {
+    "_id": "2026020035",
+    "nome_evento": "2 Corrida Runninr Teixeira",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-corrida-runninr-teixeira",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-323127f98d0d7374e5b8e4b47cdee746.jpg",
+    "data_realizacao": "25 de Julho de 2026",
+    "cidade": "Teixeira",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:49.835000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 30,00 a R$ 60,00",
+    "lista_precos": [
+      "R$ 30,00 a R$ 60,00"
+    ],
+    "horario": "17h00"
+  },
+  {
+    "_id": "2026020036",
+    "nome_evento": "Desafio Uphill Teixeira",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/desafio-uphill-teixeira",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-cf03b26810611737021dc49c09df8c8f.jpeg",
+    "data_realizacao": "24 de Maio de 2026",
+    "cidade": "Teixeira",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:49.965000Z",
+    "distancias": [
+      "14km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 99,00",
+    "lista_precos": [
+      "R$ 99,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020037",
+    "nome_evento": "5 Milhas Color",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/5-milhas-color",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-fbaec213732227cd4dd163e1d1c6b6e6.jpeg",
+    "data_realizacao": "8 de Fevereiro de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:10.051000Z",
+    "distancias": [
+      "4km (corrida), 8km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020038",
+    "nome_evento": "Corrida De Emancipao De Gurjao 64 Anos",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corrida-de-emancipao-de-gurjao-64-anos",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-c39e7be73c78f7b7eb8e1f67e8552fc0.jpeg",
+    "data_realizacao": "2 de Janeiro de 2026",
+    "cidade": "Gurjao",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:01:20.842000Z",
+    "distancias": [
+      ""
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020039",
+    "nome_evento": "Desafio Serra Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/trail-run/desafio-serra-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-25353a7335d85ebdbe01fbbf5876db93.png",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Serra Da Raiz",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:01:21.024000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020040",
+    "nome_evento": "1 Corrida De Rua Distrito De Santa Terezinha",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/1-corrida-de-rua-distrito-de-santa-terezinha",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-e10eba8ea9dd5a2857ef8a679f772318.jpeg",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Massaranduba",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:01:21.202000Z",
+    "distancias": [
+      "3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "07h30"
+  },
+  {
+    "_id": "2026020041",
+    "nome_evento": "Desafio Uphill 15K",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/desafio-uphill-15k",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-d6c294b82d95a5fe701ce5b3def3c93d.jpg",
+    "data_realizacao": "13 de Setembro de 2026",
+    "cidade": "Alagoa Grande - Areia",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:48.918000Z",
+    "distancias": [
+      "15km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 89,00",
+    "lista_precos": [
+      "R$ 89,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020042",
+    "nome_evento": "2 Corrida Arena Belem Esportes",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-corrida-arena-belem-esportes",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-49ca5a1637e8bc65e1116e4bcde85bb4.png",
+    "data_realizacao": "31 de Maio de 2026",
+    "cidade": "Belem",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:50.095000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 29,90 a R$ 69,90",
+    "lista_precos": [
+      "R$ 29,90 a R$ 69,90"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020043",
+    "nome_evento": "2 Trote Carnavalesco Oscar Diesel",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-trote-carnavalesco-oscar-diesel",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-1d19aaf24d89813e4270380bf00090a0.jpeg",
+    "data_realizacao": "22 de Fevereiro de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:50.625000Z",
+    "distancias": [
+      ""
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 80,00",
+    "lista_precos": [
+      "R$ 80,00"
+    ],
+    "horario": "07h00"
+  },
+  {
+    "_id": "2026020044",
+    "nome_evento": "Corrida Dos Reis",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corrida-dos-reis",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-f746b96928898a2eb6a9798fd1253763.jpg",
+    "data_realizacao": "25 de Janeiro de 2026",
+    "cidade": "Queimadas",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:01:21.928000Z",
+    "distancias": [
+      "6km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h30"
+  },
+  {
+    "_id": "2026020045",
+    "nome_evento": "Hb Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2025/corrida-de-rua/hb-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-c36d51a98ca9160699efc867c187ca91.jpg",
+    "data_realizacao": "1 de Março de 2026",
+    "cidade": "Areia",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:07Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 64,90 a R$ 89,99",
+    "lista_precos": [
+      "R$ 64,90 a R$ 89,99"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020046",
+    "nome_evento": "2 Pombal Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-pombal-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-0dd92640daf8d37ff20f9d1829735c32.png",
+    "data_realizacao": "29 de Março de 2026",
+    "cidade": "Pombal",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:10.444000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 45,00 a R$ 90,00",
+    "lista_precos": [
+      "R$ 45,00 a R$ 90,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020047",
+    "nome_evento": "Corrida De Rua De Serra Branca",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corrida-de-rua-de-serra-branca",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-10318807d0343f25e9caed8a406324f7.jpeg",
+    "data_realizacao": "12 de Abril de 2026",
+    "cidade": "Serra Branca",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:48.785000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 45,00 a R$ 70,00",
+    "lista_precos": [
+      "R$ 45,00 a R$ 70,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020048",
+    "nome_evento": "2 Corrida Da Incluso",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/2-corrida-da-incluso",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-fc0986949647497600c6befdc3085d7a.png",
+    "data_realizacao": "19 de Abril de 2026",
+    "cidade": "Esperança",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:09.395000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida), 1km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 70,00",
+    "lista_precos": [
+      "R$ 70,00"
+    ],
+    "horario": "07h00"
+  },
+  {
+    "_id": "2026020049",
+    "nome_evento": "5 Milhas Rock",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/5-milhas-rock",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-265c8b32bac9e200c19925c2848a5643.jpeg",
+    "data_realizacao": "25 de Julho de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:09.137000Z",
+    "distancias": [
+      "4km (corrida), 8km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 40,00 a R$ 79,00",
+    "lista_precos": [
+      "R$ 40,00 a R$ 79,00"
+    ],
+    "horario": "20h30"
+  },
+  {
+    "_id": "2026020050",
+    "nome_evento": "Unifip Live Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/unifip-live-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-7987a63a17f1271dae82a7c947bd0ad2.png",
+    "data_realizacao": "1 de Março de 2026",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:09.268000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 55,00 a R$ 110,00",
+    "lista_precos": [
+      "R$ 55,00 a R$ 110,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020051",
+    "nome_evento": "9 Corrida Av Juscelino Kubitschek",
+    "url_inscricao": "https://www.smcrono.com.br/evento/5092/9-corrida-av-juscelino-kubitschek",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-a31798fb2abb08363a7e656ed8c98f90.jpg",
+    "data_realizacao": "8 de Março de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.682000Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida), 16km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 54,90 a R$ 114,90",
+    "lista_precos": [
+      "R$ 54,90 a R$ 114,90"
+    ],
+    "horario": "06h30"
+  },
+  {
+    "_id": "2026020052",
+    "nome_evento": "Mvb Run",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/mvb-run",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-96832a4560cf5a80462e84f1ad394ae8.png",
+    "data_realizacao": "17 de Maio de 2026",
+    "cidade": "Soledade",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:09.848000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 50,00 a R$ 100,00",
+    "lista_precos": [
+      "R$ 50,00 a R$ 100,00"
+    ],
+    "horario": "06h30"
+  },
+  {
+    "_id": "2026020053",
+    "nome_evento": "Corrida De Bike De Serra Branca",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/enduro-mtb/corrida-de-bike-de-serra-branca",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-60596cd1fbbd44df711e8cb3d834c3eb.png",
+    "data_realizacao": "12 de Abril de 2026",
+    "cidade": "Serra Branca",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:48.327000Z",
+    "distancias": [
+      "38km (corrida), 65km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 80,00",
+    "lista_precos": [
+      "R$ 80,00"
+    ],
+    "horario": "08h30"
+  },
+  {
+    "_id": "2026020054",
+    "nome_evento": "1 Corrida Cidade Da F Fagundes",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/1-corrida-cidade-da-f-fagundes",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-57-31b1c4a08104f4855b7667bf45727aa2.jpeg",
+    "data_realizacao": "22 de Março de 2026",
+    "cidade": "Fagundes",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:07.905000Z",
+    "distancias": [
+      "5km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 45,90 a R$ 79,90",
+    "lista_precos": [
+      "R$ 45,90 a R$ 79,90"
+    ],
+    "horario": ""
+  },
+  {
+    "_id": "2026020055",
+    "nome_evento": "Desafio Das Praias Litoral Sul",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2614/desafio-das-praias-litoral-sul",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-e709cabeaf86c2073b10247d6bb5647e.jpg",
+    "data_realizacao": "23 de Agosto de 2026",
+    "cidade": "Jacumã",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:48.064000Z",
+    "distancias": [
+      "7km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 45,00 a R$ 90,00",
+    "lista_precos": [
+      "R$ 45,00 a R$ 90,00"
+    ],
+    "horario": "06h00"
+  },
+  {
+    "_id": "2026020056",
+    "nome_evento": "5 Milhas Cross",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/5-milhas-cross",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-acdbd0aa46921029818fb113e0dcb95b.jpeg",
+    "data_realizacao": "7 de Junho de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:49.051000Z",
+    "distancias": [
+      "8km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 40,00 a R$ 79,00",
+    "lista_precos": [
+      "R$ 40,00 a R$ 79,00"
+    ],
+    "horario": "06h30"
+  },
+  {
+    "_id": "2026020057",
+    "nome_evento": "Meia Maratona Internacional De Cg",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/meia-maratona-internacional-de-cg",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-375-530f3cdfec8ca88fcdbcd769909ec600.png",
+    "data_realizacao": "1 de Fevereiro de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:08.814000Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida), 21km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "05h00"
+  },
+  {
+    "_id": "2026020058",
+    "nome_evento": "5 Milhas Halloween",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/5-milhas-halloween",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-ae70a536a8ae11402639f484e4294308.jpeg",
+    "data_realizacao": "31 de Outubro de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T13:11:49.180000Z",
+    "distancias": [
+      "4km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "R$ 40,00 a R$ 79,00",
+    "lista_precos": [
+      "R$ 40,00 a R$ 79,00"
+    ],
+    "horario": "20h30"
+  },
+  {
+    "_id": "2026020059",
+    "nome_evento": "Corrida De Sao Sebastiao 2026",
+    "url_inscricao": "https://www.smcrono.com.br/evento/2026/corrida-de-rua/corrida-de-sao-sebastiao-2026",
+    "url_imagem": "https://www.smcrono.com.br/thumb.php?q=100&h=500&arquivo=img-69-d36ad6e407b89362219b521a6017d636.png",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-02-18T14:50:10.575000Z",
+    "distancias": [
+      "5km (corrida), 10km (corrida), 3km (corrida)"
+    ],
+    "organizador": "SmCrono",
+    "categorias": [],
+    "preco": "Valor não encontrado",
+    "lista_precos": [
+      "Valor não encontrado"
+    ],
+    "horario": "06h00"
   }
 ]

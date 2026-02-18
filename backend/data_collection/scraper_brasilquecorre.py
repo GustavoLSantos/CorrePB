@@ -24,6 +24,38 @@ from data_collection.sources.Zenite import is_zenite_domain, load_zenite_soup, e
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
 
+
+def _fmt_price_br(v):
+    """Formata float para 'R$ 1.234,56' (robusto contra None)."""
+    try:
+        pv = float(v)
+    except Exception:
+        return str(v)
+    s = f"R$ {pv:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    return s
+
+
+def _prices_from_formatted_list(formatted_iterable):
+    """Recebe um iterável de strings (formatted) e tenta extrair floats dos valores R$ presentes.
+    Retorna lista ordenada de floats (pode ser vazia).
+    """
+    prices = []
+    if not formatted_iterable:
+        return prices
+    for item in formatted_iterable:
+        try:
+            if not item:
+                continue
+            # tenta encontrar todos valores 'R$' na string
+            for m in re.findall(r'R\$\s*([\d.,]+)', str(item)):
+                v = parse_price_str(m)
+                if v is not None:
+                    prices.append(v)
+        except Exception:
+            continue
+    prices = sorted(set(prices))
+    return prices
+
 #Extração de preços
 def extract_price_entries(soup, domain):
     """
@@ -368,6 +400,9 @@ def process_event_details(events):
         """Busca detalhes de um evento específico (edital e preços)."""
         url = event_info.get('link_inscricao', '')
         if url:
+            # defaults to ensure variables exist in all control paths
+            str_preco = 'preço não encontrado'
+            json_precos_entries = '[]'
             try:
                 domain = urlparse(url).netloc
                 soup = None
@@ -485,21 +520,95 @@ def process_event_details(events):
                     try:
                         if is_ticketsports_domain(domain):
                             ts_entries = extract_ticketsports_ticket_prices(soup, debug=False)
-                            event_info['precos_entries'] = ts_entries
-                            event_info['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                            # monta preco (menor e maior) e precos_entries como JSON com lista completa
+                            try:
+                                if ts_entries and len(ts_entries) > 0:
+                                    # ts_entries are ordered by price asc; use numeric prices to build preco
+                                    try:
+                                        prices = [p.get('price') for p in ts_entries if isinstance(p, dict) and p.get('price') is not None]
+                                    except Exception:
+                                        prices = []
+                                    if prices:
+                                        min_price = prices[0]
+                                        max_price = prices[-1]
+                                        if min_price == max_price:
+                                            str_preco = _fmt_price_br(min_price)
+                                        else:
+                                            str_preco = f"{_fmt_price_br(min_price)} a {_fmt_price_br(max_price)}"
+                                    else:
+                                        # fallback to formatted strings
+                                        min_p = ts_entries[0].get('formatted')
+                                        max_p = ts_entries[-1].get('formatted')
+                                        if min_p == max_p:
+                                            str_preco = min_p
+                                        else:
+                                            str_preco = f"{min_p} a {max_p}"
+                                    # sempre monta a lista completa de entradas formatadas (JSON)
+                                    try:
+                                        safe_prices = []
+                                        for p in ts_entries:
+                                            label_atual = (p.get('label') or '').strip() or 'GERAL'
+                                            preco_atual = str(p.get('formatted', '') or '')
+                                            texto_formatado = f"{preco_atual} | {label_atual}"
+                                            safe_prices.append(texto_formatado)
+                                        json_precos_entries = json.dumps(safe_prices, ensure_ascii=False)
+                                    except Exception:
+                                        json_precos_entries = '[]'
+                            except Exception:
+                                str_preco = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                                json_precos_entries = '[]'
+                            event_info['precos_entries'] = json_precos_entries
+                            event_info['preco'] = str_preco
                         else:
                             entries = extract_price_entries(soup, domain)
-                            # Se temos um horário carregado pelo loader (p.ex. Zenite), injeta em cada entry
-                            if loader_horario:
-                                for ent in entries:
+
+                            try:
+                                if entries and len(entries) > 0:
                                     try:
-                                        # só injeta se não existir
-                                        if not ent.get('horario'):
-                                            ent['horario'] = loader_horario
+                                        prices = [p.get('price') for p in entries if isinstance(p, dict) and p.get('price') is not None]
                                     except Exception:
-                                        pass
-                            event_info['precos_entries'] = entries
-                            event_info['preco'] = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
+                                        prices = []
+                                    if prices:
+                                        min_price = prices[0]
+                                        max_price = prices[-1]
+                                        if min_price == max_price:
+                                            str_preco = _fmt_price_br(min_price)
+                                        else:
+                                            str_preco = f"{_fmt_price_br(min_price)} a {_fmt_price_br(max_price)}"
+                                    else:
+                                        min_p = entries[0].get('formatted')
+                                        max_p = entries[-1].get('formatted')
+                                        if min_p == max_p:
+                                            str_preco = min_p
+                                        else:
+                                            str_preco = f"{min_p} a {max_p}"
+                                    try:
+                                        safe_prices = []
+                                        for p in entries:
+                                            label_atual = (p.get('label') or '').strip() or 'GERAL'
+                                            preco_atual = str(p.get('formatted', '') or '')
+                                            texto_formatado = f"{preco_atual} | {label_atual}"
+                                            safe_prices.append(texto_formatado)
+                                        json_precos_entries = json.dumps(safe_prices, ensure_ascii=False)
+                                    except Exception:
+                                        json_precos_entries = '[]'
+                            except Exception:
+                                # fallback: tenta extrair preços numéricos das strings formatted
+                                try:
+                                    formatted_list = [e.get('formatted', '') for e in entries]
+                                    nums = _prices_from_formatted_list(formatted_list)
+                                    if nums:
+                                        if len(nums) == 1:
+                                            str_preco = _fmt_price_br(nums[0])
+                                        else:
+                                            str_preco = f"{_fmt_price_br(nums[0])} a {_fmt_price_br(nums[-1])}"
+                                    else:
+                                        str_preco = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
+                                except Exception:
+                                    str_preco = '; '.join(e.get('formatted', '') for e in entries) or 'preço não encontrado'
+                                json_precos_entries = '[]'
+                            event_info['precos_entries'] = json_precos_entries
+                            event_info['preco'] = str_preco
                     except Exception:
                         # fallback final: marca como não encontrado
                         event_info['precos_entries'] = []
@@ -554,6 +663,9 @@ def process_event_details(events):
                 driver = None
                 horario = ''
             if soup:
+                # defaults for ticket-specific processing
+                str_preco = 'preço não encontrado'
+                json_precos_entries = '[]'
                 try:
                     ev['link_edital'] = extract_edital(url)
                 except Exception:
@@ -569,7 +681,29 @@ def process_event_details(events):
                             except Exception:
                                 pass
                     ev['precos_entries'] = ts_entries
-                    ev['preco'] = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                    # monta preco (menor e maior) e precos_entries como JSON com lista completa
+                    try:
+                        if ts_entries and len(ts_entries) > 0:
+                            # ts_entries are ordered by price asc; use numeric prices to build preco
+                            try:
+                                prices = [p.get('price') for p in ts_entries if isinstance(p, dict) and p.get('price') is not None]
+                            except Exception:
+                                prices = []
+                            if prices:
+                                min_price = prices[0]
+                                max_price = prices[-1]
+                                if min_price == max_price:
+                                    str_preco = _fmt_price_br(min_price)
+                                else:
+                                    str_preco = f"{_fmt_price_br(min_price)} a {_fmt_price_br(max_price)}"
+                            else:
+                                str_preco = 'preço não encontrado'
+                                json_precos_entries = '[]'
+                    except Exception:
+                        str_preco = '; '.join(e.get('formatted', '') for e in ts_entries) or 'preço não encontrado'
+                        json_precos_entries = '[]'
+                    ev['precos_entries'] = json_precos_entries
+                    ev['preco'] = str_preco
                 except Exception:
                     entries = extract_price_entries(soup, urlparse(url).netloc)
                     ev['precos_entries'] = entries
@@ -762,7 +896,7 @@ def main():
         # Salva dados em CSV
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['Nome do Evento', 'Link de Inscrição', 'Link da Imagem', 'Data', 'Horário', 'Cidade', 'Distância',
-                          'Organizador', 'Preço', 'Link do Edital']
+                          'Organizador', 'Preço', 'Link do Edital', 'precos_entries']
             writer = csv.writer(csvfile, delimiter=';')
             writer.writerow(fieldnames)
 
@@ -777,7 +911,8 @@ def main():
                     event.get('distancia', ''),
                     event.get('organizador', ''),
                     event.get('preco', ''),
-                    event.get('link_edital', '')
+                    event.get('link_edital', ''),
+                    event.get('precos_entries', '')
                 ])
 
         print(f"\nDados salvos com sucesso em: {csv_path}")
