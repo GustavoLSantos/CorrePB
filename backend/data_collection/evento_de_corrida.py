@@ -115,7 +115,8 @@ class EventoDeCorrida:
         def get_value(key: str) -> str:
             value = row.get(key, '')
             return value if value and value.strip() else ''
-
+        
+        horario_val = get_value('Horário') or get_value('Horario') or get_value('horario')
         # Converter datas para lista de datetime
         data_str = get_value('Data')
         datas_realizacao = []
@@ -172,7 +173,7 @@ class EventoDeCorrida:
             site_coleta=fonte,
             data_coleta=datetime.now(),
             distancias=distancias,
-            horario=get_value('Horário'),
+            horario=horario_val,
             url_inscricao=get_value('Link de Inscrição'),
             url_imagem=get_value('Link da Imagem'),
             categoria=get_value('Categoria'),
