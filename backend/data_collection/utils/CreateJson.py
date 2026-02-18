@@ -51,24 +51,35 @@ def transformar_evento(evento_mongo):
     preco_raw = evento_mongo.get('preco', '')
     lista_precos = []
 
-    # Novo: prioriza precos estruturados em 'precos_entries' (se existirem)
+    # Prioriza precos estruturados em 'precos_entries' (se existirem)
     horario = evento_mongo.get('horario') or ''
     precos_entries = evento_mongo.get('precos_entries', [])
-    if precos_entries and isinstance(precos_entries, list) and any(isinstance(p, dict) for p in precos_entries):
+
+    # Se precos_entries é uma string JSON, tenta desserializar
+    if isinstance(precos_entries, str) and precos_entries.strip():
+        try:
+            import json as _json
+            loaded = _json.loads(precos_entries)
+            if isinstance(loaded, list):
+                precos_entries = loaded
+        except Exception:
+            # permanece como string se não for JSON
+            pass
+
+    # Agora aceita precos_entries como lista de dicts ou lista de strings
+    if precos_entries and isinstance(precos_entries, list):
         lista_precos = []
         for p in precos_entries:
             if isinstance(p, dict):
                 formatted = p.get('formatted') or p.get('raw') or ''
-                ph = p.get('horario') or horario
-                lista_precos.append({
-                    'formatted': formatted,
-                    'horario': ph
-                })
+                lista_precos.append({'formatted': formatted})
             else:
-                lista_precos.append({
-                    'formatted': str(p),
-                    'horario': horario
-                })
+                # trata como string: pode ser já no formato 'R$ X | LABEL'
+                try:
+                    s = str(p)
+                    lista_precos.append({'formatted': s})
+                except Exception:
+                    continue
     else:
         # Fallback antigo: string 'preco' separado por ';'
         if preco_raw and isinstance(preco_raw, str):
