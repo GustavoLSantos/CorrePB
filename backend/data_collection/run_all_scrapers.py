@@ -8,8 +8,6 @@ import os
 import sys
 import glob
 import subprocess
-import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 HERE = os.path.dirname(__file__)
 THIS_BASENAME = os.path.basename(__file__)
@@ -46,47 +44,25 @@ def run_script(script_name, capture_output=True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run scraper_*.py scripts located in data_collection directory')
-    parser.add_argument('--scripts', nargs='*', help='Basename(s) of scraper scripts to run. Defaults to discovered scrapers.')
-    parser.add_argument('--parallel', action='store_true', help='Run scrapers in parallel')
-    parser.add_argument('--no-capture', dest='capture', action='store_false', help='Do not capture stdout/stderr (streams to console)')
-    args = parser.parse_args()
-
-    to_run = args.scripts if args.scripts else _scripts
-    norm = []
-    for s in to_run:
-        if not s.endswith('.py'):
-            s = s + '.py'
-        if s in _scripts:
-            norm.append(s)
-        else:
-            print(f"[WARN] script {s} not found among discovered scrapers; skipping.")
-
-    if not norm:
+    """
+    Execute discovered scrapers sequentially (no CLI args required).
+    """
+    to_run = _scripts
+    if not to_run:
         print('No scripts to run; exiting.')
         return 2
 
     results = []
-    if args.parallel:
-        max_workers = min(4, len(norm))
-        with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = {ex.submit(run_script, s, args.capture): s for s in norm}
-            for fut in as_completed(futures):
-                results.append(fut.result())
-    else:
-        for s in norm:
-            results.append(run_script(s, args.capture))
+    for s in to_run:
+        print(f"\nRunning {s} ...")
+        name, code, out, err = run_script(s, capture_output=False)
+        results.append((name, code, out, err))
 
-    # resumo
+    # summary
     print('\nRun summary:')
     for name, code, out, err in results:
         status = 'OK' if code == 0 else f'FAIL({code})'
         print(f"- {name}: {status}")
-        if args.capture:
-            if out:
-                print(f"--- stdout ({name}):\n{out.strip()}")
-            if err:
-                print(f"--- stderr ({name}):\n{err.strip()}", file=sys.stderr)
 
     any_fail = any(code != 0 for (_, code, _, _) in results)
     sys.exit(1 if any_fail else 0)
