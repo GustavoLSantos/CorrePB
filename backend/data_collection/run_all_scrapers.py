@@ -16,14 +16,17 @@ THIS_BASENAME = os.path.basename(__file__)
 
 # Descobre scripts scraper_*.py no diretório, excluindo este runner
 _discovered = sorted([os.path.basename(p) for p in glob.glob(os.path.join(HERE, 'scraper_*.py')) if os.path.basename(p) != THIS_BASENAME])
+# Lista de scrapers a ignorar explicitamente (não prontos)
+_ignored = {'scraper_brasilcorrida.py'}
 # Prioriza scrapers conhecidos
 _priority = ['scraper_brasilquecorre.py', 'scraper_smcrono.py']
 _scripts = []
 for p in _priority:
-    if p in _discovered:
+    if p in _discovered and p not in _ignored:
         _scripts.append(p)
         _discovered.remove(p)
-_scripts.extend(_discovered)
+# adiciona restantes exceto ignorados
+_scripts.extend([p for p in _discovered if p not in _ignored])
 
 
 def run_script(script_name, capture_output=True):
