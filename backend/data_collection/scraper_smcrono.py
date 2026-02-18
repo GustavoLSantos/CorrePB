@@ -257,27 +257,16 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
             except:
                 edital_link = "edital não encontrado"
 
-            str_preco = "Valor não encontrado"
             json_precos_entries = "[]"
-            
-            if details['precos'] and len(details['precos']) > 0:
-                min_p = details['precos'][0]['formatted']
-                max_p = details['precos'][-1]['formatted']
-                
-                if min_p == max_p:
-                    str_preco = min_p
-                else:
-                    str_preco = f"{min_p} a {max_p}"
-                
+            if details['precos']:
                 try:
                     safe_prices = []
                     for p in details['precos']:
                         label_atual = str(p.get("label", ""))
                         preco_atual = str(p.get("formatted", ""))
-                                    
-                        texto_formatado = f"{preco_atual} | {label_atual}"                        
+                        texto_formatado = f"{preco_atual} | {label_atual}"
                         safe_prices.append(texto_formatado)
-                    json_precos_entries = json.dumps(safe_prices, ensure_ascii=False)
+                    json_precos_entries = json.dumps(safe_prices, ensure_ascii=False) if safe_prices else "[]"
                 except Exception as e:
                     print(f"  ⚠️ Erro JSON: {e}")
                     json_precos_entries = "[]"
@@ -291,12 +280,11 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
                 'Cidade': details['cidade'],
                 'Distância': ', '.join(details['distancias']),
                 'Organizador': "SmCrono",
-                'Preço': str_preco,
                 'Link do Edital': edital_link,
                 'precos_entries': json_precos_entries
             }
             
-            print(f"  ✓ {ev['Data']} | Preço: {ev['Preço']}")
+            print(f"  ✓ {ev['Data']} | Preços: {len(details['precos'])} entradas")
             events_data.append(ev)
 
         except Exception as e:
@@ -323,7 +311,6 @@ def main():
                 'Cidade', 
                 'Distância', 
                 'Organizador', 
-                'Preço', 
                 'Link do Edital',
                 'precos_entries'
             ]
