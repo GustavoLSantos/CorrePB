@@ -1,0 +1,575 @@
+[
+  {
+    "_id": "696576f5999946c68a52dbfd",
+    "nome_evento": "AGRESTE EXTREMO",
+    "url_inscricao": "https://www.084sports.com.br/evento/agresteextremo",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/28d68afd69184d5780c2f3b2918979d6.png",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Araruna",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:22.070000Z",
+    "distancias": [
+      ""
+    ],
+    "organizador": "AGRESTE EXTREMO",
+    "categorias": [],
+    "preco": "LIGHT TRAIL — KIT SIMPLES — R$ 90,00; ADVENTURE TRAIL — KIT SIMPLES — R$ 90,00; ADVENTURE TRAIL — SEGURANÇA PÚBLICA FEMININA KIT SIMPLES — R$ 90,00; ADVENTURE TRAIL — PCD KIT COMPLETO — R$ 95,00; HALF TRAIL — KIT SIMPLES — R$ 100,00; HALF TRAIL — SEGURANÇA PÚBLICA MASCULINO KIT SIMPLES — R$ 100,00; LIGHT TRAIL — GERAL KIT COMPLETO — R$ 140,00; ADVENTURE TRAIL — GERAL KIT COMPLETO — R$ 140,00; ADVENTURE TRAIL — SEGURANÇA PÚBLICA FEMININA KIT COMPLETO — R$ 140,00; HALF TRAIL — GERAL KIT COMPLETO — R$ 160,00; HALF TRAIL — SEGURANÇA PÚBLICA MASCULINO KIT COMPLETO — R$ 160,00",
+    "lista_precos": [
+      "LIGHT TRAIL — KIT SIMPLES — R$ 90,00",
+      "ADVENTURE TRAIL — KIT SIMPLES — R$ 90,00",
+      "ADVENTURE TRAIL — SEGURANÇA PÚBLICA FEMININA KIT SIMPLES — R$ 90,00",
+      "ADVENTURE TRAIL — PCD KIT COMPLETO — R$ 95,00",
+      "HALF TRAIL — KIT SIMPLES — R$ 100,00",
+      "HALF TRAIL — SEGURANÇA PÚBLICA MASCULINO KIT SIMPLES — R$ 100,00",
+      "LIGHT TRAIL — GERAL KIT COMPLETO — R$ 140,00",
+      "ADVENTURE TRAIL — GERAL KIT COMPLETO — R$ 140,00",
+      "ADVENTURE TRAIL — SEGURANÇA PÚBLICA FEMININA KIT COMPLETO — R$ 140,00",
+      "HALF TRAIL — GERAL KIT COMPLETO — R$ 160,00",
+      "HALF TRAIL — SEGURANÇA PÚBLICA MASCULINO KIT COMPLETO — R$ 160,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dbfe",
+    "nome_evento": "CORRIDA NOSSA SENHORA DAS DORES",
+    "url_inscricao": "https://tiquet.com.br/evento/2025-13-corrida-nossa-senhora-das-dores/",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/a680a7c17dd74f0f8e40167fe1c108ce.png",
+    "data_realizacao": "11 de Janeiro de 2026",
+    "cidade": "Triunfo",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:22.860000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ONPOINT PRODUÇÕES",
+    "categorias": [],
+    "preco": "A partir de 60 Anos - Kit Básico — R$ 40,00; PCD - Kit Básico — R$ 40,00; A partir de 60 Anos - Kit Completo — R$ 60,00; PCD - Kit Completo — R$ 60,00; 18 a 29 Anos - Kit Básico — R$ 80,00; 30 a 39 Anos - Kit Básico — R$ 80,00; 40 a 49 Anos - Kit Básico — R$ 80,00; 50 a 59 Anos - Kit Básico — R$ 80,00; 14 a 17 Anos - Kit Básico — R$ 80,00; 18 a 29 Anos - Kit Completo — R$ 120,00; 30 a 39 Anos - Kit Completo — R$ 120,00; 40 a 49 Anos - Kit Completo — R$ 120,00; 50 a 59 Anos - Kit Completo — R$ 120,00; 14 a 17 Anos - Kit Completo — R$ 120,00",
+    "lista_precos": [
+      "A partir de 60 Anos - Kit Básico — R$ 40,00",
+      "PCD - Kit Básico — R$ 40,00",
+      "A partir de 60 Anos - Kit Completo — R$ 60,00",
+      "PCD - Kit Completo — R$ 60,00",
+      "18 a 29 Anos - Kit Básico — R$ 80,00",
+      "30 a 39 Anos - Kit Básico — R$ 80,00",
+      "40 a 49 Anos - Kit Básico — R$ 80,00",
+      "50 a 59 Anos - Kit Básico — R$ 80,00",
+      "14 a 17 Anos - Kit Básico — R$ 80,00",
+      "18 a 29 Anos - Kit Completo — R$ 120,00",
+      "30 a 39 Anos - Kit Completo — R$ 120,00",
+      "40 a 49 Anos - Kit Completo — R$ 120,00",
+      "50 a 59 Anos - Kit Completo — R$ 120,00",
+      "14 a 17 Anos - Kit Completo — R$ 120,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dbff",
+    "nome_evento": "TR EXPLORE ETAPA BANANEIRAS",
+    "url_inscricao": "https://www.race83.com.br/evento/2026/trail-run/tr-explore-etapa-bananeiras",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/f81407751fe247d1bb4014554db03b08.png",
+    "data_realizacao": "11 de Janeiro de 2026",
+    "cidade": "Bananeiras",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:23.122000Z",
+    "distancias": [
+      "400m à 1km (infantil), 3km (caminhada)"
+    ],
+    "organizador": "+SPORTS",
+    "categorias": [],
+    "preco": "PÚBLICO GERAL — LIGHT TRAIL(Caminhada): 3km — R$ 0,00; PÚBLICO GERAL — FAST TRAIL: 6km-10km — R$ 0,00; PÚBLICO GERAL — ADVENTURE TRAIL: 12km-18km — R$ 0,00; PÚBLICO GERAL — HALF TRAIL: 19km a 27km — R$ 0,00; CORRIDA KIDS — KIDS:400m a 1km — R$ 0,00",
+    "lista_precos": [
+      "PÚBLICO GERAL — LIGHT TRAIL(Caminhada): 3km — R$ 0,00",
+      "PÚBLICO GERAL — FAST TRAIL: 6km-10km — R$ 0,00",
+      "PÚBLICO GERAL — ADVENTURE TRAIL: 12km-18km — R$ 0,00",
+      "PÚBLICO GERAL — HALF TRAIL: 19km a 27km — R$ 0,00",
+      "CORRIDA KIDS — KIDS:400m a 1km — R$ 0,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dc00",
+    "nome_evento": "CORRIDA DE SÃO SEBASTIÃO",
+    "url_inscricao": "https://www.race83.com.br/evento/2026/corrida-de-rua/corrida-de-so-sebastio",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/888217d29fea49cfb81a9a93ee5ccd7d.png",
+    "data_realizacao": "11 de Janeiro de 2026",
+    "cidade": "Pilõezinhos",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:22.990000Z",
+    "distancias": [
+      "3km (caminhada), 5km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": [],
+    "preco": "PÚBLICO GERAL — 5KM — R$ 0,00; PÚBLICO GERAL — CAMINHADA 3KM — R$ 0,00",
+    "lista_precos": [
+      "PÚBLICO GERAL — 5KM — R$ 0,00",
+      "PÚBLICO GERAL — CAMINHADA 3KM — R$ 0,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dc01",
+    "nome_evento": "CIRCUITO DE CORRIDA ZONA SUL ETAPA VALENTINA",
+    "url_inscricao": "https://zeniteesportes.com/circuitozonasulvalentina",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/22cd922b75014d3daed3146cfccebcf7.png",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:23.254000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "TOP LINE SPORTS",
+    "categorias": [],
+    "preco": "R$ 0,00",
+    "lista_precos": [
+      "R$ 0,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dc02",
+    "nome_evento": "VIBE RUN BEACH",
+    "url_inscricao": "https://www.race83.com.br/evento/2026/corrida-de-rua/vibe-run-beach-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/8d084cd56400493e814f63dd6796b2f9.png",
+    "data_realizacao": "18 de Janeiro de 2026",
+    "cidade": "Pitimbú",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:23.385000Z",
+    "distancias": [
+      "3km (caminhada), 5km e 10km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": [],
+    "preco": "GERAL — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; GERAL — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; GERAL — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; LOCAL (VIDE ART. 38 DO REGULAMENTO) — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; LOCAL (VIDE ART. 38 DO REGULAMENTO) — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; LOCAL (VIDE ART. 38 DO REGULAMENTO) — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; PCD — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; PCD — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90; PCD — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+    "lista_precos": [
+      "GERAL — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "GERAL — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "GERAL — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "LOCAL (VIDE ART. 38 DO REGULAMENTO) — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "LOCAL (VIDE ART. 38 DO REGULAMENTO) — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "LOCAL (VIDE ART. 38 DO REGULAMENTO) — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "PCD — 3KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "PCD — 5KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90",
+      "PCD — 10KM - KIT PARTICIPAÇÃO - SEM CAMISA — R$ 59,90"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dc03",
+    "nome_evento": "1ª CORRIDA PAPA-LÉGUAS",
+    "url_inscricao": "https://www.timecrono.com.br/evento/1647/1-corrida-papa-leguas-pb",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/2dbab91448384b54bf6c9ce2e5709f7e.png",
+    "data_realizacao": "8 de Fevereiro de 2026",
+    "cidade": "Caaporã",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:28.425000Z",
+    "distancias": [
+      "3km (caminhada), 7km (corrida)"
+    ],
+    "organizador": "",
+    "categorias": [],
+    "preco": "R$ 70,00",
+    "lista_precos": [
+      "R$ 70,00"
+    ]
+  },
+  {
+    "_id": "696576f6999946c68a52dc04",
+    "nome_evento": "CORRIDA LUZ",
+    "url_inscricao": "https://www.race83.com.br/evento/2026/corrida-de-rua/corrida-luz-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/c016ab2f0c1a4f9a978b26c450a3d916.png",
+    "data_realizacao": "25 de Janeiro de 2026",
+    "cidade": "Guarabira",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:28.553000Z",
+    "distancias": [
+      "5km (corrida)"
+    ],
+    "organizador": "PARÓQUIA DE NOSSA SENHORA DA LUZ",
+    "categorias": [],
+    "preco": "PÚBLICO GERAL — 5KM — R$ 0,00; LOCAL (VIDE REGULAMENTO) — 5km — R$ 0,00",
+    "lista_precos": [
+      "PÚBLICO GERAL — 5KM — R$ 0,00",
+      "LOCAL (VIDE REGULAMENTO) — 5km — R$ 0,00"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc05",
+    "nome_evento": "RAROS RUN",
+    "url_inscricao": "https://www.race83.com.br/evento/5022/raros-run-2025",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/8ef26f30cb024a48840b6ecbc36fce61.png",
+    "data_realizacao": "1 de Março de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:23.780000Z",
+    "distancias": [
+      "3km (caminhada), 5km e 10km (corrida)"
+    ],
+    "organizador": "PACE4 l TRCRONO",
+    "categorias": [],
+    "preco": "5KM — PCD NÃO CADEIRANTE — R$ 64,95; 10KM — PCD CADEIRANTE — R$ 64,95; 10KM — PCD NÃO CADEIRANTE — R$ 64,95; 5KM — PÚBLICO GERAL — R$ 99,90; 5KM — PCD CADEIRANTE — R$ 99,90; 10KM — PÚBLICO GERAL — R$ 99,90; FAMILY RUN (KIDS) ATÉ 12 ANOS — R$ 99,90; CAMINHADA 3KM — PÚBLICO GERAL — R$ 99,90; CAMINHADA 3KM — PCD CADEIRANTE — R$ 99,90; CAMINHADA 3KM — PCD NÃO CADEIRANTE — R$ 99,90",
+    "lista_precos": [
+      "5KM — PCD NÃO CADEIRANTE — R$ 64,95",
+      "10KM — PCD CADEIRANTE — R$ 64,95",
+      "10KM — PCD NÃO CADEIRANTE — R$ 64,95",
+      "5KM — PÚBLICO GERAL — R$ 99,90",
+      "5KM — PCD CADEIRANTE — R$ 99,90",
+      "10KM — PÚBLICO GERAL — R$ 99,90",
+      "FAMILY RUN (KIDS) ATÉ 12 ANOS — R$ 99,90",
+      "CAMINHADA 3KM — PÚBLICO GERAL — R$ 99,90",
+      "CAMINHADA 3KM — PCD CADEIRANTE — R$ 99,90",
+      "CAMINHADA 3KM — PCD NÃO CADEIRANTE — R$ 99,90"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc06",
+    "nome_evento": "ULTRAMARATONA PEIXE-BOI",
+    "url_inscricao": "https://www.race83.com.br/evento/4168/ultramaratona-peixe-boi-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/31360345651b42aaa6373002c9a20bf0.png",
+    "data_realizacao": "7 de Março de 2026",
+    "cidade": "Lucena",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:23.911000Z",
+    "distancias": [
+      ""
+    ],
+    "organizador": "PACE4",
+    "categorias": [],
+    "preco": "50KM — SOLO — R$ 149,00; 25KM — SOLO — R$ 149,00; 50KM — DUPLA MASCULINO — R$ 220,00; 50KM — DUPLA FEMININO — R$ 220,00; 50KM — DUPLA MISTA — R$ 220,00; 25KM — DUPLA MASCULINO — R$ 220,00; 25KM — DUPLA FEMININO — R$ 220,00; 25KM — DUPLA MISTA — R$ 220,00; 25KM — QUINTETO FEMININO — R$ 500,00; 25KM — QUINTETO MISTO — R$ 500,00; 25KM — QUINTETO MASCULINO — R$ 500,00",
+    "lista_precos": [
+      "50KM — SOLO — R$ 149,00",
+      "25KM — SOLO — R$ 149,00",
+      "50KM — DUPLA MASCULINO — R$ 220,00",
+      "50KM — DUPLA FEMININO — R$ 220,00",
+      "50KM — DUPLA MISTA — R$ 220,00",
+      "25KM — DUPLA MASCULINO — R$ 220,00",
+      "25KM — DUPLA FEMININO — R$ 220,00",
+      "25KM — DUPLA MISTA — R$ 220,00",
+      "25KM — QUINTETO FEMININO — R$ 500,00",
+      "25KM — QUINTETO MISTO — R$ 500,00",
+      "25KM — QUINTETO MASCULINO — R$ 500,00"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc07",
+    "nome_evento": "2ª CORRIDA VIGOR RUN",
+    "url_inscricao": "https://www.timecrono.com.br/evento/5883/2-corrida-vigor-run",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/335ad25e087a48ea861d8d2d8624e665.png",
+    "data_realizacao": "12 de Abril de 2026",
+    "cidade": "Caaporã",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:24.041000Z",
+    "distancias": [
+      "5km e 8km (corrida)"
+    ],
+    "organizador": "FÁBIO SANTOS",
+    "categorias": [],
+    "preco": "R$ 69,99; CORRIDA - 8 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99; CORRIDA - 8 KM - (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99; CORRIDA - 5 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99; CORRIDA - 5 KM (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99; CORRIDA - 8 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99; CORRIDA - 5 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99; 8 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99; 8 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99; 5 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99; 5 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99; R$ 89,99",
+    "lista_precos": [
+      "R$ 69,99",
+      "CORRIDA - 8 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99",
+      "CORRIDA - 8 KM - (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99",
+      "CORRIDA - 5 KM - (PÚBLICO GERAL) — ATLETA DE OUTRO MUNICÍPIO — R$ 79,99",
+      "CORRIDA - 5 KM (RESIDENTE DE CAAPORÃ) — ATLETA LOCAL — R$ 79,99",
+      "CORRIDA - 8 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99",
+      "CORRIDA - 5 KM - (ALUNO VIGOR) — ATLETA DO STUDIO VIGOR — R$ 79,99",
+      "8 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99",
+      "8 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99",
+      "5 KM - PCD - CADEIRANTE — PCD - CADEIRANTE — R$ 79,99",
+      "5 KM - PCD - NÃO CADEIRANTE — PCD - NÃO CADEIRANTE — R$ 79,99",
+      "R$ 89,99"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc08",
+    "nome_evento": "5ª CORRIDA DO REI",
+    "url_inscricao": "https://zeniteesportes.com/corridadorei",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/6c346d2a95054185a9494e8e8437f392.png",
+    "data_realizacao": "12 de Abril de 2026",
+    "cidade": "Solânea",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:24.316000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "REI SPORTS",
+    "categorias": [],
+    "preco": "R$ 89,90",
+    "lista_precos": [
+      "R$ 89,90"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc09",
+    "nome_evento": "4ª MARATONA DE JOÃO PESSOA",
+    "url_inscricao": "https://www.ticketsports.com.br/e/maratona-de-joao-pessoa-2026-73080",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/ae3d3015e351491881e7dd0bc9c2089e.png",
+    "data_realizacao": "19 de Abril de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:27.535000Z",
+    "distancias": [
+      "5km, 10km, 21km e 42km (corrida)"
+    ],
+    "organizador": "ZENITE ESPORTES",
+    "categorias": [],
+    "preco": "KIT ATLETA PADRÃO — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA PADRÃO — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA PADRÃO — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA PADRÃO — 42km — R$ 150,00 (+12,00 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 42km — R$ 150,00 (+12,00 taxa); KIT ATLETA +60 ANOS — 5km — R$ 110,00 (+8,80 taxa); KIT ATLETA +60 ANOS — 10km — R$ 110,00 (+8,80 taxa); KIT ATLETA +60 ANOS — 21km — R$ 130,00 (+10,40 taxa); KIT ATLETA +60 ANOS — 42km — R$ 150,00 (+12,00 taxa)",
+    "lista_precos": [
+      "KIT ATLETA PADRÃO — 5km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA PADRÃO — 10km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA PADRÃO — 21km — R$ 130,00 (+10,40 taxa)",
+      "KIT ATLETA PADRÃO — 42km — R$ 150,00 (+12,00 taxa)",
+      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 5km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 10km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 21km — R$ 130,00 (+10,40 taxa)",
+      "KIT ATLETA PCD - deficiência visual, motora, mental ou auditiva — 42km — R$ 150,00 (+12,00 taxa)",
+      "KIT ATLETA +60 ANOS — 5km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA +60 ANOS — 10km — R$ 110,00 (+8,80 taxa)",
+      "KIT ATLETA +60 ANOS — 21km — R$ 130,00 (+10,40 taxa)",
+      "KIT ATLETA +60 ANOS — 42km — R$ 150,00 (+12,00 taxa)"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc0a",
+    "nome_evento": "6ª CORRIDA DO TRABALHADOR",
+    "url_inscricao": "https://correparaiba.com.br/6-edicao-da-corrida-do-trabalhador",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/c26b3484c61e49279db49bba68e3810a.png",
+    "data_realizacao": "1 de Maio de 2026",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:24.448000Z",
+    "distancias": [
+      "1km (infantil), 5km e 10km (corrida)"
+    ],
+    "organizador": "ALAN JONH",
+    "categorias": [],
+    "preco": "CATEGORIA 10 KM GERAL FEMININO — R$ 90,00; CATEGORIA 10 KM GERAL MASCULINO — R$ 90,00; CATEGORIA 10 KM LOCAL FEMININO — R$ 90,00; CATEGORIA 10 KM LOCAL MASCULINO — R$ 90,00; CATEGORIA 5 KM GERAL FEMININO — R$ 90,00; CATEGORIA 5 KM GERAL MASCULINO — R$ 90,00; CATEGORIA 5 KM LOCAL FEMININO — R$ 90,00; CATEGORIA 5 KM LOCAL MASCULINO — R$ 90,00",
+    "lista_precos": [
+      "CATEGORIA 10 KM GERAL FEMININO — R$ 90,00",
+      "CATEGORIA 10 KM GERAL MASCULINO — R$ 90,00",
+      "CATEGORIA 10 KM LOCAL FEMININO — R$ 90,00",
+      "CATEGORIA 10 KM LOCAL MASCULINO — R$ 90,00",
+      "CATEGORIA 5 KM GERAL FEMININO — R$ 90,00",
+      "CATEGORIA 5 KM GERAL MASCULINO — R$ 90,00",
+      "CATEGORIA 5 KM LOCAL FEMININO — R$ 90,00",
+      "CATEGORIA 5 KM LOCAL MASCULINO — R$ 90,00"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc0b",
+    "nome_evento": "21K DO CONDE ROTA DOS MIRANTES",
+    "url_inscricao": "https://www.race83.com.br/evento/2026/trail-run/21k-do-conde-rota-dos-mirantes-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/7f7a2ccfd33f4cb498696eeb3b541707.png",
+    "data_realizacao": "26 de Abril de 2026",
+    "cidade": "Conde",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:24.582000Z",
+    "distancias": [
+      ""
+    ],
+    "organizador": "MOVE SPORTS",
+    "categorias": [],
+    "preco": "PÚBLICO GERAL — 7KM — R$ 126,90; PÚBLICO GERAL — 12KM — R$ 126,90; PÚBLICO GERAL — 21KM — R$ 138,90",
+    "lista_precos": [
+      "PÚBLICO GERAL — 7KM — R$ 126,90",
+      "PÚBLICO GERAL — 12KM — R$ 126,90",
+      "PÚBLICO GERAL — 21KM — R$ 138,90"
+    ]
+  },
+  {
+    "_id": "696576f7999946c68a52dc0c",
+    "nome_evento": "NIGHT RUN FEVER",
+    "url_inscricao": "https://www.nightrun.com.br/joao-pessoa/unica",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/500ff9cd65534d2aa4def30e371303ad.png",
+    "data_realizacao": "16 de Maio de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:29.242000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "ALÇANDO VOOS l TTK MKT ESPORTIVO",
+    "categorias": [],
+    "preco": "R$ 69,99",
+    "lista_precos": [
+      "R$ 69,99"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc0d",
+    "nome_evento": "CANGAÇO TRIATHLON",
+    "url_inscricao": "https://www.race83.com.br/evento/5360/angao-triathlon-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/628e21903f8846168b2fc682f44fa6f4.png",
+    "data_realizacao": "3 de Maio de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:24.846000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TRCRONO EVENTOS ESPORTIVOS",
+    "categorias": [],
+    "preco": "Corrida 5km — GERAL CORRIDA 5KM — R$ 179,90; Corrida 10km — GERAL CORRIDA 10KM — R$ 179,90; Aquathlon: Corrida 2500m + Natação 750m + Corrida 2500m — PÚBLICO GERAL — R$ 309,90; Super Sprint (Mini Sprint): Natação 375m + Ciclismo 10km + Corrida 2,5km — PÚBLICO GERAL — R$ 399,90; Sprint: Natação 750m + Ciclismo 20km + Corrida 5km — PÚBLICO GERAL — R$ 449,90; Standard (Olímpico): Natação 1500m + Ciclismo 40km + Corrida 10km — PÚBLICO GERAL — R$ 489,90",
+    "lista_precos": [
+      "Corrida 5km — GERAL CORRIDA 5KM — R$ 179,90",
+      "Corrida 10km — GERAL CORRIDA 10KM — R$ 179,90",
+      "Aquathlon: Corrida 2500m + Natação 750m + Corrida 2500m — PÚBLICO GERAL — R$ 309,90",
+      "Super Sprint (Mini Sprint): Natação 375m + Ciclismo 10km + Corrida 2,5km — PÚBLICO GERAL — R$ 399,90",
+      "Sprint: Natação 750m + Ciclismo 20km + Corrida 5km — PÚBLICO GERAL — R$ 449,90",
+      "Standard (Olímpico): Natação 1500m + Ciclismo 40km + Corrida 10km — PÚBLICO GERAL — R$ 489,90"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc0e",
+    "nome_evento": "MEIA MARATONA DE PATOS",
+    "url_inscricao": "https://www.ticketsports.com.br/e/meia-maratona-de-patos-2025-71727",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/193a43b4a44e4767bc779b1367f19fce.png",
+    "data_realizacao": "17 de Maio de 2026",
+    "cidade": "Patos",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:28.294000Z",
+    "distancias": [
+      "5km, 10km e 21km (corrida)"
+    ],
+    "organizador": "RUN",
+    "categorias": [],
+    "preco": "KIT ATLETA PADRÃO — 5km — R$ 59,90 (+5,00 taxa); KIT ATLETA PADRÃO — 10km — R$ 59,90 (+5,00 taxa); KIT ATLETA PADRÃO — 21km — R$ 69,90 (+4,19 taxa)",
+    "lista_precos": [
+      "KIT ATLETA PADRÃO — 5km — R$ 59,90 (+5,00 taxa)",
+      "KIT ATLETA PADRÃO — 10km — R$ 59,90 (+5,00 taxa)",
+      "KIT ATLETA PADRÃO — 21km — R$ 69,90 (+4,19 taxa)"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc0f",
+    "nome_evento": "LIVE! RUN XP",
+    "url_inscricao": "https://www.liverun.com.br/etapa/live-run-campina-grande-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/80e00bbce7f34e22a1a62a9d6320244c.png",
+    "data_realizacao": "29 de Março de 2026",
+    "cidade": "Campina Grande",
+    "estado": "PB",
+    "data_coleta": "2026-01-22T21:53:28.994000Z",
+    "distancias": [
+      "50m à 400m (infantil), 5km e 10km (corrida)"
+    ],
+    "organizador": "LIVE!",
+    "categorias": [],
+    "preco": "R$ 70,00; R$ 119,90; R$ 159,90; R$ 169,90; R$ 179,90",
+    "lista_precos": [
+      "R$ 70,00",
+      "R$ 119,90",
+      "R$ 159,90",
+      "R$ 169,90",
+      "R$ 179,90"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc10",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES INVERNO",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/joao-pessoa/inverno",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/36d7a57cb8f54180ad4d08e14bdd32e4.png",
+    "data_realizacao": "7 de Junho de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:25.367000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TTK MKT ESPORTIVO",
+    "categorias": [],
+    "preco": "R$ 119,90",
+    "lista_precos": [
+      "R$ 119,90"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc11",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES OUTONO",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/joao-pessoa/outono",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/78c175c535d944e5a9d9e466365f4447.png",
+    "data_realizacao": "29 de Março de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:25.499000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TTK MKT ESPORTIVO",
+    "categorias": [],
+    "preco": "R$ 119,90",
+    "lista_precos": [
+      "R$ 119,90"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc12",
+    "nome_evento": "6ª MARATONA INTERNACIONAL DE JOÃO PESSOA",
+    "url_inscricao": "https://www.race83.com.br/evento/4160/6-maratona-internacional-de-joao-pessoa-2026",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/66f22b1472714bb08c69b12b42e696da.png",
+    "data_realizacao": "2 de Agosto de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:25.237000Z",
+    "distancias": [
+      "5km, 10km, 21km e 42km (corrida)"
+    ],
+    "organizador": "PREFEITURA MUNICIPAL l TRCRONO EVENTOS ESPORTIVOS",
+    "categorias": [],
+    "preco": "preço não encontrado",
+    "lista_precos": [
+      "preço não encontrado"
+    ]
+  },
+  {
+    "_id": "696576f8999946c68a52dc13",
+    "nome_evento": "CORRIDA DE ANIVERSÁRIO LYRUN ASSESSORIA",
+    "url_inscricao": "https://www.sympla.com.br/evento/corrida-de-aniversario-lyrun-assessoria/3138338",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/1d00e09079e54a0180fa7ec83320a4ec.png",
+    "data_realizacao": "11 de Janeiro de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:25.632000Z",
+    "distancias": [
+      "5km e 8km (corrida)"
+    ],
+    "organizador": "LYRUN ASSESSORIA",
+    "categorias": [],
+    "preco": "preço não encontrado",
+    "lista_precos": [
+      "preço não encontrado"
+    ]
+  },
+  {
+    "_id": "696576f9999946c68a52dc14",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES VERÃO",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/joao-pessoa/verao",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/3346fa92adc94266b13a6ea7721cff27.png",
+    "data_realizacao": "13 de Dezembro de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:26.024000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TTK MKT ESPORTIVO",
+    "categorias": [],
+    "preco": "R$ 119,90",
+    "lista_precos": [
+      "R$ 119,90"
+    ]
+  },
+  {
+    "_id": "696576f9999946c68a52dc15",
+    "nome_evento": "CIRCUITO DAS ESTAÇÕES PRIMAVERA",
+    "url_inscricao": "https://www.circuitodasestacoes.com.br/joao-pessoa/primavera",
+    "url_imagem": "https://yata-apix-b6a73c78-1100-48ad-9374-0a41af79d029.s3-object.locaweb.com.br/dc746cf60bcb4bd985cc450a7105f22c.png",
+    "data_realizacao": "27 de Setembro de 2026",
+    "cidade": "João Pessoa",
+    "estado": "PB",
+    "data_coleta": "2026-01-12T20:17:25.762000Z",
+    "distancias": [
+      "5km e 10km (corrida)"
+    ],
+    "organizador": "TTK MKT ESPORTIVO",
+    "categorias": [],
+    "preco": "R$ 119,90",
+    "lista_precos": [
+      "R$ 119,90"
+    ]
+  }
+]
