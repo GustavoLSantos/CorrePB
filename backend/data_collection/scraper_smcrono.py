@@ -5,15 +5,15 @@ import re
 import time
 import json
 from datetime import datetime
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urljoin
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from bs4 import BeautifulSoup
-from selenium import webdriver
 from selenium.webdriver.common.by import By
 from data_collection.core.Driver import setup_driver
 from data_collection.utils.PriceUtils import parse_price_str
+from data_collection.utils.PrizeDetection import entry_is_prize
 
 def fix_encoding(text):
     if not text: return ""
@@ -129,8 +129,10 @@ def extract_smcrono_details_robust(driver):
                              if 'R$' not in next_line and not category_pattern.search(next_line):
                                  label = fix_encoding(next_line)
 
-                        if len(label) > 60: label = label[:60] + "..."
-                        if not label: label = "Geral"
+                        if len(label) > 60:
+                            label = label[:60] + "..."
+                        if not label:
+                            label = "Geral"
 
                         # 3. PREFIXAR A CATEGORIA (O PULO DO GATO)
                         # Se temos uma categoria salva (ex: "5KM"), juntamos com o label
@@ -138,8 +140,21 @@ def extract_smcrono_details_robust(driver):
                             # Só adiciona se o label já não tiver a info (evita "5KM - 5KM GERAL")
                             if current_category not in label.upper():
                                 label = f"{current_category} — {label}"
-                        
-                        raw_prices.append({'label': label, 'price': price_float, 'formatted': f"R$ {v}"})
+
+
+                        normalized_label = re.sub(r"\s+", " ", label).strip()
+
+
+                        entry = {'raw': line, 'label': normalized_label, 'price': price_float}
+                        try:
+                            if entry_is_prize(entry, driver.page_source):
+                                # ignora entradas que correspondem a premiação
+                                continue
+                        except Exception:
+                            # Em caso de erro na detecção, não bloqueia o scraping — registra silenciosamente e segue
+                            pass
+
+                        raw_prices.append({'label': normalized_label, 'price': price_float, 'formatted': f"R$ {v}"})
                 except:
                     pass
     
