@@ -46,3 +46,5 @@ data/processed/*
 # Arquivos do sistema
 .DS_Store
 Thumbs.db
+
+data_collection/data
