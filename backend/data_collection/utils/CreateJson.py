@@ -10,7 +10,7 @@ load_dotenv(env_path)
 MONGO_URI = os.getenv('MONGODB_URI')
 DB_NAME = os.getenv('MONGODB_DB_NAME')
 COLLECTION_NAME = os.getenv('MONGODB_COLLECTION')
-CAMINHO_SAIDA = '../data/eventos_compilados.json'
+CAMINHO_SAIDA = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'eventos_compilados.json'))
 
 MESES = {
     1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
