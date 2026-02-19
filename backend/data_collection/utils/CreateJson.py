@@ -1,8 +1,10 @@
 import json
 import os
+import re
 from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
+from data_collection.utils.PriceUtils import fmt_entry
 
 env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
 load_dotenv(env_path)
@@ -70,16 +72,90 @@ def transformar_evento(evento_mongo):
     if precos_entries and isinstance(precos_entries, list):
         lista_precos = []
         for p in precos_entries:
-            if isinstance(p, dict):
-                formatted = p.get('formatted') or p.get('raw') or ''
-                lista_precos.append({'formatted': formatted})
-            else:
-                # trata como string: pode ser já no formato 'R$ X | LABEL'
-                try:
-                    s = str(p)
-                    lista_precos.append({'formatted': s})
-                except Exception:
-                    continue
+            try:
+                if isinstance(p, dict):
+                    # usa 'formatted' se já existir, senão tenta formatar via fmt_entry
+                    formatted = p.get('formatted') or p.get('raw') or ''
+                    if not formatted and (p.get('price') is not None or p.get('label')):
+                        try:
+                            formatted = fmt_entry(p).get('formatted')
+                        except Exception:
+                            formatted = ''
+
+                    if formatted:
+                        m = re.search(r"R\$\s*[\d.,]+(?:.*?taxa.*)?", formatted)
+                        if m:
+                            price_part = m.group(0).strip()
+                            label_part = formatted[:m.start()].strip(' -—–')
+                            if label_part:
+                                lista_precos.append(f"{label_part.upper()} — {price_part}")
+                            else:
+                                lista_precos.append(price_part)
+                            continue
+                        else:
+                            lista_precos.append(formatted)
+                            continue
+
+                    # fallback: montar a partir de label e price
+                    label = (p.get('label') or '').strip()
+                    price_val = p.get('price')
+                    if price_val is not None:
+                        try:
+                            price_s = fmt_entry({'price': price_val}).get('formatted')
+                        except Exception:
+                            try:
+                                price_s = f"R$ {float(price_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                            except Exception:
+                                price_s = str(price_val)
+                        if label:
+                            lista_precos.append(f"{label.upper()} — {price_s}")
+                        else:
+                            lista_precos.append(price_s)
+                        continue
+
+                    raw = p.get('raw') or ''
+                    if raw:
+                        m = re.search(r"R\$\s*[\d.,]+", raw)
+                        if m:
+                            price_part = m.group(0).strip()
+                            label_part = raw.replace(m.group(0), '').strip(' -—|')
+                            if label_part:
+                                lista_precos.append(f"{label_part.upper()} — {price_part}")
+                            else:
+                                lista_precos.append(price_part)
+                        else:
+                            lista_precos.append(raw)
+
+                else:
+                    # trata string: possivelmente 'R$ X | LABEL' ou similar
+                    s = str(p).strip()
+                    if '|' in s:
+                        parts = [part.strip() for part in s.split('|', 1)]
+                        if len(parts) == 2:
+                            price_part, label_part = parts[0], parts[1]
+                            lista_precos.append(f"{label_part.upper()} — {price_part}")
+                            continue
+                    m = re.search(r"R\$\s*[\d.,]+", s)
+                    if m:
+                        price_part = m.group(0).strip()
+                        label_part = s.replace(m.group(0), '').strip(' -—|')
+                        if label_part:
+                            lista_precos.append(f"{label_part.upper()} — {price_part}")
+                        else:
+                            lista_precos.append(price_part)
+                    else:
+                        lista_precos.append(s)
+            except Exception:
+                continue
+
+        # deduplica preservando ordem
+        seen = set()
+        deduped = []
+        for item in lista_precos:
+            if item not in seen:
+                seen.add(item)
+                deduped.append(item)
+        lista_precos = deduped
     else:
         # Fallback antigo: string 'preco' separado por ';'
         if preco_raw and isinstance(preco_raw, str):
