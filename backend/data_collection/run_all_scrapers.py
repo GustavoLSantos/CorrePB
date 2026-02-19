@@ -44,9 +44,6 @@ def run_script(script_name, capture_output=True):
 
 
 def main():
-    """
-    Execute discovered scrapers sequentially (no CLI args required).
-    """
     to_run = _scripts
     if not to_run:
         print('No scripts to run; exiting.')
