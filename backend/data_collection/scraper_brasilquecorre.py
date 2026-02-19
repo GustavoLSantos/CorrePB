@@ -137,11 +137,17 @@ def _entries_to_json(entries):
         if not isinstance(p, dict):
             continue
         label_atual = (p.get('label') or '').strip() or 'GERAL'
-        preco_atual = str(p.get('formatted', '') or p.get('raw', '') or '')
-        if not preco_atual and p.get('price') is not None:
-            preco_atual = str(p.get('price'))
-        if preco_atual:
-            safe_prices.append(f"{preco_atual} | {label_atual}")
+        formatted = (p.get('formatted') or '').strip()
+        if formatted:
+            safe_prices.append(formatted)
+        else:
+            price_val = p.get('price')
+            if price_val is not None:
+                try:
+                    price_s = f"R$ {float(price_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                except Exception:
+                    price_s = f"R$ {price_val}"
+                safe_prices.append(f"{label_atual} — {price_s}")
     try:
         return json.dumps(safe_prices, ensure_ascii=False) if safe_prices else '[]'
     except Exception:
