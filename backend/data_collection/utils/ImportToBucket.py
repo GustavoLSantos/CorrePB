@@ -40,12 +40,6 @@ def _validar_credenciais_aws():
         raise EnvironmentError(f"As seguintes variáveis AWS não estão definidas: {', '.join(missing)}")
 
 
-def _obter_caminho_arquivo_saida():
-    # CAMINHO_SAIDA em CreateJson é relativo; resolve para caminho absoluto
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    caminho_rel = CAMINHO_SAIDA if CAMINHO_SAIDA else '../data/eventos_compilados.json'
-    caminho_absoluto = os.path.abspath(os.path.join(base_dir, caminho_rel))
-    return caminho_absoluto
 
 
 def upload_para_s3(file_path: str, chave_s3: str) -> None:
@@ -86,7 +80,7 @@ def gerar_e_enviar_para_bucket() -> str:
 
     gerar_json_customizado()
 
-    arquivo_local = _obter_caminho_arquivo_saida()
+    arquivo_local = CAMINHO_SAIDA
     if not os.path.exists(arquivo_local):
         raise FileNotFoundError(f"Arquivo esperado não encontrado: {arquivo_local}")
 
