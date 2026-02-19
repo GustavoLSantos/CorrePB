@@ -530,8 +530,10 @@ def process_event_details(events):
                     soup = None
             elif is_circuito_domain(domain):
                 try:
-                    soup, _, driver = load_circuito_soup(url)
+                    soup, _, driver, loader_horario = load_circuito_soup(url)
                     _register_driver(driver)
+                    if loader_horario:
+                        horario = horario or loader_horario
                 except Exception:
                     soup = None
             elif is_liverun_domain(domain):
