@@ -116,6 +116,20 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
         except Exception:
             pass
 
+        # tenta clicar em cards/opções para assegurar que detalhes (ex.: horário) fiquem visíveis
+        try:
+            clickable_cards = local_driver.find_elements(By.CSS_SELECTOR, 'div.card, div.bloco-radio, .display-modality')
+            if clickable_cards:
+                # tenta clicar nas primeiras opções (até 2) para forçar renderização dos detalhes
+                for el in clickable_cards[:2]:
+                    try:
+                        _safe_click(el)
+                        time.sleep(0.6)
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
         # aguarda blocos de preço ou cards
         try:
             WebDriverWait(local_driver, 5).until(
@@ -128,6 +142,19 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
             local_driver.execute_script('window.scrollTo(0, 0);')
             time.sleep(0.4)
         except Exception:
+            pass
+
+        # Aguarda até que o horário esteja presente na página para aumentar determinismo
+        try:
+            def _has_schedule(drv):
+                try:
+                    s = BeautifulSoup(drv.page_source, 'html.parser')
+                    return bool(extract_ticketsports_schedule(s))
+                except Exception:
+                    return False
+            WebDriverWait(local_driver, wait_seconds).until(_has_schedule)
+        except Exception:
+            # não falhar aqui — continuará com o estado atual da página
             pass
 
         soup = BeautifulSoup(local_driver.page_source, 'html.parser')
@@ -147,6 +174,60 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
                 horario_req = extract_ticketsports_schedule(soup_req)
                 if horario_req:
                     horario = horario_req
+
+        # tentativa de reload + interação caso o horário não tenha sido encontrado
+        if not horario and created and local_driver:
+            try:
+                try:
+                    local_driver.get(url)
+                    time.sleep(1.0)
+                except Exception:
+                    pass
+
+                try:
+                    click_closebtn(local_driver, debug)
+                    modals = local_driver.find_elements(By.CSS_SELECTOR, '.display-modality')
+                    if modals:
+                        _safe_click(modals[0])
+                except Exception:
+                    pass
+
+                try:
+                    clickable_cards = local_driver.find_elements(By.CSS_SELECTOR, 'div.card, div.bloco-radio, .display-modality')
+                    if clickable_cards:
+                        for el in clickable_cards[:2]:
+                            try:
+                                _safe_click(el)
+                                time.sleep(0.6)
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
+
+                try:
+                    local_driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+                    time.sleep(0.6)
+                except Exception:
+                    pass
+
+                try:
+                    def _has_schedule_retry(drv):
+                        try:
+                            s2 = BeautifulSoup(drv.page_source, 'html.parser')
+                            return bool(extract_ticketsports_schedule(s2))
+                        except Exception:
+                            return False
+                    WebDriverWait(local_driver, wait_seconds).until(_has_schedule_retry)
+                except Exception:
+                    pass
+
+                soup2 = BeautifulSoup(local_driver.page_source, 'html.parser')
+                horario2 = extract_ticketsports_schedule(soup2)
+                if horario2:
+                    horario = horario2
+                    soup = soup2
+            except Exception:
+                pass
 
         num_cards = len(soup.select('div.card')) if soup else 0
         if return_counts:
