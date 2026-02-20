@@ -134,37 +134,34 @@ def _entries_to_json(entries):
         return '[]'
     safe_prices = []
     for p in entries:
-        if not isinstance(p, dict):
-            continue
-        label_atual = (p.get('label') or '').strip() or 'GERAL'
-        formatted = (p.get('formatted') or '').strip()
+        formatted = None
+        if isinstance(p, str):
+            formatted = p.strip()
+        elif isinstance(p, dict):
+            label_atual = (p.get('label') or '').strip() or 'GERAL'
+            formatted = (p.get('formatted') or '').strip()
+            if not formatted:
+                price_val = p.get('price')
+                if price_val is not None:
+                    try:
+                        price_s = f"R$ {float(price_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    except Exception:
+                        price_s = f"R$ {price_val}"
+                    formatted = f"{label_atual} — {price_s}"
         if formatted:
             safe_prices.append(formatted)
-        else:
-            price_val = p.get('price')
-            if price_val is not None:
-                try:
-                    price_s = f"R$ {float(price_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                except Exception:
-                    price_s = f"R$ {price_val}"
-                safe_prices.append(f"{label_atual} — {price_s}")
     try:
         return json.dumps(safe_prices, ensure_ascii=False) if safe_prices else '[]'
     except Exception:
         return '[]'
 
 #Extração de preços
-def extract_price_entries(soup, domain):
+def extract_price_entries(soup, domain, driver=None):
     """
     Retorna uma lista de entradas de preço estruturadas encontradas na página.
 
-    Cada entrada é um dict: {
-        label (str|None),
-        price (float),
-        tax (float|None),
-        formatted (str),
-        raw (str)
-    }
+    Cada entrada é um dict ou uma string formatada. Em casos específicos (ex: NightRun), o extractor
+    pode devolver diretamente valores como '5KM - 69,90'.
     """
     page_html = str(soup)
     candidates = []
@@ -205,7 +202,13 @@ def extract_price_entries(soup, domain):
                 # Ticketsports normalmente usa seu próprio loader/flow; keep generic fallback
                 return extract_ticketsports_ticket_prices(soup)
             if 'extract_nightrun_ticket_prices' in locals() and extract_nightrun_ticket_prices and is_nightrun_domain(domain):
-                return extract_nightrun_ticket_prices(soup)
+                if driver:
+                    try:
+                        raw_prices = extract_nightrun_ticket_prices(driver)
+                        if raw_prices:
+                            return raw_prices
+                    except Exception:
+                        pass
             if 'extract_zenite_ticket_prices' in locals() and extract_zenite_ticket_prices and is_zenite_domain(domain):
                 return extract_zenite_ticket_prices(soup)
     except Exception:
@@ -505,6 +508,7 @@ def process_event_details(events):
         domain = urlparse(url).netloc
         horario = (evt.get('horario') or '').strip()
         driver_handles = []
+        driver = None
         soup = None
 
         def _register_driver(driver):
@@ -558,8 +562,10 @@ def process_event_details(events):
                     soup = None
             elif is_nightrun_domain(domain):
                 try:
-                    soup, _, driver = load_nightrun_soup(url, driver=None, wait_seconds=30)
+                    soup, _, driver, nightrun_schedule = load_nightrun_soup(url, driver=None, wait_seconds=30)
                     _register_driver(driver)
+                    if nightrun_schedule:
+                        horario = horario or nightrun_schedule
                 except Exception:
                     soup = None
             elif is_zenite_domain(domain):
@@ -597,7 +603,7 @@ def process_event_details(events):
                     pass
 
                 try:
-                    entries = extract_ticketsports_ticket_prices(soup, debug=False) if is_ticketsports_domain(domain) else extract_price_entries(soup, domain)
+                    entries = extract_ticketsports_ticket_prices(soup, debug=False) if is_ticketsports_domain(domain) else extract_price_entries(soup, domain, driver)
                 except Exception:
                     entries = []
 
