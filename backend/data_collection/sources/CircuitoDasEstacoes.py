@@ -36,6 +36,7 @@ def load_circuito_soup(url: str, timeout: int = 20):
 
         try:
             selectors = [
+                'p.kit-price-desktop, p.kit-price-mobile',
                 '#race-detailed-info',
                 'details',
                 '.details-content',
@@ -51,6 +52,20 @@ def load_circuito_soup(url: str, timeout: int = 20):
                     continue
             if not found:
                 pass
+        except Exception:
+            pass
+
+        # captura o HTML completo antes de qualquer clique que possa navegar
+        price_soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+        # guarda o href do CTA antes de navegar para a página de informações
+        cta_href = ''
+        try:
+            cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a.kit-cta-desktop')
+            if not cta_anchors:
+                cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a[class*="kit-cta"]')
+            if cta_anchors:
+                cta_href = cta_anchors[0].get_attribute('href') or ''
         except Exception:
             pass
 
@@ -112,12 +127,119 @@ def load_circuito_soup(url: str, timeout: int = 20):
         except Exception:
             pass
 
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        horario = extract_circuito_schedule(soup)
-        return soup, created, driver, horario
+        # extrai o horário da página de informações (URL pode ter navegado)
+        schedule_soup = BeautifulSoup(driver.page_source, 'html.parser')
+        horario = extract_circuito_schedule(schedule_soup)
+
+        # navega para o CTA (RunningLand) para que extract_circuito_ticket_prices possa usar o driver
+        if cta_href:
+            try:
+                driver.get(cta_href)
+                try:
+                    WebDriverWait(driver, timeout).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
+                        or 'R$' in (d.page_source or '')
+                    )
+                except Exception:
+                    time.sleep(3)
+            except Exception:
+                pass
+
+        return price_soup, created, driver, horario
 
     except Exception:
         return None, created, None, ''
+
+
+def _parse_price_str_to_float(token):
+    import re
+    if not token:
+        return None
+    s = re.sub(r'[^\d\.,]', '', str(token))
+    if not s:
+        return None
+    if '.' in s and ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    elif ',' in s and '.' not in s:
+        s = s.replace(',', '.')
+    try:
+        return float(s)
+    except Exception:
+        try:
+            return float(s.replace('.', '').replace(',', '.'))
+        except Exception:
+            return None
+
+
+def extract_circuito_ticket_prices(driver, wait_seconds: int = 30):
+    """Extrai preços da página de inscrição do CircuitoDasEstacoes (RunningLand).
+
+    O driver deve estar posicionado na página de compra (RunningLand).
+    Retorna uma lista de strings no formato 'LABEL - XX,XX'.
+    """
+    import re
+    if not driver:
+        return []
+    try:
+        price_sel = 'div[class*="option-root"], div[class*="option-priceBlock"], [class*="option-rootLeft"], div[class*="priceBlock-block"]'
+        try:
+            WebDriverWait(driver, min(wait_seconds, 40), poll_frequency=0.5).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, price_sel)) > 0 or 'R$' in (d.page_source or '')
+            )
+        except Exception:
+            pass
+
+        blocks = driver.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"], div[class*="option-priceBlock"], [class*="option-rootLeft"], div[class*="priceBlock-block"]') or []
+
+        out = {}
+        for b in blocks:
+            try:
+                try:
+                    lbl_el = b.find_element(By.CSS_SELECTOR, '[class*="option-label"], .option-label, .option-labelLeft, .option-labelLeft-f8R, h4, h3')
+                    label = (lbl_el.text or '').strip()
+                except Exception:
+                    label = None
+
+                # tenta preço especial primeiro, depois preço regular
+                price_el = None
+                for price_css in [
+                    'span[class*="option-specialPrice"], .option-specialPrice',
+                    'span[class*="option-regularPrice"], .option-regularPrice',
+                    'span[class*="priceBlock-regularPrice"]',
+                    'span[class*="priceBlock-oldP"], .priceBlock-oldP, span[class*="priceBlock-fromPrice"]',
+                ]:
+                    try:
+                        price_el = b.find_element(By.CSS_SELECTOR, price_css)
+                        if price_el:
+                            break
+                    except Exception:
+                        continue
+
+                if not price_el or not label:
+                    continue
+
+                txt = price_el.text or ''
+                m = re.search(r'R\$\s*([\d\.,]+)', txt)
+                val = None
+                if m:
+                    val = _parse_price_str_to_float(m.group(1))
+                else:
+                    mm = re.search(r'([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|[0-9]+(?:[\.,][0-9]{2}))', txt)
+                    if mm:
+                        val = _parse_price_str_to_float(mm.group(1))
+                if val is None:
+                    continue
+
+                key = label.strip().upper()
+                if key in out:
+                    continue
+                out[key] = "{:.2f}".format(val).replace('.', ',')
+            except Exception:
+                continue
+
+        return [f"{k} - {v}" for k, v in out.items()]
+    except Exception:
+        return []
 
 
 def extract_circuito_schedule(soup) -> str:

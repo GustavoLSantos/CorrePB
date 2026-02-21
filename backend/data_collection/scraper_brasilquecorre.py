@@ -16,7 +16,7 @@ from selenium.common.exceptions import TimeoutException, WebDriverException
 from data_collection.core.Driver import setup_driver
 from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
 from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
-from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup
+from data_collection.sources.CircuitoDasEstacoes import is_circuito_domain, load_circuito_soup, extract_circuito_ticket_prices
 from data_collection.sources.Race83 import is_race83_domain, is_race83_listing_url, detect_redirects_to_listing, load_race83_soup
 from data_collection.sources.Ticketsports import is_ticketsports_domain, load_ticketsports_soup, extract_ticketsports_ticket_prices, extract_ticketsports_schedule
 from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
@@ -211,6 +211,10 @@ def extract_price_entries(soup, domain, driver=None):
                         pass
             if 'extract_zenite_ticket_prices' in locals() and extract_zenite_ticket_prices and is_zenite_domain(domain):
                 return extract_zenite_ticket_prices(soup)
+            if is_circuito_domain(domain) and driver:
+                prices = extract_circuito_ticket_prices(driver)
+                if prices:
+                    return prices
     except Exception:
         # Se o extractor específico falhar, segue com heurísticas genéricas abaixo
         pass
