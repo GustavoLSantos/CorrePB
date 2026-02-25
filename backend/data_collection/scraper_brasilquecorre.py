@@ -512,13 +512,14 @@ def process_event_details(events):
 
         domain = urlparse(url).netloc
         horario = (evt.get('horario') or '').strip()
-        driver_handles = []
-        driver = None
-        soup = None
+        drivers_to_close = []
+        current_driver = None  # Rastreia driver da sessão atual para extract_price_entries
 
-        def _register_driver(driver):
+        def _safe_register_driver(driver):
+            """Registra driver para fechamento garantido, mesmo se exceção ocorrer."""
             if driver:
-                driver_handles.append(driver)
+                drivers_to_close.append(driver)
+            return driver
 
         try:
             # Trata redirecionamentos do Race83 que levam para listagem
@@ -531,16 +532,17 @@ def process_event_details(events):
                 except Exception:
                     pass
 
+            soup = None
             if is_sympla_domain(domain):
                 try:
                     soup, _, driver = load_sympla_soup(url)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                 except Exception:
                     soup = None
             elif is_circuito_domain(domain):
                 try:
                     soup, _, driver, loader_horario = load_circuito_soup(url)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                     if loader_horario:
                         horario = horario or loader_horario
                 except Exception:
@@ -548,19 +550,19 @@ def process_event_details(events):
             elif is_liverun_domain(domain):
                 try:
                     soup, _, driver = load_liverun_soup(url)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                 except Exception:
                     soup = None
             elif is_race83_domain(domain):
                 try:
                     soup, _, driver = load_race83_soup(url)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                 except Exception:
                     soup = None
             elif is_ticketsports_domain(domain):
                 try:
                     soup, _, driver, loader_horario = load_ticketsports_soup(url, driver=None, wait_seconds=30, debug=False)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                     if loader_horario:
                         horario = horario or loader_horario
                 except Exception:
@@ -568,7 +570,7 @@ def process_event_details(events):
             elif is_nightrun_domain(domain):
                 try:
                     soup, _, driver, nightrun_schedule = load_nightrun_soup(url, driver=None, wait_seconds=30)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                     if nightrun_schedule:
                         horario = horario or nightrun_schedule
                 except Exception:
@@ -576,7 +578,7 @@ def process_event_details(events):
             elif is_zenite_domain(domain):
                 try:
                     soup, _, driver, loader_horario = load_zenite_soup(url, driver=None, wait_seconds=30)
-                    _register_driver(driver)
+                    current_driver = _safe_register_driver(driver)
                     if loader_horario:
                         horario = horario or loader_horario
                 except Exception:
@@ -608,7 +610,7 @@ def process_event_details(events):
                     pass
 
                 try:
-                    entries = extract_ticketsports_ticket_prices(soup, debug=False) if is_ticketsports_domain(domain) else extract_price_entries(soup, domain, driver)
+                    entries = extract_ticketsports_ticket_prices(soup, debug=False) if is_ticketsports_domain(domain) else extract_price_entries(soup, domain, current_driver)
                 except Exception:
                     entries = []
 
@@ -629,7 +631,8 @@ def process_event_details(events):
                 evt['horario'] = horario
             return evt
         finally:
-            for drv in driver_handles:
+            # Garantir fechamento de todos drivers mesmo se exceção ocorreu
+            for drv in drivers_to_close:
                 _safe_quit(drv)
 
     def _process_sequential(evts):
