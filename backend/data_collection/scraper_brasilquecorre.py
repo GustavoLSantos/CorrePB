@@ -4,7 +4,9 @@ import os
 import json
 import time
 from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import logging
+
+logger = logging.getLogger(__name__)
 
 import requests
 from bs4 import BeautifulSoup
@@ -495,8 +497,7 @@ def extract_edital(url):
 # PROCESSAMENTO PARALELO DE DETALHES DOS EVENTOS
 def process_event_details(events):
     """
-    Processa editais e preços de múltiplos eventos em paralelo.
-    Usa ThreadPoolExecutor para acelerar a extração de dados de cada URL.
+    Processa editais e preços de múltiplos eventos sequencialmente.
     """
     if not events:
         return []
@@ -631,28 +632,30 @@ def process_event_details(events):
             for drv in driver_handles:
                 _safe_quit(drv)
 
-    def _process_parallel(evts, max_workers):
+    def _process_sequential(evts):
+        """Processa eventos sequencialmente para evitar race conditions com Selenium.
+        """
         if not evts:
             return []
-        workers = max(1, min(max_workers, len(evts)))
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {executor.submit(fetch_details, dict(event)): dict(event) for event in evts}
-            results = []
-            total = len(futures)
-            for idx, future in enumerate(as_completed(futures), 1):
-                try:
-                    result = future.result()
-                    if result is None:
-                        continue
-                    results.append(result)
-                    print(f"[{idx}/{total}] ✓ {result.get('nome', '')}")
-                    print(f"   Edital: {result.get('link_edital', '')[:50]}")
-                except Exception:
-                    event = dict(futures[future])
-                    event['link_edital'] = 'edital não encontrado'
-                    event['precos_entries'] = '[]'
-                    results.append(event)
-            return results
+        
+        results = []
+        total = len(evts)
+        for idx, event in enumerate(evts, 1):
+            try:
+                result = fetch_details(dict(event))
+                if result is None:
+                    continue
+                results.append(result)
+                print(f"[{idx}/{total}] ✓ {result.get('nome', '')}")
+                print(f"   Edital: {result.get('link_edital', '')[:50]}")
+            except Exception:
+                logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
+                event = dict(event)
+                event['link_edital'] = 'edital não encontrado'
+                event['precos_entries'] = '[]'
+                results.append(event)
+        
+        return results
 
     tickets = []
     others = []
@@ -666,9 +669,10 @@ def process_event_details(events):
         else:
             others.append(ev)
 
+    # Processar sequencialmente em vez de paralelo para evitar race conditions com Selenium
     processed = []
-    processed += _process_parallel(tickets, max_workers=2)
-    processed += _process_parallel(others, max_workers=6)
+    processed += _process_sequential(tickets)
+    processed += _process_sequential(others)
 
     return processed
 
