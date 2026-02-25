@@ -1,4 +1,3 @@
-import time
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -69,27 +68,40 @@ def load_circuito_soup(url: str, timeout: int = 20):
             try:
                 # tenta seletor específico dentro do container
                 buttons = driver.find_elements(By.CSS_SELECTOR, "#race-detailed-info [role='button'], #race-detailed-info button, #race-detailed-info a")
-                if buttons and len(buttons) > 0:
-                    buttons[0].click()
-                    WebDriverWait(driver, 5).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
+                if buttons:
+                    try:
+                        buttons[0].click()
+                        WebDriverWait(driver, 5).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
+                    except Exception:
+                        pass
             except Exception:
-                # fallback: procura por elementos com texto aproximado 'confira'/'inform'
+                # fallback: procura por elementos com texto aproximado 'confira'/'inform' em anchors e buttons
                 try:
                     details_count = driver.execute_script("return document.querySelectorAll('details').length")
                 except Exception:
                     details_count = 0
 
                 if not details_count:
-                    elems = driver.find_elements(By.XPATH, "//button|//a|//div|//span")
+                    # procura apenas por anchors e buttons com texto relevante para reduzir escopo
+                    xpath = ("//a[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'confira')"
+                             " or contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'inform')]"
+                             " | //button[contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'confira')"
+                             " or contains(translate(normalize-space(.), 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'),'inform')]")
+                    try:
+                        elems = driver.find_elements(By.XPATH, xpath)
+                    except Exception:
+                        elems = []
+
                     for el in elems:
                         try:
-                            txt = (el.text or '').strip().lower()
-                            if 'confira' in txt or 'inform' in txt:
-                                # safety: ensure element is displayed and enabled
-                                if el.is_displayed():
-                                    el.click()
-                                    WebDriverWait(driver, 3).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
-                                    break
+                            if not el.is_displayed():
+                                continue
+                            disabled = el.get_attribute('disabled')
+                            if disabled:
+                                continue
+                            el.click()
+                            WebDriverWait(driver, 3).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
+                            break
                         except Exception:
                             continue
 
@@ -97,7 +109,7 @@ def load_circuito_soup(url: str, timeout: int = 20):
             try:
                 driver.execute_script("document.querySelectorAll('details').forEach(d=>d.open=true);")
                 driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                WebDriverWait(driver, 2).until(lambda d: True)
+                # não usar sleep; confiar nas esperas explícitas posteriores
                 driver.execute_script('window.scrollTo(0, 0);')
             except Exception:
                 pass
@@ -133,7 +145,13 @@ def load_circuito_soup(url: str, timeout: int = 20):
                             or 'R$' in (d.page_source or '')
                         )
                     except Exception:
-                        WebDriverWait(driver, 3)
+                        try:
+                            WebDriverWait(driver, 3).until(
+                                lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
+                                or 'R$' in (d.page_source or '')
+                            )
+                        except Exception:
+                            pass
                 except Exception:
                     pass
 
@@ -156,7 +174,7 @@ def _parse_price_str_to_float(token):
     import re
     if not token:
         return None
-    s = re.sub(r'[^\d\.,]', '', str(token))
+    s = re.sub(r'[^\d.,]', '', str(token))
     if not s:
         return None
     if '.' in s and ',' in s:
@@ -220,12 +238,12 @@ def extract_circuito_ticket_prices(driver, wait_seconds: int = 30):
                     continue
 
                 txt = price_el.text or ''
-                m = re.search(r'R\$\s*([\d\.,]+)', txt)
+                m = re.search(r'R\$\s*([\d.,]+)', txt)
                 val = None
                 if m:
                     val = _parse_price_str_to_float(m.group(1))
                 else:
-                    mm = re.search(r'([0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|[0-9]+(?:[\.,][0-9]{2}))', txt)
+                    mm = re.search(r'([0-9]{1,3}(?:\.[0-9]{3})*,[0-9]{2}|[0-9]+[.,][0-9]{2})', txt)
                     if mm:
                         val = _parse_price_str_to_float(mm.group(1))
                 if val is None:
