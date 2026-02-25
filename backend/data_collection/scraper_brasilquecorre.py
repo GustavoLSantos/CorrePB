@@ -496,7 +496,35 @@ def extract_price_entries(soup, domain, driver=None):
         candidates = [e for e in candidates if not (e.get('label') is None and e.get('price') in labeled_prices)]
 
     # Filtra preços de inscrição plausíveis (ajusta limites se necessário)
-    valid_entries = [e for e in candidates if e.get('price') is not None and 0 <= e.get('price') <= 500]
+    # Rastreia preços descartados para debug de problemas de parsing
+    discarded_prices = []
+    valid_entries = []
+    
+    for e in candidates:
+        price = e.get('price')
+        
+        if price is None:
+            # Valores None são esperados, apenas continua
+            continue
+        
+        # Verifica se preço está fora do intervalo válido
+        if not (0 <= price <= 500):
+            discarded_prices.append({
+                'price': price,
+                'label': e.get('label'),
+                'raw': e.get('raw'),
+                'reason': 'fora do intervalo [0, 500]'
+            })
+            # Log se preço é negativo (possível bug de parsing)
+            if price < 0:
+                logger.warning(f"Preco negativo descartado: {e}. Possivelmente bug em parse_price_str().")
+            continue
+        
+        valid_entries.append(e)
+    
+    # Log resumo se muitos preços foram descartados
+    if discarded_prices and len(discarded_prices) > len(valid_entries):
+        logger.info(f"Descartados {len(discarded_prices)} precos invalidos contra {len(valid_entries)} validos. Precos descartados: {discarded_prices[:3]}")
 
     # Se há preços pagos, exclui entradas gratuitas (0.00) para evitar falsos positivos
     if any(e['price'] > 0 for e in valid_entries):
