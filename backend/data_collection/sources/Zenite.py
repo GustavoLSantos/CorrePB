@@ -51,6 +51,15 @@ def load_zenite_soup(url: str, driver=None, wait_seconds: int = 30, debug: bool 
     except Exception as e:
         if debug:
             print(f"Erro ao carregar Zenite: {e}")
+        try:
+            if created and local_driver:
+                try:
+                    local_driver.quit()
+                except Exception:
+                    pass
+                created = False
+        except Exception:
+            pass
         return None, created, None, horario
 
 
