@@ -18,7 +18,19 @@ def is_zenite_domain(domain: str) -> bool:
 def load_zenite_soup(url: str, driver=None, wait_seconds: int = 30, debug: bool = False):
     """
     Carrega a página do Zenite com Selenium e retorna o soup.
-    Retorna (soup, created, driver, horario)
+
+    Retorna: (soup, created, driver, horario)
+
+    Contrato de retorno:
+    - soup: BeautifulSoup do conteúdo em caso de sucesso, ou None em erro.
+    - created: bool indicando se a função criou o driver (True) ou recebeu um driver externo (False).
+    - driver: o WebDriver retornado se sucesso; None em erro.
+    - horario: horário extraído (string) ou '' em falta.
+
+    Observações:
+    - Se created for True, o chamador é responsável por fechar o driver (driver.quit()) após o uso.
+    - Em caso de exceção durante a carga, se a função criou o driver internamente, ela o fecha antes de retornar e
+      ajusta created para False. Assim, a função NUNCA retornará (created=True, driver=None).
     """
     created = False
     local_driver = driver
