@@ -230,8 +230,10 @@ def extract_price_entries(soup, domain, driver=None):
 
     Cada entrada é um dict ou uma string formatada. Em casos específicos (ex: NightRun), o extractor
     pode devolver diretamente valores como '5KM - 69,90'.
+    
+    NOTA: page_html é criado sob demanda (lazy) para evitar duplicar memória do objeto soup
+    inteiro, e é deletado após uso para permitir garbage collection.
     """
-    page_html = str(soup)
     candidates = []
 
     # Tenta rodar extractors site-specific apenas se o domínio corresponder explicitamente
@@ -440,33 +442,40 @@ def extract_price_entries(soup, domain, driver=None):
         pass
 
     #Fallbacks: R$ genérico, 'reais', faixas — apenas após parsing estruturado
-    for m in re.findall(r'R\$(?:&nbsp;|\s)*([\d.,]+)', page_html):
-        v = parse_price_str(m)
-        if v is not None:
-            candidates.append({'label': None, 'price': v, 'tax': None, 'raw': m})
-    for m in re.findall(r'([\d.,]+)\s*reais', page_html, re.IGNORECASE):
-        v = parse_price_str(m)
-        if v is not None:
-            candidates.append({'label': None, 'price': v, 'tax': None, 'raw': m})
-    for a, b in re.findall(r'R\$\s*([\d.,]+)\s*(?:a|até|-)\s*(?:R\$)?\s*([\d.,]+)', page_html, re.IGNORECASE):
-        va = parse_price_str(a)
-        vb = parse_price_str(b)
-        # Evita capturar índices pequenos (ex: '1-159,90') como preço '1.0'.
-        # Se o lado esquerdo for <10 e não contiver separador decimal, e o direito contiver, ignora o esquerdo.
-        try:
-            a_has_dec = ',' in a or '.' in a
-        except Exception:
-            a_has_dec = False
-        try:
-            b_has_dec = ',' in b or '.' in b
-        except Exception:
-            b_has_dec = False
-        if va is not None:
-            if not (va < 10 and not a_has_dec and b_has_dec):
-                candidates.append({'label': None, 'price': va, 'tax': None, 'raw': f'{a}-{b}'})
-        if vb is not None:
-            if not (vb < 10 and not b_has_dec and a_has_dec):
-                candidates.append({'label': None, 'price': vb, 'tax': None, 'raw': f'{a}-{b}'})
+    # Cria page_html apenas quando necessário para evitar duplicar memória do objeto soup inteiro
+    page_html = str(soup)
+    try:
+        for m in re.findall(r'R\$(?:&nbsp;|\s)*([\d.,]+)', page_html):
+            v = parse_price_str(m)
+            if v is not None:
+                candidates.append({'label': None, 'price': v, 'tax': None, 'raw': m})
+        for m in re.findall(r'([\d.,]+)\s*reais', page_html, re.IGNORECASE):
+            v = parse_price_str(m)
+            if v is not None:
+                candidates.append({'label': None, 'price': v, 'tax': None, 'raw': m})
+        for a, b in re.findall(r'R\$\s*([\d.,]+)\s*(?:a|até|-)\s*(?:R\$)?\s*([\d.,]+)', page_html, re.IGNORECASE):
+            va = parse_price_str(a)
+            vb = parse_price_str(b)
+            # Evita capturar índices pequenos (ex: '1-159,90') como preço '1.0'.
+            # Se o lado esquerdo for <10 e não contiver separador decimal, e o direito contiver, ignora o esquerdo.
+            try:
+                a_has_dec = ',' in a or '.' in a
+            except Exception:
+                a_has_dec = False
+            try:
+                b_has_dec = ',' in b or '.' in b
+            except Exception:
+                b_has_dec = False
+            if va is not None:
+                if not (va < 10 and not a_has_dec and b_has_dec):
+                    candidates.append({'label': None, 'price': va, 'tax': None, 'raw': f'{a}-{b}'})
+            if vb is not None:
+                if not (vb < 10 and not b_has_dec and a_has_dec):
+                    candidates.append({'label': None, 'price': vb, 'tax': None, 'raw': f'{a}-{b}'})
+    except Exception:
+        # Se regex fallback falhar, continua com autres testes
+        pass
+
     for a, b in re.findall(r'(?:R\$)?\s*([\d.,]+)\s*(?:a|até|-)\s*R\$\s*([\d.,]+)', page_html, re.IGNORECASE):
         va = parse_price_str(a)
         vb = parse_price_str(b)
@@ -550,7 +559,13 @@ def extract_price_entries(soup, domain, driver=None):
     # Ordena por preço crescente
     unique_sorted = sorted(unique, key=lambda x: (x.get('price') or 0))
 
-    return [fmt_entry(e) for e in unique_sorted]
+    result = [fmt_entry(e) for e in unique_sorted]
+    
+    # Libera memória de page_html se foi criado
+    if 'page_html' in locals():
+        del page_html
+    
+    return result
 
 #Extração de edital
 def extract_edital(url):
@@ -717,6 +732,9 @@ def process_event_details(events):
                 evt['precos_entries'] = _entries_to_json(entries)
                 if horario:
                     evt['horario'] = horario
+                
+                # Libera memória do objeto soup para evitar memory leak
+                del soup
             else:
                 evt['link_edital'] = 'edital não encontrado'
                 evt['precos_entries'] = '[]'
