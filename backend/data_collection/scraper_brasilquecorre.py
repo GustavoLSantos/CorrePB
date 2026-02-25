@@ -5,6 +5,8 @@ import json
 import time
 from urllib.parse import urlparse
 import logging
+from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,70 @@ from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_s
 from data_collection.sources.Zenite import is_zenite_domain, load_zenite_soup, extract_zenite_schedule
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 from data_collection.utils.PrizeDetection import entry_is_prize
+
+
+def _get_http_session():
+    """Cria sessão requests com retry automático e User-Agent.
+    
+    Implementa:
+    - Retry com backoff exponencial (3 tentativas, espera 1s, 2s, 4s)
+    - User-Agent customizado para evitar bloqueios
+    - Timeout padrão de 10s
+    - Reúsa conexões TCP/HTTP para performance
+    """
+    session = requests.Session()
+    
+    # User-Agent comum para não ser bloqueado como bot
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    })
+    
+    # Retry automático com backoff exponencial
+    retry_strategy = Retry(
+        total=3,  # Máximo de 3 tentativas
+        status_forcelist=[429, 500, 502, 503, 504],  # Retry em rate limit e erros de servidor
+        allowed_methods=['GET', 'POST'],  # Métodos para retentar
+        backoff_factor=1  # Espera: 1s, 2s, 4s
+    )
+    
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    
+    return session
+
+
+_global_session = _get_http_session()
+_last_request_time = {}  # Rastreia último request por domínio para rate limiting
+
+
+def _get_with_rate_limit(url, timeout=10):
+    """Realiza GET com retry automático e rate limiting por domínio.
+    
+    Args:
+        url: URL a acessar
+        timeout: Timeout em segundos (padrão 10s)
+    
+    Returns:
+        Response object ou None se falhar após retries
+    """
+    try:
+        domain = urlparse(url).netloc
+        
+        # Rate limiting: aguarda 0.5s entre requisições ao mesmo domínio
+        if domain in _last_request_time:
+            elapsed = time.time() - _last_request_time[domain]
+            if elapsed < 0.5:
+                time.sleep(0.5 - elapsed)
+        
+        _last_request_time[domain] = time.time()
+        
+        response = _global_session.get(url, timeout=timeout)
+        response.raise_for_status()
+        return response
+    except Exception as e:
+        logger.warning(f"Erro ao acessar {url}: {e}")
+        return None
 
 
 def _safe_quit(driver):
@@ -460,9 +526,12 @@ def extract_price_entries(soup, domain, driver=None):
 
 #Extração de edital
 def extract_edital(url):
-    """Extrai o link do edital usando requests."""
+    """Extrai o link do edital usando requests com retry automático."""
     try:
-        response = requests.get(url, timeout=5)
+        response = _get_with_rate_limit(url, timeout=10)
+        if not response:
+            return 'edital não encontrado'
+        
         soup = BeautifulSoup(response.text, 'html.parser')
         domain = urlparse(url).netloc
 
@@ -585,8 +654,11 @@ def process_event_details(events):
                     soup = None
             else:
                 try:
-                    response = requests.get(url, timeout=5)
-                    soup = BeautifulSoup(response.text, 'html.parser')
+                    response = _get_with_rate_limit(url, timeout=10)
+                    if response:
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                    else:
+                        soup = None
                 except Exception:
                     soup = None
 
