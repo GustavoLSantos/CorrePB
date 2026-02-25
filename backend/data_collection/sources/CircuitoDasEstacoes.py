@@ -32,9 +32,9 @@ def load_circuito_soup(url: str, timeout: int = 20):
         # usar modo headless para execução sem UI
         driver = setup_driver(headless=True)
         created = True
-        driver.get(url)
-
         try:
+            driver.get(url)
+
             selectors = [
                 'p.kit-price-desktop, p.kit-price-mobile',
                 '#race-detailed-info',
@@ -50,105 +50,106 @@ def load_circuito_soup(url: str, timeout: int = 20):
                     break
                 except Exception:
                     continue
-            if not found:
-                pass
-        except Exception:
-            pass
 
-        # captura o HTML completo antes de qualquer clique que possa navegar
-        price_soup = BeautifulSoup(driver.page_source, 'html.parser')
+            # captura o HTML completo antes de qualquer clique que possa navegar
+            price_soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-        # guarda o href do CTA antes de navegar para a página de informações
-        cta_href = ''
-        try:
-            cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a.kit-cta-desktop')
-            if not cta_anchors:
-                cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a[class*="kit-cta"]')
-            if cta_anchors:
-                cta_href = cta_anchors[0].get_attribute('href') or ''
-        except Exception:
-            pass
-
-        # tenta clicar no botão que revela as informações (caso exista)
-        try:
-            # tenta seletor específico dentro do container
+            # guarda o href do CTA antes de navegar para a página de informações
+            cta_href = ''
             try:
+                cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a.kit-cta-desktop')
+                if not cta_anchors:
+                    cta_anchors = driver.find_elements(By.CSS_SELECTOR, 'a[class*="kit-cta"]')
+                if cta_anchors:
+                    cta_href = cta_anchors[0].get_attribute('href') or ''
+            except Exception:
+                cta_href = ''
+
+            # tenta clicar no botão que revela as informações (caso exista)
+            try:
+                # tenta seletor específico dentro do container
                 buttons = driver.find_elements(By.CSS_SELECTOR, "#race-detailed-info [role='button'], #race-detailed-info button, #race-detailed-info a")
                 if buttons and len(buttons) > 0:
                     buttons[0].click()
-                    time.sleep(1.5)
+                    WebDriverWait(driver, 5).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
+            except Exception:
+                # fallback: procura por elementos com texto aproximado 'confira'/'inform'
+                try:
+                    details_count = driver.execute_script("return document.querySelectorAll('details').length")
+                except Exception:
+                    details_count = 0
+
+                if not details_count:
+                    elems = driver.find_elements(By.XPATH, "//button|//a|//div|//span")
+                    for el in elems:
+                        try:
+                            txt = (el.text or '').strip().lower()
+                            if 'confira' in txt or 'inform' in txt:
+                                # safety: ensure element is displayed and enabled
+                                if el.is_displayed():
+                                    el.click()
+                                    WebDriverWait(driver, 3).until(lambda d: 'details' in (d.page_source or '').lower() or len(d.find_elements(By.CSS_SELECTOR, 'details'))>0)
+                                    break
+                        except Exception:
+                            continue
+
+            # força abertura de <details> e rolagem para acionar lazy-loads
+            try:
+                driver.execute_script("document.querySelectorAll('details').forEach(d=>d.open=true);")
+                driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+                WebDriverWait(driver, 2).until(lambda d: True)
+                driver.execute_script('window.scrollTo(0, 0);')
             except Exception:
                 pass
 
-            # fallback: procura por elementos com texto aproximado 'confira'/'inform'
+            # espera até que o conteúdo pareça renderizado (presença de 'largada' ou details com texto)
             try:
-                details_count = driver.execute_script("return document.querySelectorAll('details').length")
-            except Exception:
-                details_count = 0
-
-            if not details_count:
-                elems = driver.find_elements(By.XPATH, "//button|//a|//div|//span")
-                for el in elems:
+                def _ready(drv):
                     try:
-                        txt = (el.text or '').strip().lower()
-                        if 'confira' in txt or 'inform' in txt:
-                            el.click()
-                            time.sleep(1.5)
-                            break
+                        if drv.execute_script("return document.body.innerText.toLowerCase().includes('largada')"):
+                            return True
+                        cnt = drv.execute_script("return document.querySelectorAll('details').length")
+                        if cnt and cnt > 0:
+                            has_text = drv.execute_script("let d=document.querySelector('details .details-content'); return d && d.innerText.trim().length>0")
+                            return bool(has_text)
+                        return False
                     except Exception:
-                        continue
-        except Exception as e:
-            print('DEBUG: clicking info failed', e)
-
-        # força abertura de <details> e rolagem para acionar lazy-loads
-        try:
-            driver.execute_script("document.querySelectorAll('details').forEach(d=>d.open=true);")
-            driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            time.sleep(0.8)
-            driver.execute_script('window.scrollTo(0, 0);')
-            time.sleep(0.5)
-        except Exception:
-            pass
-
-        # espera até que o conteúdo pareça renderizado (presença de 'largada' ou details com texto)
-        try:
-            def _ready(drv):
-                try:
-                    if drv.execute_script("return document.body.innerText.toLowerCase().includes('largada')"):
-                        return True
-                    cnt = drv.execute_script("return document.querySelectorAll('details').length")
-                    if cnt and cnt > 0:
-                        has_text = drv.execute_script("let d=document.querySelector('details .details-content'); return d && d.innerText.trim().length>0")
-                        return bool(has_text)
-                    return False
-                except Exception:
-                    return False
-            WebDriverWait(driver, timeout).until(_ready)
-        except Exception:
-            pass
-
-        # extrai o horário da página de informações (URL pode ter navegado)
-        schedule_soup = BeautifulSoup(driver.page_source, 'html.parser')
-        horario = extract_circuito_schedule(schedule_soup)
-
-        # navega para o CTA (RunningLand) para que extract_circuito_ticket_prices possa usar o driver
-        if cta_href:
-            try:
-                driver.get(cta_href)
-                try:
-                    WebDriverWait(driver, timeout).until(
-                        lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
-                        or 'R$' in (d.page_source or '')
-                    )
-                except Exception:
-                    time.sleep(3)
+                        return False
+                WebDriverWait(driver, timeout).until(_ready)
             except Exception:
                 pass
 
-        return price_soup, created, driver, horario
+            # extrai o horário da página de informações (URL pode ter navegado)
+            schedule_soup = BeautifulSoup(driver.page_source, 'html.parser')
+            horario = extract_circuito_schedule(schedule_soup)
 
+            # navega para o CTA (RunningLand) para que extract_circuito_ticket_prices possa usar o driver
+            if cta_href:
+                try:
+                    driver.get(cta_href)
+                    try:
+                        WebDriverWait(driver, timeout).until(
+                            lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
+                            or 'R$' in (d.page_source or '')
+                        )
+                    except Exception:
+                        WebDriverWait(driver, 3)
+                except Exception:
+                    pass
+
+            return price_soup, created, driver, horario
+        finally:
+            pass
     except Exception:
-        return None, created, None, ''
+        try:
+            if created and driver:
+                try:
+                    driver.quit()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return None, False, None, ''
 
 
 def _parse_price_str_to_float(token):
