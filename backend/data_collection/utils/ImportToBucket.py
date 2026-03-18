@@ -1,4 +1,5 @@
 # Ajuste dos imports e carregamento de .env
+import json
 import os
 import logging
 from datetime import datetime, timezone
@@ -13,6 +14,14 @@ except Exception:
         gerar_json_customizado = None
         CAMINHO_SAIDA = '../data/eventos_compilados.json'
 
+try:
+    from data_collection.utils.ProcessImages import processar_imagens_para_s3
+except Exception:
+    try:
+        from ProcessImages import processar_imagens_para_s3
+    except Exception:
+        processar_imagens_para_s3 = None
+
 env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
 load_dotenv(env_path)
 
@@ -21,6 +30,7 @@ AWS_REGION = os.getenv('AWS_REGION')
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_BUCKET_NAME = os.getenv('AWS_BUCKET_NAME')
+AWS_STATIC_DOMAIN = os.getenv('AWS_STATIC_DOMAIN')
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -84,6 +94,29 @@ def gerar_e_enviar_para_bucket() -> str:
     if not os.path.exists(arquivo_local):
         raise FileNotFoundError(f"Arquivo esperado não encontrado: {arquivo_local}")
 
+    if AWS_STATIC_DOMAIN and processar_imagens_para_s3 is not None:
+        _validar_credenciais_aws()
+        import boto3
+        s3 = boto3.client(
+            's3',
+            region_name=AWS_REGION,
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        )
+
+        with open(arquivo_local, 'r', encoding='utf-8') as f:
+            eventos = json.load(f)
+
+        eventos = processar_imagens_para_s3(eventos, s3, AWS_BUCKET_NAME, AWS_STATIC_DOMAIN)
+
+        with open(arquivo_local, 'w', encoding='utf-8') as f:
+            json.dump(eventos, f, ensure_ascii=False, indent=4)
+    else:
+        if not AWS_STATIC_DOMAIN:
+            logger.warning("AWS_STATIC_DOMAIN não definido. Imagens não serão processadas.")
+        if processar_imagens_para_s3 is None:
+            logger.warning("ProcessImages não pôde ser importado. Imagens não serão processadas.")
+
     chave_s3 = 'eventos_real.json'
 
     upload_para_s3(arquivo_local, chave_s3)
@@ -92,9 +125,11 @@ def gerar_e_enviar_para_bucket() -> str:
 def main():
     try:
         chave = gerar_e_enviar_para_bucket()
-        print(f"Arquivo enviado para S3 com chave: {chave}")
+        print(f"✅ Arquivo enviado para S3 com chave: {chave}")
     except Exception as e:
-        pass
+        import traceback
+        print(f"❌ Erro: {e}")
+        traceback.print_exc()
 
 if __name__ == '__main__':
     main()

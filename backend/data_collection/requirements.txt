@@ -4,3 +4,5 @@ beautifulsoup4==4.12.3
 webdriver-manager==4.0.1
 pyperclip==1.8.2
 requests==2.31.0
+boto3
+botocore
