@@ -1,23 +1,43 @@
 import csv
 import os
+import sys
 from datetime import datetime
 
+# Configurar caminho
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.abspath(os.path.join(current_dir, '../..'))
+sys.path.insert(0, backend_dir)
+
+import certifi
 from dotenv import load_dotenv
 from data_collection.evento_de_corrida import EventoDeCorrida
 from pymongo import MongoClient
 
-# Carregar o .env da raiz do projeto
-env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
-load_dotenv(env_path)
+load_dotenv(os.path.abspath(os.path.join(current_dir, '../..', '.env')))
 
-REMOTE_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
-if not REMOTE_URI:
-    raise Exception('A variável MONGODB_REMOTE_URI ou MONGODB_URI não está definida no .env')
-remote_client = MongoClient(REMOTE_URI)
+MONGO_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
+DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or 'correpb'
+COLLECTION_NAME = 'eventos'
 
-REMOTE_DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or 'correpb'
-remote_db = remote_client[REMOTE_DB_NAME]
-remote_collection = remote_db['eventos']
+print("Conectando ao MongoDB Atlas\n")
+
+try:
+    print("Conectando ao Atlas...")
+    remote_client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=10000)
+    remote_client.admin.command('ping')
+    print("MongoDB Atlas conectado com sucesso!")
+
+    remote_db = remote_client[DB_NAME]
+    remote_collection = remote_db[COLLECTION_NAME]
+
+    total_atual = remote_collection.count_documents({})
+    print(f"Eventos ja cadastrados: {total_atual}\n")
+
+except Exception as e:
+    print(f"ERRO ao conectar ao Atlas: {e}")
+    remote_client = None
+    remote_db = None
+    remote_collection = None
 
 
 def import_csv_to_mongodb(db, csv_file, fonte):
@@ -79,28 +99,37 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                             )
                             eventos_atualizados += 1
                 except Exception as e:
-                    print(f"❌ Erro ao processar linha do CSV: {str(e)}")
-                    print(f"Conteúdo da linha: {row}")
+                    print(f"Erro ao processar linha do CSV: {str(e)}")
+                    print(f"Conteudo da linha: {row}")
                     continue
-        print(f"✅ Dados de {fonte} processados com sucesso no Atlas")
-        print(f"📝 {novos_eventos} novos eventos adicionados")
-        print(f"🔄 {eventos_atualizados} eventos atualizados")
+        print(f"Dados de {fonte} processados com sucesso")
+        print(f"{novos_eventos} novos eventos adicionados")
+        print(f"{eventos_atualizados} eventos atualizados")
     except Exception as e:
-        print(f"❌ Erro ao importar dados de {fonte}: {str(e)}")
+        print(f"Erro ao importar dados de {fonte}: {str(e)}")
 
 
 def main():
+    if remote_db is None:
+        print("MongoDB nao conectado. Encerrando.\n")
+        return
     try:
         db = remote_db
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        csv_brasilcorrida = os.path.join(base_dir, '../data/eventos_brasilcorrida.csv')
-        csv_brasilquecorre = os.path.join(base_dir, '../data/eventos_brasilquecorre.csv')
-        import_csv_to_mongodb(db, csv_brasilcorrida, 'brasilcorrida')
-        import_csv_to_mongodb(db, csv_brasilquecorre, 'brasilquecorre')
+        csv_files = [
+            (os.path.join(base_dir, '../data/eventos_smcrono.csv'), 'smcrono'),
+            (os.path.join(base_dir, '../data/eventos_brasilcorrida.csv'), 'brasilcorrida'),
+            (os.path.join(base_dir, '../data/eventos_brasilquecorre.csv'), 'brasilquecorre'),
+        ]
+        for csv_path, fonte in csv_files:
+            if os.path.exists(csv_path):
+                import_csv_to_mongodb(db, csv_path, fonte)
+            else:
+                print(f"Arquivo nao encontrado: {csv_path}")
         total = db.eventos.count_documents({})
-        print(f"\n📊 Total de eventos na base Atlas: {total}")
+        print(f"\nTotal de eventos no Atlas: {total}")
     except Exception as e:
-        print(f"❌ Erro geral: {str(e)}")
+        print(f"Erro geral: {str(e)}")
 
 if __name__ == "__main__":
     main()

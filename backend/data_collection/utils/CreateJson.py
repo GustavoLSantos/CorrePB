@@ -2,16 +2,16 @@ import json
 import os
 import re
 from datetime import datetime
-from pymongo import MongoClient
 from dotenv import load_dotenv
+from pymongo import MongoClient
+import certifi
 from data_collection.utils.PriceUtils import fmt_entry
 
-env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env'))
-load_dotenv(env_path)
+load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env')))
 
-MONGO_URI = os.getenv('MONGODB_URI')
-DB_NAME = os.getenv('MONGODB_DB_NAME')
-COLLECTION_NAME = os.getenv('MONGODB_COLLECTION')
+MONGO_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
+DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or 'correpb'
+COLLECTION_NAME = os.getenv('MONGODB_COLLECTION') or 'eventos'
 CAMINHO_SAIDA = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'eventos_compilados.json'))
 
 MESES = {
@@ -179,7 +179,7 @@ def transformar_evento(evento_mongo):
     }
 
 def gerar_json_customizado():
-    client = MongoClient(MONGO_URI)
+    client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=10000)
     try:
         db = client[DB_NAME]
         collection = db[COLLECTION_NAME]

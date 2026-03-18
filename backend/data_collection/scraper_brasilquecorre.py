@@ -767,7 +767,7 @@ def process_event_details(events):
                 if result is None:
                     continue
                 results.append(result)
-                print(f"[{idx}/{total}] ✓ {result.get('nome', '')}")
+                print(f"[{idx}/{total}] OK {result.get('nome', '')}")
                 print(f"   Edital: {result.get('link_edital', '')[:50]}")
             except Exception:
                 logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")

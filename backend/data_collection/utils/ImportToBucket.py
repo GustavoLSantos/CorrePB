@@ -1,9 +1,15 @@
 # Ajuste dos imports e carregamento de .env
 import json
 import os
+import sys
 import logging
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+
+# Garante que o diretório raiz do backend esteja no path
+_backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+if _backend_dir not in sys.path:
+    sys.path.insert(0, _backend_dir)
 
 try:
     from data_collection.utils.CreateJson import gerar_json_customizado, CAMINHO_SAIDA
@@ -125,10 +131,10 @@ def gerar_e_enviar_para_bucket() -> str:
 def main():
     try:
         chave = gerar_e_enviar_para_bucket()
-        print(f"✅ Arquivo enviado para S3 com chave: {chave}")
+        print(f"Arquivo enviado para S3 com chave: {chave}")
     except Exception as e:
         import traceback
-        print(f"❌ Erro: {e}")
+        print(f"Erro: {e}")
         traceback.print_exc()
 
 if __name__ == '__main__':

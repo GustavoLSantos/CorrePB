@@ -84,7 +84,7 @@ def processar_imagens_para_s3(
     ja_no_s3 = 0
     falhas = 0
 
-    print(f"🖼️  Processando imagens de {total_com_imagem} eventos...")
+    print(f"Processando imagens de {total_com_imagem} eventos...")
 
     for evento in eventos:
         url_original = evento.get('url_imagem') or ''
@@ -108,8 +108,8 @@ def processar_imagens_para_s3(
         evento['url_imagem'] = f"{dominio_estatico.rstrip('/')}/{chave}"
         substituidos += 1
 
-    print(f"   ✅ Substituídas: {substituidos}")
-    print(f"   ⏭️  Já no S3 (reutilizadas): {ja_no_s3}")
-    print(f"   ❌ Falhas: {falhas}")
+    print(f"  Substituidas: {substituidos}")
+    print(f"  Ja no S3 (reutilizadas): {ja_no_s3}")
+    print(f"  Falhas: {falhas}")
 
     return eventos
