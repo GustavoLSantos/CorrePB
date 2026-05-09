@@ -284,11 +284,11 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
                 'precos_entries': json_precos_entries
             }
             
-            print(f"  ✓ {ev['Data']} | Preços: {len(details['precos'])} entradas")
+            print(f"  [OK] {ev['Data']} | Precos: {len(details['precos'])} entradas")
             events_data.append(ev)
 
         except Exception as e:
-            print(f"  ✗ Erro: {e}")
+            print(f"  [ERRO]: {e}")
             continue
 
     return events_data
@@ -318,7 +318,7 @@ def main():
             print(f"\nTotal de {len(events)} eventos encontrados. Salvando no CSV...")
 
             with open(csv_path, 'w', newline='', encoding='utf-8') as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';', extrasaction='ignore')
+                writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=';', quoting=csv.QUOTE_ALL, extrasaction='ignore')
                 writer.writeheader()
                 writer.writerows(events)
             

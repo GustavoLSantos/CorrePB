@@ -175,7 +175,8 @@ def transformar_evento(evento_mongo):
         "categorias": [],
         "preco": preco_raw, 
         "lista_precos": lista_precos,
-        "horario": horario
+        "horario": horario,
+        "patrocinado": bool(evento_mongo.get('patrocinado', False))
     }
 
 def gerar_json_customizado():

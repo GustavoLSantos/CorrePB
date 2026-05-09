@@ -944,7 +944,7 @@ def main():
         with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['Nome do Evento', 'Link de Inscrição', 'Link da Imagem', 'Data', 'Horário', 'Cidade', 'Distância',
                           'Organizador', 'Link do Edital', 'precos_entries']
-            writer = csv.writer(csvfile, delimiter=';')
+            writer = csv.writer(csvfile, delimiter=';', quoting=csv.QUOTE_ALL)
             writer.writerow(fieldnames)
 
             for event in event_data:

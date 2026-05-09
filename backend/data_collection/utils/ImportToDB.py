@@ -43,7 +43,7 @@ except Exception as e:
 def import_csv_to_mongodb(db, csv_file, fonte):
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
-            reader = csv.DictReader(file, delimiter=';')
+            reader = csv.DictReader(file, delimiter=';', quoting=csv.QUOTE_ALL)
             novos_eventos = 0
             eventos_atualizados = 0
             for row in reader:
@@ -80,7 +80,7 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                     else:
                         evento_dict = evento.to_dict()
                         evento_existente_dict = {k: v for k, v in evento_existente.items() if k != '_id'}
-                        campos_nao_comparaveis = ['data_coleta']
+                        campos_nao_comparaveis = ['data_coleta', 'patrocinado']
                         for campo in campos_nao_comparaveis:
                             evento_dict.pop(campo, None)
                             evento_existente_dict.pop(campo, None)
