@@ -116,7 +116,7 @@ def gerar_e_enviar_para_bucket() -> str:
         eventos = processar_imagens_para_s3(eventos, s3, AWS_BUCKET_NAME, AWS_STATIC_DOMAIN)
 
         with open(arquivo_local, 'w', encoding='utf-8') as f:
-            json.dump(eventos, f, ensure_ascii=False, indent=4)
+            json.dump(eventos, f, ensure_ascii=False, indent=4, default=str)
     else:
         if not AWS_STATIC_DOMAIN:
             logger.warning("AWS_STATIC_DOMAIN não definido. Imagens não serão processadas.")

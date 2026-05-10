@@ -24,6 +24,8 @@ class EventoDeCorrida:
         categorias_premiadas: Optional[str] = None,
         preco: Optional[str] = None,
         precos_entries: Optional[List[Dict[str, Any]]] = None,
+        percurso: Optional[Dict[str, Any]] = None,
+        kits: Optional[List[Dict[str, Any]]] = None,
         _id: Optional[ObjectId] = None
     ):
         # Propriedades obrigatórias
@@ -46,6 +48,8 @@ class EventoDeCorrida:
         self.categorias_premiadas = categorias_premiadas
         self.preco = preco
         self.precos_entries = precos_entries or []
+        self.percurso = percurso
+        self.kits = kits
 
     def to_dict(self) -> dict:
         """Converte o objeto para um dicionário compatível com MongoDB"""
@@ -79,6 +83,17 @@ class EventoDeCorrida:
             documento['preco'] = self.preco
         if self.precos_entries:
             documento['precos_entries'] = self.precos_entries
+        if self.percurso:
+            percurso = dict(self.percurso)
+            percurso.setdefault("local_largada", "")
+            documento['percurso'] = percurso
+        if self.kits:
+            kits_safe = []
+            for kit in self.kits:
+                k = dict(kit)
+                k.setdefault("nome", "Kit")
+                kits_safe.append(k)
+            documento['kits'] = kits_safe
 
         return documento
 
@@ -164,6 +179,26 @@ class EventoDeCorrida:
             except Exception:
                 precos_entries_val = None
 
+        percurso_val = None
+        if 'Percurso' in row and row.get('Percurso'):
+            try:
+                percurso_val = json.loads(row.get('Percurso'))
+                if isinstance(percurso_val, dict):
+                    percurso_val.setdefault("local_largada", "")
+            except Exception:
+                percurso_val = None
+
+        kits_val = None
+        if 'Kits' in row and row.get('Kits'):
+            try:
+                kits_val = json.loads(row.get('Kits'))
+                if isinstance(kits_val, list):
+                    for kit in kits_val:
+                        if isinstance(kit, dict):
+                            kit.setdefault("nome", "Kit")
+            except Exception:
+                kits_val = None
+
         return cls(
             nome_evento=get_value('Nome do Evento'),
             datas_realizacao=datas_realizacao,
@@ -180,5 +215,7 @@ class EventoDeCorrida:
             link_edital=link_edital,
             categorias_premiadas=categorias_premiadas,
             preco=preco_val,
-            precos_entries=precos_entries_val
+            precos_entries=precos_entries_val,
+            percurso=percurso_val,
+            kits=kits_val
         )

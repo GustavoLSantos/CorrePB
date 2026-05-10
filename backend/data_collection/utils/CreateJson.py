@@ -176,6 +176,9 @@ def transformar_evento(evento_mongo):
         "preco": preco_raw, 
         "lista_precos": lista_precos,
         "horario": horario,
+        "link_edital": evento_mongo.get('link_edital', ''),
+        "percurso": evento_mongo.get('percurso'),
+        "kits": evento_mongo.get('kits'),
         "patrocinado": bool(evento_mongo.get('patrocinado', False))
     }
 
@@ -192,7 +195,7 @@ def gerar_json_customizado():
         os.makedirs(os.path.dirname(CAMINHO_SAIDA), exist_ok=True)
 
         with open(CAMINHO_SAIDA, 'w', encoding='utf-8') as f:
-            json.dump(eventos_processados, f, ensure_ascii=False, indent=2)
+            json.dump(eventos_processados, f, ensure_ascii=False, indent=2, default=str)
     finally:
         client.close()
 

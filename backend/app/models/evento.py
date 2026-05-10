@@ -1,3 +1,4 @@
+import json
 import re
 from datetime import datetime
 from typing import Any
@@ -17,20 +18,28 @@ class Kit(BaseModel):
     data_retirada: datetime | None = None
 
 
+MESES_PT = [
+    "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+]
+
+
 class EventoResponse(BaseModel):
     id: str = Field(alias="_id")
     nome_evento: str
-    datas_realizacao: list[datetime] = []
+    datas_realizacao: list[datetime] = Field(default=[], exclude=True)
+    data_realizacao: str = ""
     cidade: str = ""
     estado: str = ""
     organizador: str = ""
     site_coleta: str = ""
     data_coleta: datetime | None = None
-    distancias: str = ""
+    distancias: list[str] = []
     horario: str | None = None
     url_inscricao: str | None = None
     url_imagem: str | None = None
-    categoria: str | None = None
+    categoria: str | None = Field(default=None, exclude=True)
+    categorias: list[str] = []
     link_edital: str | None = None
     categorias_premiadas: str | None = None
     preco: str | None = None
@@ -40,6 +49,34 @@ class EventoResponse(BaseModel):
     kits: list[Kit] | None = None
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("distancias", mode="before")
+    @classmethod
+    def parse_distancias(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
+        if isinstance(v, list):
+            return [str(d).strip() for d in v if str(d).strip()]
+        return []
+
+    @field_validator("precos_entries", mode="before")
+    @classmethod
+    def parse_precos_entries(cls, v: Any) -> list[Any] | None:
+        if isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return []
+        return v
+
+    @model_validator(mode="after")
+    def compute_fields(self) -> "EventoResponse":
+        if self.datas_realizacao and not self.data_realizacao:
+            dt = self.datas_realizacao[0]
+            self.data_realizacao = f"{dt.day:02d} de {MESES_PT[dt.month]} de {dt.year}"
+        if self.categoria and not self.categorias:
+            self.categorias = [c.strip() for c in self.categoria.split(",") if c.strip()]
+        return self
 
 
 class EventoCreate(BaseModel):

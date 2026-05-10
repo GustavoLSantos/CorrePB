@@ -2,10 +2,14 @@ import sys
 import os
 import csv
 import re
+import io
 import time
 import json
 from datetime import datetime
 from urllib.parse import urljoin
+
+import requests
+from PyPDF2 import PdfReader
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -21,6 +25,226 @@ def fix_encoding(text):
         return text.encode('latin1').decode('utf-8')
     except:
         return text
+
+
+KIT_ITEMS_PATTERN = re.compile(
+    r'\b(camiseta|camisa|medalha|n[uú]mero\s+d[oea]+\s*peito|chip|meia|viseira|'
+    r'sacochila|bon[eé]|squeeze|ecobag|mochila|toalha|pochete|regata)\b',
+    re.IGNORECASE
+)
+
+KIT_ITEMS_NORMALIZE = {
+    'camisa': 'camiseta',
+}
+
+def _normalize_item(item):
+    item = re.sub(r'\s+', ' ', item.strip().lower())
+    item = re.sub(r'n[uú]mero\s+d[oea]+\s*peito', 'número de peito', item)
+    return KIT_ITEMS_NORMALIZE.get(item, item)
+
+MESES_NUM = {
+    'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4,
+    'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8,
+    'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12
+}
+
+
+def _extract_pdf_text(pdf_url):
+    resp = requests.get(pdf_url, timeout=15)
+    resp.raise_for_status()
+    reader = PdfReader(io.BytesIO(resp.content))
+    return '\n'.join(page.extract_text() or '' for page in reader.pages)
+
+
+def _parse_largada(text):
+    a_definir = re.compile(r'^\(?[àa]\s*definir\)?\.?\s*$', re.IGNORECASE)
+    hora_pattern = re.compile(r'^\s*[àa]s\s+\d{1,2}[h:]\d{2}', re.IGNORECASE)
+    # Frases genéricas que não são locais
+    generic_pattern = re.compile(
+        r'com\s+pelo\s+menos|meia\s+hora|anteced[eê]ncia|dever[aá]|ser[aá]\s+[àa]s|no\s+mesmo\s+local',
+        re.IGNORECASE
+    )
+    patterns = [
+        r'(?:local\s+d[aeo]\s+largada|ponto\s+de\s+partida)[:\s\-–]+(.+)',
+        r'(?:largada\s+e\s+chegada|concentra[çc][aã]o\s+e\s+largada)[:\s\-–]+(.+)',
+    ]
+    for pat in patterns:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            local = m.group(1).strip().split('\n')[0].strip()
+            local = re.sub(r'\s{2,}', ' ', local)
+            # Limpar prefixos comuns do PyPDF2
+            local = re.sub(r'^e\s+(?:C|c)hegada[:\s\-–]*', '', local).strip()
+            if not local or a_definir.match(local) or hora_pattern.match(local) or generic_pattern.search(local):
+                continue
+            return local
+    return None
+
+
+def _find_kit_sections(text):
+    """Encontra todas as seções relacionadas a kit no texto do PDF."""
+    # Padrões que iniciam uma seção de kit (variações encontradas nos regulamentos)
+    header_patterns = [
+        r'(?:^|\n)\s*(?:\d+[\.\-\s]*)*\s*(?:D[AO]S?\s+)?(?:COMPOSI[CÇ][AÃ]O\s+D[OE]S?\s+)?KITS?\s*(?:D[OE]S?\s+ATLETAS?)?',
+        r'(?:^|\n)\s*(?:\d+[\.\-\s]*)*\s*(?:ENTREGA|RETIRADA)\s+D[OE]S?\s+KITS?',
+        r'(?:^|\n)\s*(?:Cap[ií]tulo|Art(?:igo)?)\s+[^\n]*KITS?',
+        r'(?:^|\n)\s*Entrega\s+d[eo]s?\s+kits?[:\s]',
+    ]
+    sections = []
+    for pat in header_patterns:
+        for m in re.finditer(pat, text, re.IGNORECASE):
+            end = len(text)
+            # Buscar próximo cabeçalho de seção para delimitar
+            next_header = re.search(
+                r'\n\s*(?:\d+[\.\-\s]*)+\s*(?:CRONOMETRAGEM|PREMIA|REGRAS?\s+GERA|PERCURSO|LARGADA|CATEGORIAS|DECLARA|DISPOSI|PENALID)',
+                text[m.end():], re.IGNORECASE
+            )
+            if next_header:
+                end = m.end() + next_header.start()
+            sections.append(text[m.start():end])
+    return sections
+
+
+def _parse_kit_info(text):
+    """Extrai itens, local e data de retirada do texto completo do PDF."""
+    a_definir = re.compile(r'^\(?[àa]\s*definir\)?\.?\s*$', re.IGNORECASE)
+
+    kit_sections = _find_kit_sections(text)
+    if not kit_sections:
+        return None
+
+    combined = '\n'.join(kit_sections)
+
+    # --- ITENS ---
+    itens = list({_normalize_item(m.group(0)) for m in KIT_ITEMS_PATTERN.finditer(combined)})
+
+    # --- LOCAL DE RETIRADA ---
+    local_retirada = None
+    # Padrões específicos para local/endereço de retirada de kit
+    local_patterns = [
+        r'[Ee]ndere[cç]o[:\s\-–]+(.+)',
+        r'[Ll]ocal\s*(?:de|da|para)\s*(?:entrega|retirada)[:\s\-–]+(.+)',
+    ]
+    local_blacklist = re.compile(
+        r'http|www\.|deslocamento|anteced[eê]ncia|estabelecid|largada|obrigat|comprova|inscri[çc]',
+        re.IGNORECASE
+    )
+    for pat in local_patterns:
+        for m in re.finditer(pat, combined, re.IGNORECASE):
+            candidate = m.group(1).strip().split('\n')[0].strip()
+            candidate = re.sub(r'^[:\s\-–]+', '', candidate)
+            candidate = re.sub(r'\s{2,}', ' ', candidate).strip(' .')
+            if (candidate
+                and not a_definir.match(candidate)
+                and not local_blacklist.search(candidate)
+                and len(candidate) > 3):
+                local_retirada = candidate
+                break
+        if local_retirada:
+            break
+
+    # Fallback: buscar "Endereço:" no texto inteiro perto de kit/entrega
+    if not local_retirada:
+        for m in re.finditer(r'[Ee]ndere[cç]o[:\s\-–]+(.+)', text):
+            candidate = m.group(1).strip().split('\n')[0].strip()
+            candidate = re.sub(r'\s{2,}', ' ', candidate).strip(' .')
+            if candidate and len(candidate) > 5 and not local_blacklist.search(candidate):
+                local_retirada = candidate
+                break
+
+    # Fallback: "– LOCAL NOME" ou "DATA ... LOCAL NOME" (ex: "LOCAL MEGGA SHOES")
+    if not local_retirada:
+        skip = re.compile(r'^(D[AEOI]S?\b|PARA\b|KIT|PROVA|EVENTO|RETIRADA|E\s+DATA|HOR|QUE\b|ONDO)', re.IGNORECASE)
+        for section in kit_sections:
+            for loc_m in re.finditer(r'[–\-]\s*LOCAL\s+([A-Z][A-Za-z\s]{4,})', section):
+                candidate = loc_m.group(1).strip()
+                candidate = re.sub(r'\s{2,}', ' ', candidate).strip(' .')
+                if candidate and not skip.match(candidate) and not local_blacklist.search(candidate):
+                    local_retirada = candidate
+                    break
+            if local_retirada:
+                break
+
+    # --- DATA DE RETIRADA ---
+    # Buscar datas perto de "entrega" ou "retirada" de kit
+    data_retirada = None
+    entrega_context = re.findall(
+        r'(?:entrega|retirada)[^\n]{0,80}',
+        combined, re.IGNORECASE
+    )
+    search_text = '\n'.join(entrega_context) if entrega_context else combined
+
+    # Formato: "16 de maio 2026" ou "16 de maio de 2026"
+    date_m = re.search(r'(\d{1,2})\s+de\s+(\w+)\s+(?:de\s+)?(\d{4})', search_text, re.IGNORECASE)
+    if not date_m:
+        # Formato: "16/05/2026"
+        date_m = re.search(r'(\d{1,2})/(\d{1,2})/(\d{4})', search_text)
+    if date_m:
+        try:
+            g = date_m.groups()
+            if '/' in date_m.group(0):
+                data_retirada = datetime(int(g[2]), int(g[1]), int(g[0])).isoformat()
+            else:
+                mes = MESES_NUM.get(g[1].lower())
+                if mes:
+                    data_retirada = datetime(int(g[2]), mes, int(g[0])).isoformat()
+        except (ValueError, KeyError):
+            pass
+
+    # Também buscar info de kit no topo do documento (padrão "Entrega do kit: DATA")
+    top_kit = re.search(
+        r'Entrega\s+d[eo]s?\s+kits?[:\s\-–]+(.+)',
+        text[:2000], re.IGNORECASE
+    )
+    if top_kit and not data_retirada:
+        top_line = top_kit.group(1).strip()
+        date_m2 = re.search(r'(\d{1,2})\s+(?:de\s+)?(\w+)\s+(?:de\s+)?(\d{4})', top_line, re.IGNORECASE)
+        if not date_m2:
+            date_m2 = re.search(r'(\d{1,2})/(\d{1,2})/(\d{4})', top_line)
+        if date_m2:
+            try:
+                g = date_m2.groups()
+                if '/' in date_m2.group(0):
+                    data_retirada = datetime(int(g[2]), int(g[1]), int(g[0])).isoformat()
+                else:
+                    mes = MESES_NUM.get(g[1].lower())
+                    if mes:
+                        data_retirada = datetime(int(g[2]), mes, int(g[0])).isoformat()
+            except (ValueError, KeyError):
+                pass
+
+    # Também buscar itens no topo do documento se não encontrou nas seções
+    if not itens:
+        top_itens = list({_normalize_item(m.group(0)) for m in KIT_ITEMS_PATTERN.finditer(text)})
+        itens = top_itens
+
+    if not itens and not local_retirada:
+        return None
+
+    return [{
+        'nome': 'Kit',
+        'itens': sorted(itens),
+        'local_retirada': local_retirada,
+        'data_retirada': data_retirada
+    }]
+
+
+def extract_kits_and_percurso_from_pdf(pdf_url):
+    if not pdf_url or pdf_url.lower() in ('edital não encontrado', 'edital nao encontrado', ''):
+        return {'percurso': None, 'kits': None}
+    try:
+        text = _extract_pdf_text(pdf_url)
+        if not text.strip():
+            return {'percurso': None, 'kits': None}
+
+        local_largada = _parse_largada(text)
+        percurso = {'local_largada': local_largada} if local_largada else None
+        kits = _parse_kit_info(text)
+
+        return {'percurso': percurso, 'kits': kits}
+    except Exception as e:
+        print(f"  [WARN] Erro ao extrair PDF ({pdf_url}): {e}")
+        return {'percurso': None, 'kits': None}
 
 def extract_smcrono_details_robust(driver):
     soup = BeautifulSoup(driver.page_source, 'html.parser')
@@ -231,8 +455,8 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
             
             try:
                 soup = BeautifulSoup(driver.page_source, 'html.parser')
-                title_elem = soup.find('h1') or soup.find('h2')
-                nome_evento = fix_encoding(title_elem.get_text(strip=True)) if title_elem else ""
+                title_elem = soup.find('h1') or soup.find('h2') or soup.find('h3')
+                nome_evento = title_elem.get_text(strip=True) if title_elem else ""
                 if not nome_evento:
                     parts = url.strip('/').split('/')
                     nome_evento = parts[-1].replace('-', ' ').title()
@@ -257,6 +481,10 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
             except:
                 edital_link = "edital não encontrado"
 
+            pdf_data = extract_kits_and_percurso_from_pdf(edital_link)
+            percurso_json = json.dumps(pdf_data['percurso'], ensure_ascii=False) if pdf_data['percurso'] else ""
+            kits_json = json.dumps(pdf_data['kits'], ensure_ascii=False) if pdf_data['kits'] else ""
+
             json_precos_entries = "[]"
             if details['precos']:
                 try:
@@ -272,7 +500,7 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
                     json_precos_entries = "[]"
 
             ev = {
-                'Nome do Evento': fix_encoding(nome_evento),
+                'Nome do Evento': nome_evento,
                 'Link de Inscrição': url,
                 'Link da Imagem': details['link_imagem'],
                 'Data': details['data'],
@@ -281,7 +509,9 @@ def get_smcrono_events_v2(driver, estado_filter='PB'):
                 'Distância': ', '.join(details['distancias']),
                 'Organizador': "SmCrono",
                 'Link do Edital': edital_link,
-                'precos_entries': json_precos_entries
+                'precos_entries': json_precos_entries,
+                'Percurso': percurso_json,
+                'Kits': kits_json
             }
             
             print(f"  [OK] {ev['Data']} | Precos: {len(details['precos'])} entradas")
@@ -312,7 +542,9 @@ def main():
                 'Distância', 
                 'Organizador', 
                 'Link do Edital',
-                'precos_entries'
+                'precos_entries',
+                'Percurso',
+                'Kits'
             ]
 
             print(f"\nTotal de {len(events)} eventos encontrados. Salvando no CSV...")
