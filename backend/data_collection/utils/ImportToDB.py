@@ -80,22 +80,37 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                     else:
                         evento_dict = evento.to_dict()
                         evento_existente_dict = {k: v for k, v in evento_existente.items() if k != '_id'}
-                        campos_nao_comparaveis = ['data_coleta', 'patrocinado']
+                        campos_nao_comparaveis = ['data_coleta', 'patrocinado', 'campos_protegidos']
                         for campo in campos_nao_comparaveis:
                             evento_dict.pop(campo, None)
                             evento_existente_dict.pop(campo, None)
+
+                        # Remover campos protegidos da comparação e do update
+                        campos_protegidos = evento_existente.get('campos_protegidos', [])
+                        for campo in campos_protegidos:
+                            evento_dict.pop(campo, None)
+                            evento_existente_dict.pop(campo, None)
+
+                        if campos_protegidos:
+                            print(f"  Campos protegidos em '{evento.nome_evento}': {campos_protegidos}")
+
                         # Garante que ambos os dicionários tenham o campo 'link_edital' para comparação justa
                         if 'link_edital' not in evento_existente_dict:
                             evento_existente_dict['link_edital'] = ''
                         if 'link_edital' not in evento_dict:
                             evento_dict['link_edital'] = ''
                         if evento_dict != evento_existente_dict:
+                            # Montar dict de update sem campos protegidos
+                            update_dict = evento.to_dict()
+                            for campo in campos_protegidos:
+                                update_dict.pop(campo, None)
+
                             print(f"Atualizando evento: {evento.nome_evento}")
                             print(f"Antes: {evento_existente_dict}")
                             print(f"Depois: {evento_dict}")
                             db.eventos.update_one(
                                 {'nome_evento': evento.nome_evento},
-                                {'$set': evento.to_dict()}
+                                {'$set': update_dict}
                             )
                             eventos_atualizados += 1
                 except Exception as e:

@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.utils.price_formatting import formatar_lista_precos
+
 
 class Percurso(BaseModel):
     local_largada: str
@@ -47,6 +49,8 @@ class EventoResponse(BaseModel):
     patrocinado: bool = False
     percurso: Percurso | None = None
     kits: list[Kit] | None = None
+    campos_protegidos: list[str] = []
+    lista_precos: list[str] = []
 
     model_config = {"populate_by_name": True}
 
@@ -76,6 +80,8 @@ class EventoResponse(BaseModel):
             self.data_realizacao = f"{dt.day:02d} de {MESES_PT[dt.month]} de {dt.year}"
         if self.categoria and not self.categorias:
             self.categorias = [c.strip() for c in self.categoria.split(",") if c.strip()]
+        if not self.lista_precos:
+            self.lista_precos = formatar_lista_precos(self.precos_entries, self.preco)
         return self
 
 
@@ -87,8 +93,17 @@ class EventoCreate(BaseModel):
     organizador: str = ""
     site_coleta: str = ""
     data_coleta: datetime = Field(default_factory=datetime.now)
-    distancias: str = ""
+    distancias: list[str] = []
     horario: str | None = None
+
+    @field_validator("distancias", mode="before")
+    @classmethod
+    def parse_distancias(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
+        if isinstance(v, list):
+            return [str(d).strip() for d in v if str(d).strip()]
+        return []
     url_inscricao: str | None = None
     url_imagem: str | None = None
     categoria: str | None = None
@@ -115,8 +130,19 @@ class EventoUpdate(BaseModel):
     estado: str | None = None
     organizador: str | None = None
     site_coleta: str | None = None
-    distancias: str | None = None
+    distancias: list[str] | None = None
     horario: str | None = None
+
+    @field_validator("distancias", mode="before")
+    @classmethod
+    def parse_distancias(cls, v: Any) -> list[str] | None:
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
+        if isinstance(v, list):
+            return [str(d).strip() for d in v if str(d).strip()]
+        return []
     url_inscricao: str | None = None
     url_imagem: str | None = None
     categoria: str | None = None
@@ -127,6 +153,7 @@ class EventoUpdate(BaseModel):
     patrocinado: bool | None = None
     percurso: Percurso | None = None
     kits: list[Kit] | None = None
+    campos_protegidos: list[str] | None = None
 
     @field_validator("horario")
     @classmethod

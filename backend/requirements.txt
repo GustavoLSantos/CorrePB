@@ -6,3 +6,4 @@ pydantic==2.11.7
 motor>=3.3.2
 pymongo==4.13.2
 certifi
+boto3

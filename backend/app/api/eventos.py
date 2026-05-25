@@ -77,9 +77,21 @@ async def update_evento(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
+    campos_editados = [k for k in update_data if k != "campos_protegidos"]
+
+    # Se o usuário enviou campos_protegidos explicitamente, não usar $addToSet
+    if "campos_protegidos" in update_data:
+        update_ops: dict = {"$set": update_data}
+    else:
+        update_ops: dict = {"$set": update_data}
+        if campos_editados:
+            update_ops["$addToSet"] = {
+                "campos_protegidos": {"$each": campos_editados}
+            }
+
     result = await collection.find_one_and_update(
         {"_id": evento_id},
-        {"$set": update_data},
+        update_ops,
         return_document=True,
     )
     if not result:
