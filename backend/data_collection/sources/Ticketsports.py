@@ -7,6 +7,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from typing import Optional
+
+from selenium.webdriver.remote.webdriver import WebDriver
+
 from data_collection.core.Driver import setup_driver
 from data_collection.utils.PriceUtils import parse_price_str, fmt_entry
 
@@ -18,7 +22,12 @@ def is_ticketsports_domain(domain: str) -> bool:
     return 'ticketsports.com.br' in domain.lower()
 
 
-def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug: bool = False, return_counts: bool = False):
+def load_ticketsports_soup(
+    url: str,
+    driver=None,
+    wait_seconds: int = 20,
+    debug: bool = False,
+) -> tuple[Optional[BeautifulSoup], bool, Optional[WebDriver], str]:
     """
     Carrega a página do Ticketsports, tenta abrir a área de inscrição e retorna o soup já renderizado.
     Mantém horários extraídos cedo e aplica fallback via requests quando necessário.
@@ -229,9 +238,6 @@ def load_ticketsports_soup(url: str, driver=None, wait_seconds: int = 20, debug:
             except Exception:
                 pass
 
-        num_cards = len(soup.select('div.card')) if soup else 0
-        if return_counts:
-            return soup, created, local_driver, horario, num_cards
         return soup, created, local_driver, horario
     except Exception:
         if created and local_driver:

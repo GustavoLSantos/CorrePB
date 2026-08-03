@@ -41,6 +41,13 @@ except Exception as e:
 
 
 def import_csv_to_mongodb(db, csv_file, fonte):
+    if db is None:
+        print(
+            "ERRO: Mongo NÃO conectado ao Atlas. Verifique MONGODB_REMOTE_URI/"
+            "MONGODB_REMOTE_DB_NAME no arquivo backend/.env e que o IP está liberado "
+            "em Network Access. Dados não foram sincronizados."
+        )
+        return
     try:
         with open(csv_file, 'r', encoding='utf-8') as file:
             reader = csv.DictReader(file, delimiter=';', quoting=csv.QUOTE_ALL)

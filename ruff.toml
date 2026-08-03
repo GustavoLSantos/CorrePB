@@ -1,0 +1,13 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["B", "S", "SIM"]
+
+[lint.per-file-ignores]
+"backend/data_collection/**/*.py" = [
+  "BLE001",  # scrapers depend on broad except para resiliência contra HTML/network inesperado
+  "S110",    # try/except pass intencional para continuar a coleta mesmo com falhas pontuais
+  "S112",    # try/except continue idem
+  "SIM102",  # guards combináveis deixados explícitos para legibilidade
+]
