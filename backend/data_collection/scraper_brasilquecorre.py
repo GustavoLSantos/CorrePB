@@ -890,7 +890,9 @@ def process_event_details(events):
                 try:
                     response = _get_with_rate_limit(url, timeout=10)
                     soup = (
-                        BeautifulSoup(response.text, "html.parser") if response else None
+                        BeautifulSoup(response.text, "html.parser")
+                        if response
+                        else None
                     )
                 except Exception:
                     soup = None
