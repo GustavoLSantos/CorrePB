@@ -1,48 +1,44 @@
-name: Backend CI
+name: Deploy backend
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  push: [ main ]
+  paths: 
+    - 'backend/**'
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
-  test:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10', '3.12']
+    setps:
+      - uses: actions/checkout@v4
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Log in to Azure
+        uses: azure/login@v3
         with:
-          python-version: ${{ matrix.python-version }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Cache pip
-        uses: actions/cache@v4
+      - name: Build and deploy Container App
+        uses: azure/container-apps-deploy-action@v1
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+          appSourcePath: ${{ github.workspace }}/backend
+          dockerfilePath: Dockerfile
+          acrName: circuitoapp
+          imageToBuid: circuitoapp.azurecr.io/circuitoapp-api:latest
+          containerAppName: circuitoapp-api
+          resourceGroup: rg-circuitoapp
+          containerAppEnvironment: env-circuitoapp
+          targetPort: 8181
+          ingress: external
+          environmentVariables: |
+            MONGODB_REMOTE_URI=${{ secrets.MONGODB_REMOTE_URI }}
+            MONGODB_REMOOTE_DB_NAME=${{ secrets.MONGODB_REMOOTE_DB_NAME }}
+            MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+            API_PORT=8181
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-
-      - name: Check Python syntax (compile)
-        run: python -m compileall backend
-
-      - name: Run tests (if present)
-        run: |
-          if [ -d backend/tests ] || grep -q "\[tool\.pytest\]" backend/pyproject.toml 2>/dev/null || [ -f backend/pytest.ini ]; then
-            python -m pip install pytest
-            pytest backend -q --maxfail=1
-          else
-            echo "No tests detected in backend/, skipping pytest."
-          fi
