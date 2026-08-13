@@ -1,0 +1,51 @@
+name: Deploy backend
+
+on:
+  workflow_run:
+    workflows: ["Backend CI"]
+    branches: [main]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Build and deploy Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          appSourcePath: ${{ github.workspace }}/backend
+          dockerfilePath: Dockerfile
+          acrName: circuitoapp
+          imageToBuild: circuitoapp.azurecr.io/circuitoapp-api:${{ github.event.workflow_run.head_sha }}
+          containerAppName: circuitoapp-api
+          resourceGroup: rg-circuitoapp
+          containerAppEnvironment: env-circuitoapp
+          targetPort: 8181
+          ingress: external
+          environmentVariables: |
+            MONGODB_REMOTE_URI=${{ secrets.MONGODB_REMOTE_URI }}
+            MONGODB_REMOTE_DB_NAME=${{ secrets.MONGODB_REMOTE_DB_NAME }}
+            MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+            MONGODB_COLLECTION=${{ secrets.MONGODB_COLLECTION }}
+            API_PORT=8181
+            AWS_REGION=${{ secrets.AWS_REGION }}
+            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}
+
