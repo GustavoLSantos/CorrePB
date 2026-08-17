@@ -85,6 +85,14 @@ class EventoResponse(BaseModel):
         return self
 
 
+class EventoPageResponse(BaseModel):
+    eventos: list[EventoResponse]
+    total: int
+    total_pages: int
+    page: int
+    size: int
+
+
 class EventoCreate(BaseModel):
     nome_evento: str
     datas_realizacao: list[datetime]

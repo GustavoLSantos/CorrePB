@@ -1,10 +1,11 @@
 from datetime import datetime
+from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.auth import verify_api_key
 from app.core.database import database
-from app.models.evento import EventoCreate, EventoResponse, EventoUpdate
+from app.models.evento import EventoCreate, EventoPageResponse, EventoResponse, EventoUpdate
 from app.utils.search import build_search_regex
 
 router = APIRouter(prefix="/api/v1/eventos", tags=["eventos"])
@@ -30,7 +31,7 @@ async def _generate_id() -> str:
     return f"{prefix}{seq:04d}"
 
 
-@router.get("", response_model=list[EventoResponse])
+@router.get("", response_model=EventoPageResponse)
 async def list_eventos(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
@@ -47,9 +48,17 @@ async def list_eventos(
             query["$or"] = [
                 {field: {"$regex": pattern, "$options": "i"}} for field in SEARCH_FIELDS
             ]
+    total = await collection.count_documents(query)
     skip = (page - 1) * size
     cursor = collection.find(query).sort("datas_realizacao", -1).skip(skip).limit(size)
-    return [EventoResponse(**doc) async for doc in cursor]
+    eventos = [EventoResponse(**doc) async for doc in cursor]
+    return EventoPageResponse(
+        eventos=eventos,
+        total=total,
+        total_pages=ceil(total / size),
+        page=page,
+        size=size,
+    )
 
 
 @router.get("/{evento_id}", response_model=EventoResponse)
