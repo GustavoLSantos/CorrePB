@@ -5,8 +5,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.core.auth import verify_api_key
 from app.core.database import database
 from app.models.evento import EventoCreate, EventoResponse, EventoUpdate
+from app.utils.search import build_search_regex
 
 router = APIRouter(prefix="/api/v1/eventos", tags=["eventos"])
+
+SEARCH_FIELDS = ["nome_evento", "cidade", "organizador"]
 
 
 async def _generate_id() -> str:
@@ -32,12 +35,18 @@ async def list_eventos(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     estado: str | None = Query(None),
+    q: str | None = Query(None, description="Busca em nome, cidade e organizador"),
 ):
     collection = database.get_collection()
     query: dict = {}
     if estado:
         query["estado"] = estado.upper()
-
+    if q:
+        pattern = build_search_regex(q)
+        if pattern:
+            query["$or"] = [
+                {field: {"$regex": pattern, "$options": "i"}} for field in SEARCH_FIELDS
+            ]
     skip = (page - 1) * size
     cursor = collection.find(query).sort("datas_realizacao", -1).skip(skip).limit(size)
     return [EventoResponse(**doc) async for doc in cursor]
@@ -85,9 +94,7 @@ async def update_evento(
     else:
         update_ops: dict = {"$set": update_data}
         if campos_editados:
-            update_ops["$addToSet"] = {
-                "campos_protegidos": {"$each": campos_editados}
-            }
+            update_ops["$addToSet"] = {"campos_protegidos": {"$each": campos_editados}}
 
     result = await collection.find_one_and_update(
         {"_id": evento_id},
