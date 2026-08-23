@@ -305,8 +305,6 @@ def get_smcrono_events_api(estado_filter="PB"):
     for ev in eventos_lista:
         nome_ref = ev.get("eve_nome", "?")
         try:
-            if str(ev.get("eve_liberado", 1)) in ("0", "False"):
-                continue
             url_evento = (ev.get("url_evento") or "").strip("/")
             if not url_evento or url_evento in vistos:
                 continue
@@ -328,7 +326,7 @@ def get_smcrono_events_api(estado_filter="PB"):
                     break
 
             percursos = [
-                (p.get("nome") or "").strip()
+                fix_encoding((p.get("nome") or "").strip())
                 for p in det.get("percursos") or []
                 if (p.get("nome") or "").strip()
             ]
@@ -339,7 +337,7 @@ def get_smcrono_events_api(estado_filter="PB"):
             kits = extract_kits_from_pdf(edital_link)
             kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
 
-            partida = (det.get("partida") or "").strip()
+            partida = fix_encoding((det.get("partida") or "").strip())
             percurso = {"local_largada": partida} if partida else None
             percurso_json = json.dumps(percurso, ensure_ascii=False) if percurso else ""
 
