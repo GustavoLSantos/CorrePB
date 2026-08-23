@@ -3,6 +3,7 @@ import csv
 import json
 import logging
 import os
+import sys
 import re
 import time
 from urllib.parse import urlparse
@@ -11,6 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import requests
 from bs4 import BeautifulSoup
@@ -189,9 +191,7 @@ def extract_time_from_text(text: str) -> str:
     norm = _strip_accents(text).lower()
 
     # 2) '14 de março de 2026 às 17:00' (procura 'as' após remoção de acentos)
-    m = re.search(
-        r"\b\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}\s*as\s*(\d{1,2}(?:[:hH]\d{2})?)", norm
-    )
+    m = re.search(r"\b\d{1,2}\s+de\s+[a-z]+\s+de\s+\d{4}\s*as\s*(\d{1,2}(?:[:hH]\d{2})?)", norm)
     if m:
         out = _normalize_time(m.group(1))
         if out:
@@ -207,9 +207,7 @@ def extract_time_from_text(text: str) -> str:
             return out
 
     # 4) 'LARGADA'/'SAIDA' context (usa texto original para preservar formatos)
-    m = re.search(
-        r"(?:largada|saida)[^0-9]{0,20}(\d{1,2}(?:[:hH]\d{2})?)", text, re.IGNORECASE
-    )
+    m = re.search(r"(?:largada|saida)[^0-9]{0,20}(\d{1,2}(?:[:hH]\d{2})?)", text, re.IGNORECASE)
     if m:
         out = _normalize_time(m.group(1))
         if out:
@@ -368,9 +366,7 @@ def extract_price_entries(soup, domain, driver=None):
         for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt):
             v = parse_price_str(m)
             tax = None
-            tax_m = re.search(
-                r"\(\s*\+?([\d.,]+)\s*(?:taxa|tax|fee)\s*\)", txt, re.IGNORECASE
-            )
+            tax_m = re.search(r"\(\s*\+?([\d.,]+)\s*(?:taxa|tax|fee)\s*\)", txt, re.IGNORECASE)
             if tax_m:
                 tax = parse_price_str(tax_m.group(1))
             candidates.append({"label": None, "price": v, "tax": tax, "raw": txt})
@@ -385,9 +381,7 @@ def extract_price_entries(soup, domain, driver=None):
                     txt = elem.get_text(separator=" ", strip=True)
                     for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt):
                         v = parse_price_str(m)
-                        candidates.append(
-                            {"label": None, "price": v, "tax": None, "raw": txt}
-                        )
+                        candidates.append({"label": None, "price": v, "tax": None, "raw": txt})
     except Exception:
         pass
 
@@ -409,16 +403,10 @@ def extract_price_entries(soup, domain, driver=None):
                     left_has_price = bool(re.search(r"R\$", left_text))
                     right_has_price = bool(re.search(r"R\$", right_text))
                     if left_has_price and not right_has_price:
-                        for m in re.findall(
-                            r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", left_text
-                        ):
+                        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", left_text):
                             v = parse_price_str(m)
                             label = right_text or None
-                            if (
-                                current_section
-                                and label
-                                and current_section not in label
-                            ):
+                            if current_section and label and current_section not in label:
                                 label = f"{current_section} — {label}"
                             elif current_section and not label:
                                 label = current_section
@@ -431,16 +419,10 @@ def extract_price_entries(soup, domain, driver=None):
                                 }
                             )
                     elif right_has_price and not left_has_price:
-                        for m in re.findall(
-                            r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", right_text
-                        ):
+                        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", right_text):
                             v = parse_price_str(m)
                             label = left_text or None
-                            if (
-                                current_section
-                                and label
-                                and current_section not in label
-                            ):
+                            if current_section and label and current_section not in label:
                                 label = f"{current_section} — {label}"
                             elif current_section and not label:
                                 label = current_section
@@ -478,10 +460,7 @@ def extract_price_entries(soup, domain, driver=None):
         for meta in soup.find_all("meta"):
             prop = (meta.get("property") or meta.get("name") or "").lower()
             content = meta.get("content", "")
-            if (
-                prop in ("product:price:amount", "price", "og:price:amount")
-                or "price" in prop
-            ):
+            if prop in ("product:price:amount", "price", "og:price:amount") or "price" in prop:
                 if content:
                     v = parse_price_str(content)
                     if v is not None:
@@ -497,9 +476,7 @@ def extract_price_entries(soup, domain, driver=None):
         # Atributos data como data-price, data-preco, data-value
         for elem in soup.find_all(attrs=True):
             for attr, val in list(elem.attrs.items()):
-                if re.search(
-                    r"data[-_]?(price|preco|valor|value)", attr, re.IGNORECASE
-                ):
+                if re.search(r"data[-_]?(price|preco|valor|value)", attr, re.IGNORECASE):
                     v = parse_price_str(val)
                     if v is not None:
                         label = None
@@ -537,11 +514,7 @@ def extract_price_entries(soup, domain, driver=None):
                                 if price:
                                     v = parse_price_str(price)
                                     if v is not None:
-                                        label = (
-                                            item.get("name")
-                                            if item.get("name")
-                                            else None
-                                        )
+                                        label = item.get("name") if item.get("name") else None
                                         candidates.append(
                                             {
                                                 "label": label,
@@ -597,14 +570,10 @@ def extract_price_entries(soup, domain, driver=None):
                 b_has_dec = False
             if va is not None:
                 if not (va < 10 and not a_has_dec and b_has_dec):
-                    candidates.append(
-                        {"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"}
-                    )
+                    candidates.append({"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"})
             if vb is not None:
                 if not (vb < 10 and not b_has_dec and a_has_dec):
-                    candidates.append(
-                        {"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"}
-                    )
+                    candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
     except Exception:
         # Se regex fallback falhar, continua com autres testes
         pass
@@ -626,14 +595,10 @@ def extract_price_entries(soup, domain, driver=None):
             b_has_dec = False
         if va is not None:
             if not (va < 10 and not a_has_dec and b_has_dec):
-                candidates.append(
-                    {"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"}
-                )
+                candidates.append({"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"})
         if vb is not None:
             if not (vb < 10 and not b_has_dec and a_has_dec):
-                candidates.append(
-                    {"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"}
-                )
+                candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
 
     # Após coletar candidatos, filtra valores de prêmios/premiações usando verificação contextual
     # Usa verificação sensível ao contexto: o raw/label do candidato pode não conter palavras-chave de prêmio,
@@ -806,9 +771,7 @@ def process_event_details(events):
         domain = urlparse(url).netloc
         horario = (evt.get("horario") or "").strip()
         drivers_to_close = []
-        current_driver = (
-            None  # Rastreia driver da sessão atual para extract_price_entries
-        )
+        current_driver = None  # Rastreia driver da sessão atual para extract_price_entries
 
         def _safe_register_driver(driver):
             """Registra driver para fechamento garantido, mesmo se exceção ocorrer."""
@@ -889,11 +852,7 @@ def process_event_details(events):
             else:
                 try:
                     response = _get_with_rate_limit(url, timeout=10)
-                    soup = (
-                        BeautifulSoup(response.text, "html.parser")
-                        if response
-                        else None
-                    )
+                    soup = BeautifulSoup(response.text, "html.parser") if response else None
                 except Exception:
                     soup = None
 
@@ -965,9 +924,7 @@ def process_event_details(events):
                 print(f"[{idx}/{total}] OK {result.get('nome', '')}")
                 print(f"   Edital: {result.get('link_edital', '')[:50]}")
             except Exception:
-                logger.exception(
-                    f"Erro ao processar evento: {event.get('nome', 'N/A')}"
-                )
+                logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
                 event = dict(event)
                 event["link_edital"] = "edital não encontrado"
                 event["precos_entries"] = "[]"
@@ -1015,9 +972,7 @@ def get_event_data(driver):
                 driver.get(url)
                 break  # Sucesso
             except (TimeoutException, WebDriverException) as e:
-                print(
-                    f"[get_event_data] Tentativa {attempt} falhou ao carregar a página: {e}"
-                )
+                print(f"[get_event_data] Tentativa {attempt} falhou ao carregar a página: {e}")
                 # Tenta parar o carregamento e tentar novamente após breve espera
                 with contextlib.suppress(Exception):
                     driver.execute_script("window.stop();")
@@ -1061,15 +1016,11 @@ def get_event_data(driver):
                 try:
                     link_insc = event_info.get("link_inscricao", "") or ""
                     if link_insc.startswith("https://www.liverun.com.br/calendario"):
-                        print(
-                            f"[SKIP] Pulando link de calendário genérico do Liverun: {link_insc}"
-                        )
+                        print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_insc}")
                         continue
                     # Também ignora listagem genérica de eventos do Race83 (usa helper específico)
                     if is_race83_listing_url(link_insc):
-                        print(
-                            f"[SKIP] Pulando link de eventos genérico do Race83: {link_insc}"
-                        )
+                        print(f"[SKIP] Pulando link de eventos genérico do Race83: {link_insc}")
                         continue
                 except Exception:
                     pass
@@ -1118,9 +1069,7 @@ def get_event_data(driver):
                     event_info["horario"] = ""
 
                 event_data.append(event_info)
-                print(
-                    f"[{idx}/{total_events}] ✓ Dados básicos: {event_info.get('nome', '')}"
-                )
+                print(f"[{idx}/{total_events}] ✓ Dados básicos: {event_info.get('nome', '')}")
 
             except Exception:
                 continue
@@ -1195,17 +1144,18 @@ def main():
         print(f"\nDados salvos com sucesso em: {csv_path}")
 
         # Tenta sincronizar o CSV para o MongoDB Atlas
-        try:
-            from data_collection.utils import ImportToDB as sync_module
-
+        if not os.environ.get("CORREPB_COLLEC_ONLY"):
             try:
-                sync_module.import_csv_to_mongodb(
-                    sync_module.remote_db, csv_path, "brasilquecorre"
-                )
+                from data_collection.utils import ImportToDB as sync_module
+
+                try:
+                    sync_module.import_csv_to_mongodb(
+                        sync_module.remote_db, csv_path, "brasilquecorre"
+                    )
+                except Exception as e:
+                    print(f"falha ao sincronizar csv para mongodb: {e}")
             except Exception as e:
-                print(f"Falha ao sincronizar CSV para MongoDB: {e}")
-        except Exception as e:
-            print(f"Sincronização com MongoDB ignorada (import failed): {e}")
+                print(f"sincronização com mongodb ignorada (import failed): {e}")
 
     finally:
         driver.quit()
