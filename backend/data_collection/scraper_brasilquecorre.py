@@ -1,4 +1,3 @@
-import contextlib
 import csv
 import json
 import logging
@@ -6,17 +5,22 @@ import os
 import sys
 import re
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
+import requests
+from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+# O domínio brasilquecorre.com publica um certificado SSL inválido; as coletas para
+# ele usam verify=False e o aviso de conexão insegura é suprimido intencionalmente.
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import requests
-from bs4 import BeautifulSoup
-from data_collection.core.Driver import setup_driver
 from data_collection.sources.CircuitoDasEstacoes import (
     extract_circuito_ticket_prices,
     is_circuito_domain,
@@ -44,10 +48,6 @@ from data_collection.sources.Zenite import (
 )
 from data_collection.utils.PriceUtils import fmt_entry, parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
-from selenium.common.exceptions import TimeoutException, WebDriverException
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.wait import WebDriverWait
 
 
 def _get_http_session():
@@ -93,12 +93,13 @@ _global_session = _get_http_session()
 _last_request_time = {}  # Rastreia último request por domínio para rate limiting
 
 
-def _get_with_rate_limit(url, timeout=10):
+def _get_with_rate_limit(url, timeout=10, verify=True):
     """Realiza GET com retry automático e rate limiting por domínio.
 
     Args:
         url: URL a acessar
         timeout: Timeout em segundos (padrão 10s)
+        verify: Valida o certificado SSL (padrão True)
 
     Returns:
         Response object ou None se falhar após retries
@@ -114,7 +115,7 @@ def _get_with_rate_limit(url, timeout=10):
 
         _last_request_time[domain] = time.time()
 
-        response = _global_session.get(url, timeout=timeout)
+        response = _global_session.get(url, timeout=timeout, verify=verify)
         response.raise_for_status()
         return response
     except Exception as e:
@@ -953,128 +954,134 @@ def process_event_details(events):
 
 
 # EXTRAÇÃO DE DADOS DOS EVENTOS
-def get_event_data(driver):
+BQC_LISTING_URL = "https://brasilquecorre.com/paraiba"
+
+_BQC_SSL_VERIFY = False  # certificado do domínio é inválido (ver comentário nos imports)
+
+_DATA_PATTERN = re.compile(r"\d{1,2}\s+de\s+[A-Za-zçÇ]+\s+de\s+\d{4}", re.IGNORECASE)
+_DISTANCE_TERMS = ["(corrida", "(caminhada", "(trail", "(ultra", "(infantil"]
+
+
+def _is_distance_text(text: str) -> bool:
+    """Reconhece parágrafos de distância como '5km e 10km (corrida)' ou '15km (corrida - uphill)'."""
+    lowered = text.lower()
+    return any(term in lowered for term in _DISTANCE_TERMS)
+
+
+def _fetch_bqc_listing_html(attempts: int = 3) -> str | None:
+    """Baixa o HTML da listagem de eventos com tentativas múltiplas."""
+    html = None
+    for attempt in range(1, attempts + 1):
+        response = _get_with_rate_limit(BQC_LISTING_URL, timeout=30, verify=_BQC_SSL_VERIFY)
+        if response is not None:
+            html = response.text
+            break
+        print(f"[get_event_data] Tentativa {attempt} falhou ao baixar a listagem")
+        time.sleep(2)
+    return html
+
+
+def _extract_bqc_event_info(box) -> dict | None:
+    """Extrai os dados básicos de um box de evento da listagem do Brasil Que Corre.
+
+    A listagem é renderizada server-side, contendo por evento:
+    - h5 > a: nome e link de inscrição
+    - img.cs-chosen-image: imagem
+    - div.text-editor > p: data, cidade, distâncias e organizador
+
+    Retorna dict com os campos ou None se o box não for um evento.
+    """
+    name_element = box.select_one("h5 a")
+    if not name_element:
+        return None
+
+    event_info: dict = {}
+    link_inscricao = str(name_element.get("href") or "").strip()
+    event_info["nome"] = name_element.get_text(strip=True)
+
+    # Ignorar URLs redirecionadas/que não são de evento
+    if link_inscricao.startswith("https://www.liverun.com.br/calendario"):
+        print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_inscricao}")
+        return None
+    if is_race83_listing_url(link_inscricao):
+        print(f"[SKIP] Pulando link de eventos genérico do Race83: {link_inscricao}")
+        return None
+
+    event_info["link_inscricao"] = link_inscricao
+
+    # Imagem do evento (resolve URLs relativas contra a URL da listagem)
+    img_element = box.select_one("img.cs-chosen-image")
+    event_info["link_imagem"] = urljoin(BQC_LISTING_URL, str(img_element.get("src") or "")) if img_element else ""
+
+    # Extrai informações textuais (data, cidade, distâncias, organizador)
+    paragraphs = [
+        p.get_text(" ", strip=True).replace("\xa0", " ").strip()
+        for p in box.select("div.text-editor p")
+    ]
+    texts = [t for t in paragraphs if t]
+
+    full_text = " ".join(texts)
+    extracted_time = extract_time_from_text(full_text)
+    if extracted_time:
+        event_info["horario"] = extracted_time
+
+    distancias_encontradas = []
+    outros = []
+    for text in texts:
+        if _DATA_PATTERN.search(text):
+            event_info["data"] = text
+        elif _is_distance_text(text):
+            distancias_encontradas.append(text)
+        else:
+            outros.append(text)
+
+    # Primeiro parágrafo restante é a cidade; o último (quando distinto) é o organizador.
+    if outros:
+        event_info["cidade"] = outros[0]
+        if len(outros) > 1:
+            event_info["organizador"] = outros[-1]
+
+    if distancias_encontradas:
+        event_info["distancia"] = ", ".join(distancias_encontradas)
+    if not event_info.get("horario"):
+        event_info["horario"] = ""
+
+    return event_info
+
+
+def get_event_data() -> list[dict]:
     """
     Extrai os dados dos eventos da página Brasil Que Corre - Paraíba.
 
-    Implementa tentativas múltiplas de carregamento para maior robustez.
-    Extrai informações básicas (nome, data, cidade, distâncias, etc.) e depois
-    busca detalhes adicionais (preços e editais) em paralelo.
+    A listagem é estática (server-side), portanto usa requests + BeautifulSoup,
+    sem necessidade de Selenium nesta etapa. Os detalhes (preços, editais e
+    horário quando ausente na listagem) continuam sendo coletados em
+    process_event_details, que cria drivers sob demanda para fontes que exigem JS.
     """
     try:
-        url = "https://brasilquecorre.com/paraiba"
-        attempts = 3
+        html = _fetch_bqc_listing_html()
+        if not html:
+            print(f"Erro crítico ao buscar dados dos eventos: falha ao baixar {BQC_LISTING_URL}")
+            return []
 
-        # Tenta carregar a página com múltiplas tentativas
-        for attempt in range(1, attempts + 1):
-            try:
-                driver.set_page_load_timeout(30)
-                driver.get(url)
-                break  # Sucesso
-            except (TimeoutException, WebDriverException) as e:
-                print(f"[get_event_data] Tentativa {attempt} falhou ao carregar a página: {e}")
-                # Tenta parar o carregamento e tentar novamente após breve espera
-                with contextlib.suppress(Exception):
-                    driver.execute_script("window.stop();")
-                time.sleep(2)
-                if attempt == attempts:
-                    raise
-                continue
-
-        # Aguarda os elementos dos eventos aparecerem
-        wait = WebDriverWait(driver, 20)
-        event_boxes = wait.until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "div.cs-box"))
-        )
+        soup = BeautifulSoup(html, "html.parser")
+        event_boxes = soup.find_all("div", class_="cs-box")
 
         event_data = []
-        data_pattern = re.compile(r"\d{1,2}\s+de\s+[A-Za-zçÇ]+\s+de\s+\d{4}")
-
-        def normalize_time(hour_str, minute_str=None):
-            try:
-                h = int(hour_str)
-                m = int(minute_str) if minute_str not in (None, "") else 0
-            except Exception:
-                return None
-            if h < 0 or h > 23 or m < 0 or m > 59:
-                return None
-            return f"{h:02d}:{m:02d}"
-
         total_events = len(event_boxes)
-        print(f"\nEncontrados {total_events} eventos. Iniciando extração\n")
+        print(f"\nEncontrados {total_events} boxes na listagem. Iniciando extração\n")
 
-        # Primeira iteração: extrai dados básicos de cada evento
         for idx, box in enumerate(event_boxes, 1):
-            event_info = {}
             try:
-                # Nome do evento e link de inscrição
-                name_element = box.find_element(By.CSS_SELECTOR, "h5 a")
-                event_info["nome"] = name_element.text
-                event_info["link_inscricao"] = name_element.get_attribute("href")
-
-                # Ignorar URLs redirecionadas/que não são de evento
-                try:
-                    link_insc = event_info.get("link_inscricao", "") or ""
-                    if link_insc.startswith("https://www.liverun.com.br/calendario"):
-                        print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_insc}")
-                        continue
-                    # Também ignora listagem genérica de eventos do Race83 (usa helper específico)
-                    if is_race83_listing_url(link_insc):
-                        print(f"[SKIP] Pulando link de eventos genérico do Race83: {link_insc}")
-                        continue
-                except Exception:
-                    pass
-
-                # Imagem do evento
-                img_element = box.find_element(By.CSS_SELECTOR, "img.cs-chosen-image")
-                event_info["link_imagem"] = img_element.get_attribute("src")
-
-                # Extrai informações textuais (data, cidade, distâncias, organizador)
-                text_elements = box.find_elements(By.CSS_SELECTOR, "div.text-editor p")
-                distancias_encontradas = []
-
-                full_text = (
-                    " ".join([el.text for el in text_elements])
-                    if text_elements
-                    else (box.text if hasattr(box, "text") else "")
-                )
-                extracted_time = extract_time_from_text(full_text)
-                if extracted_time:
-                    event_info["horario"] = extracted_time
-
-                for idx_elem, element in enumerate(text_elements):
-                    text = element.text.strip()
-                    if text and not text.isspace():
-                        if data_pattern.search(text):
-                            event_info["data"] = text
-                        elif any(
-                            term in text
-                            for term in [
-                                "(corrida)",
-                                "(caminhada)",
-                                "(trail)",
-                                "(ultra)",
-                                "(infantil)",
-                            ]
-                        ):
-                            distancias_encontradas.append(text)
-                        elif idx_elem == len(text_elements) - 1:
-                            event_info["organizador"] = text
-                        elif "cidade" not in event_info:
-                            event_info["cidade"] = text
-
-                if distancias_encontradas:
-                    event_info["distancia"] = ", ".join(distancias_encontradas)
-                if not event_info.get("horario"):
-                    event_info["horario"] = ""
-
+                event_info = _extract_bqc_event_info(box)
+                if event_info is None:
+                    continue
                 event_data.append(event_info)
                 print(f"[{idx}/{total_events}] ✓ Dados básicos: {event_info.get('nome', '')}")
-
             except Exception:
                 continue
 
-        # Segunda iteração: busca editais e preços em paralelo
+        # Busca editais e preços para complementar os dados básicos
         print("\nBuscando editais e preços...\n")
         event_data = process_event_details(event_data)
 
@@ -1091,74 +1098,68 @@ def main():
     Função principal para executar o scraper e salvar os dados.
 
     Executa todo o processo de scraping:
-    1. Configura o driver Selenium
-    2. Extrai dados dos eventos
-    3. Salva em CSV
+    1. Extrai dados dos eventos (listagem via requests + detalhes via extractors)
+    2. Salva em CSV
     """
-    driver = setup_driver()
     base_dir = os.path.dirname(os.path.abspath(__file__))
     csv_path = os.path.join(base_dir, "data/eventos_brasilquecorre.csv")
 
-    try:
-        event_data = get_event_data(driver)
+    event_data = get_event_data()
 
-        if not event_data:
-            print("Nenhum evento encontrado ou ocorreu um erro.")
-            return
+    if not event_data:
+        print("Nenhum evento encontrado ou ocorreu um erro.")
+        return
 
-        print(f"\nTotal de {len(event_data)} eventos encontrados. Salvando no CSV...")
+    print(f"\nTotal de {len(event_data)} eventos encontrados. Salvando no CSV...")
 
-        # Salva dados em CSV
-        with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
-            fieldnames = [
-                "Nome do Evento",
-                "Link de Inscrição",
-                "Link da Imagem",
-                "Data",
-                "Horário",
-                "Cidade",
-                "Distância",
-                "Organizador",
-                "Link do Edital",
-                "precos_entries",
-            ]
-            writer = csv.writer(csvfile, delimiter=";", quoting=csv.QUOTE_ALL)
-            writer.writerow(fieldnames)
+    # Salva dados em CSV
+    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
+        fieldnames = [
+            "Nome do Evento",
+            "Link de Inscrição",
+            "Link da Imagem",
+            "Data",
+            "Horário",
+            "Cidade",
+            "Distância",
+            "Organizador",
+            "Link do Edital",
+            "precos_entries",
+        ]
+        writer = csv.writer(csvfile, delimiter=";", quoting=csv.QUOTE_ALL)
+        writer.writerow(fieldnames)
 
-            for event in event_data:
-                writer.writerow(
-                    [
-                        event.get("nome", ""),
-                        event.get("link_inscricao", ""),
-                        event.get("link_imagem", ""),
-                        event.get("data", ""),
-                        (event.get("horario") or "Horário de largada não encontrado"),
-                        event.get("cidade", ""),
-                        event.get("distancia", ""),
-                        event.get("organizador", ""),
-                        event.get("link_edital", ""),
-                        event.get("precos_entries", ""),
-                    ]
-                )
+        for event in event_data:
+            writer.writerow(
+                [
+                    event.get("nome", ""),
+                    event.get("link_inscricao", ""),
+                    event.get("link_imagem", ""),
+                    event.get("data", ""),
+                    (event.get("horario") or "Horário de largada não encontrado"),
+                    event.get("cidade", ""),
+                    event.get("distancia", ""),
+                    event.get("organizador", ""),
+                    event.get("link_edital", ""),
+                    event.get("precos_entries", ""),
+                ]
+            )
 
-        print(f"\nDados salvos com sucesso em: {csv_path}")
+    print(f"\nDados salvos com sucesso em: {csv_path}")
 
-        # Tenta sincronizar o CSV para o MongoDB Atlas
-        if not os.environ.get("CORREPB_COLLEC_ONLY"):
+    # Tenta sincronizar o CSV para o MongoDB Atlas
+    if not os.environ.get("CORREPB_COLLEC_ONLY"):
+        try:
+            from data_collection.utils import ImportToDB as sync_module
+
             try:
-                from data_collection.utils import ImportToDB as sync_module
-
-                try:
-                    sync_module.import_csv_to_mongodb(
-                        sync_module.remote_db, csv_path, "brasilquecorre"
-                    )
-                except Exception as e:
-                    print(f"falha ao sincronizar csv para mongodb: {e}")
+                sync_module.import_csv_to_mongodb(
+                    sync_module.remote_db, csv_path, "brasilquecorre"
+                )
             except Exception as e:
-                print(f"sincronização com mongodb ignorada (import failed): {e}")
-
-    finally:
-        driver.quit()
+                print(f"falha ao sincronizar csv para mongodb: {e}")
+        except Exception as e:
+            print(f"sincronização com mongodb ignorada (import failed): {e}")
 
 
 if __name__ == "__main__":
