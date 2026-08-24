@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     API_PORT: int = 8181
     API_DEBUG: bool = False
     API_KEY: str = ""
+    SCRAPERS_API_KEY: str = ""
 
     AWS_BUCKET_NAME: str = ""
     AWS_REGION: str = "us-east-1"

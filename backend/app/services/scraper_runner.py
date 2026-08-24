@@ -9,6 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypedDict
 
+from app.core.database import database
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
 DATA_COLLECTION_DIR = BASE_DIR / "data_collection"
 DATA_DIR = DATA_COLLECTION_DIR / "data"
@@ -158,6 +160,24 @@ def _build_csv_summaries() -> list[ValidationSummary]:
     return summaries
 
 
+async def _save_last_run(finished_at: str) -> None:
+    """Grava o finished_at do último job completo (base do cooldown de 15 dias)."""
+    try:
+        collection = database.get_collection("scrape_state")
+        await collection.update_one(
+            {"_id": "last_scrape"},
+            {"$set": {"finished_at": finished_at}},
+            upsert=True,
+        )
+    except Exception as e:
+        print(f"[WARN] Falha ao salvar last_scrape: {e}")
+
+
+async def get_last_run() -> dict | None:
+    collection = database.get_collection("scrape_state")
+    return await collection.find_one({"_id": "last_scrape"})
+
+
 async def _execute_job(job: ScraperJob) -> None:
     global _active_job_id
     job.started_at = _now_iso()
@@ -186,6 +206,8 @@ async def _execute_job(job: ScraperJob) -> None:
                 job.status = "complete"
         report["finished_at"] = _now_iso()
         job.report = report
+        if job.status == "complete":
+            await _save_last_run(report["finished_at"])
     except Exception as e:
         job.status = "failed"
         job.error = str(e)
