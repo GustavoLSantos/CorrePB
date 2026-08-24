@@ -26,7 +26,7 @@ class EventoDeCorrida:
         precos_entries: Optional[List[Dict[str, Any]]] = None,
         percurso: Optional[Dict[str, Any]] = None,
         kits: Optional[List[Dict[str, Any]]] = None,
-        _id: Optional[ObjectId] = None
+        _id: Optional[ObjectId] = None,
     ):
         # Propriedades obrigatórias
         self._id = _id
@@ -51,49 +51,49 @@ class EventoDeCorrida:
         self.percurso = percurso
         self.kits = kits
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Converte o objeto para um dicionário compatível com MongoDB"""
         documento = {
-            'nome_evento': self.nome_evento,
-            'datas_realizacao': self.datas_realizacao,
-            'cidade': self.cidade,
-            'estado': self.estado,
-            'organizador': self.organizador,
-            'site_coleta': self.site_coleta,
-            'data_coleta': self.data_coleta,
-            'distancias': self.distancias
+            "nome_evento": self.nome_evento,
+            "datas_realizacao": self.datas_realizacao,
+            "cidade": self.cidade,
+            "estado": self.estado,
+            "organizador": self.organizador,
+            "site_coleta": self.site_coleta,
+            "data_coleta": self.data_coleta,
+            "distancias": self.distancias,
         }
 
         # Adiciona campos opcionais apenas se não forem None ou vazios
         if self.horario and self.horario.strip():
-            documento['horario'] = self.horario
+            documento["horario"] = self.horario
         if self.url_inscricao and self.url_inscricao.strip():
-            documento['url_inscricao'] = self.url_inscricao
+            documento["url_inscricao"] = self.url_inscricao
         if self.url_imagem and self.url_imagem.strip():
-            documento['url_imagem'] = self.url_imagem
+            documento["url_imagem"] = self.url_imagem
         if self.categoria and self.categoria.strip():
-            documento['categoria'] = self.categoria
+            documento["categoria"] = self.categoria
         if self.link_edital is not None:
-            documento['link_edital'] = self.link_edital
+            documento["link_edital"] = self.link_edital
         if self.categorias_premiadas is not None:
-            documento['categorias_premiadas'] = self.categorias_premiadas
+            documento["categorias_premiadas"] = self.categorias_premiadas
 
         # Preço (legível) e entradas estruturadas
         if self.preco is not None:
-            documento['preco'] = self.preco
+            documento["preco"] = self.preco
         if self.precos_entries:
-            documento['precos_entries'] = self.precos_entries
+            documento["precos_entries"] = self.precos_entries
         if self.percurso:
             percurso = dict(self.percurso)
             percurso.setdefault("local_largada", "")
-            documento['percurso'] = percurso
+            documento["percurso"] = percurso
         if self.kits:
             kits_safe = []
             for kit in self.kits:
                 k = dict(kit)
                 k.setdefault("nome", "Kit")
                 kits_safe.append(k)
-            documento['kits'] = kits_safe
+            documento["kits"] = kits_safe
 
         return documento
 
@@ -101,51 +101,71 @@ class EventoDeCorrida:
         """Compara dois eventos, ignorando campos específicos"""
         if not isinstance(other, EventoDeCorrida):
             return False
-            
+
         # Campos a serem comparados
         campos_comparacao = [
-            'nome_evento', 'datas_realizacao', 'cidade', 'estado',
-            'organizador', 'site_coleta', 'distancias', 'horario', 'url_inscricao',
-            'url_imagem', 'categoria', 'preco'
+            "nome_evento",
+            "datas_realizacao",
+            "cidade",
+            "estado",
+            "organizador",
+            "site_coleta",
+            "distancias",
+            "horario",
+            "url_inscricao",
+            "url_imagem",
+            "categoria",
+            "preco",
         ]
-        
+
         # Compara cada campo
         for campo in campos_comparacao:
             valor_self = getattr(self, campo)
             valor_other = getattr(other, campo)
-            
+
             # Trata listas de forma especial
             if isinstance(valor_self, list) and isinstance(valor_other, list):
                 if sorted(valor_self) != sorted(valor_other):
                     return False
             elif valor_self != valor_other:
                 return False
-                
+
         return True
 
     @classmethod
-    def from_csv_row(cls, row: dict, fonte: str) -> 'EventoDeCorrida':
+    def from_csv_row(cls, row: dict[str, str], fonte: str) -> "EventoDeCorrida":
         """Cria uma instância de EventoDeCorrida a partir de uma linha do CSV"""
+
         # Função auxiliar para tratar campos vazios
         def get_value(key: str) -> str:
-            value = row.get(key, '')
-            return value if value and value.strip() else ''
-        
-        horario_val = get_value('Horário') or get_value('Horario') or get_value('horario')
+            value = row.get(key, "")
+            return value if value and value.strip() else ""
+
+        horario_val = get_value("Horário") or get_value("Horario") or get_value("horario")
         # Converter datas para lista de datetime
-        data_str = get_value('Data')
+        data_str = get_value("Data")
         datas_realizacao = []
         if data_str:
             try:
                 meses = {
-                    'janeiro': 1, 'fevereiro': 2, 'março': 3, 'abril': 4, 'maio': 5, 'junho': 6,
-                    'julho': 7, 'agosto': 8, 'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12
+                    "janeiro": 1,
+                    "fevereiro": 2,
+                    "março": 3,
+                    "abril": 4,
+                    "maio": 5,
+                    "junho": 6,
+                    "julho": 7,
+                    "agosto": 8,
+                    "setembro": 9,
+                    "outubro": 10,
+                    "novembro": 11,
+                    "dezembro": 12,
                 }
                 # Exemplo: '02, 03 e 15 de Agosto de 2025'
-                data_str = data_str.lower().replace('  ', ' ').replace(' e ', ', ')
-                partes = data_str.split(' de ')
+                data_str = data_str.lower().replace("  ", " ").replace(" e ", ", ")
+                partes = data_str.split(" de ")
                 if len(partes) == 3:
-                    dias = [d.strip() for d in partes[0].split(',')]
+                    dias = [d.strip() for d in partes[0].split(",")]
                     mes = meses[partes[1].strip()]
                     ano = int(partes[2])
                     for dia in dias:
@@ -159,39 +179,39 @@ class EventoDeCorrida:
         if not datas_realizacao:
             datas_realizacao = []
 
-        link_edital = get_value('link_edital') or get_value('Link do Edital')
-        categorias_premiadas = get_value('Categorias Premiadas')
+        link_edital = get_value("link_edital") or get_value("Link do Edital")
+        categorias_premiadas = get_value("Categorias Premiadas")
 
         # Garante que distancias seja uma string separada por vírgulas
-        distancias_val = get_value('Distância')
+        distancias_val = get_value("Distância")
         if isinstance(distancias_val, list):
-            distancias = ', '.join([d.strip() for d in distancias_val if d.strip()])
+            distancias = ", ".join([d.strip() for d in distancias_val if d.strip()])
         else:
             distancias = str(distancias_val).strip()
 
         # Preço e entradas estruturadas (se vierem no CSV)
-        preco_val = row.get('Preço') or row.get('preco') or ''
+        preco_val = row.get("Preço") or row.get("preco") or ""
         precos_entries_val = None
         # Se houver um JSON serializado nas entradas de preço (coluna 'precos_entries'), tenta carregar
-        if 'precos_entries' in row and row.get('precos_entries'):
+        if "precos_entries" in row and row.get("precos_entries"):
             try:
-                precos_entries_val = json.loads(row.get('precos_entries'))
+                precos_entries_val = json.loads(row.get("precos_entries"))
             except Exception:
                 precos_entries_val = None
 
         percurso_val = None
-        if 'Percurso' in row and row.get('Percurso'):
+        if "Percurso" in row and row.get("Percurso"):
             try:
-                percurso_val = json.loads(row.get('Percurso'))
+                percurso_val = json.loads(row.get("Percurso"))
                 if isinstance(percurso_val, dict):
                     percurso_val.setdefault("local_largada", "")
             except Exception:
                 percurso_val = None
 
         kits_val = None
-        if 'Kits' in row and row.get('Kits'):
+        if "Kits" in row and row.get("Kits"):
             try:
-                kits_val = json.loads(row.get('Kits'))
+                kits_val = json.loads(row.get("Kits"))
                 if isinstance(kits_val, list):
                     for kit in kits_val:
                         if isinstance(kit, dict):
@@ -200,22 +220,22 @@ class EventoDeCorrida:
                 kits_val = None
 
         return cls(
-            nome_evento=get_value('Nome do Evento'),
+            nome_evento=get_value("Nome do Evento"),
             datas_realizacao=datas_realizacao,
-            cidade=get_value('Cidade'),
-            estado='PB',  # Estado fixo para este projeto
-            organizador=get_value('Organizador'),
+            cidade=get_value("Cidade"),
+            estado="PB",  # Estado fixo para este projeto
+            organizador=get_value("Organizador"),
             site_coleta=fonte,
             data_coleta=datetime.now(),
             distancias=distancias,
             horario=horario_val,
-            url_inscricao=get_value('Link de Inscrição'),
-            url_imagem=get_value('Link da Imagem'),
-            categoria=get_value('Categoria'),
+            url_inscricao=get_value("Link de Inscrição"),
+            url_imagem=get_value("Link da Imagem"),
+            categoria=get_value("Categoria"),
             link_edital=link_edital,
             categorias_premiadas=categorias_premiadas,
             preco=preco_val,
             precos_entries=precos_entries_val,
             percurso=percurso_val,
-            kits=kits_val
+            kits=kits_val,
         )
