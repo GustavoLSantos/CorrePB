@@ -42,6 +42,8 @@ async def scrape_status(job_id: str):
 
 @router.post("/import")
 async def import_scraped():
+    if get_active_job_id():
+        raise HTTPException(status_code=409, detail="Coleta em andamento; tente importar depois")
     result = await asyncio.to_thread(scraper_import.import_scraped_csvs)
-    await asyncio.to_thread(cleanup_scraped_csvs)
+    _ = await asyncio.to_thread(cleanup_scraped_csvs)
     return result
