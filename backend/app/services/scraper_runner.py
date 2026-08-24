@@ -13,11 +13,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
 DATA_COLLECTION_DIR = BASE_DIR / "data_collection"
 DATA_DIR = DATA_COLLECTION_DIR / "data"
 
-SCRAPERS = ["scraper_brasilquecorre.py", "scraper_smcrono.py"]
+SCRAPERS = [
+    "scraper_brasilquecorre.py",
+    "scraper_smcrono.py",
+    "scraper_race83.py",
+    "scraper_zenite.py",
+]
 
 CSV_MAP = {
     "brasilquecorre": DATA_DIR / "eventos_brasilquecorre.csv",
     "smcrono": DATA_DIR / "eventos_smcrono.csv",
+    "race83": DATA_DIR / "eventos_race83.csv",
+    "zenite": DATA_DIR / "eventos_zenite.csv",
 }
 
 _background_tasks: set[asyncio.Task[None]] = set()
