@@ -1,10 +1,23 @@
+import json
+import re
 import time
+from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
 import requests
 from data_collection.core.Driver import setup_driver
+from data_collection.core.ScraperCommon import (
+    fix_encoding,
+    formatar_data_br,
+    get_http_session,
+    get_with_rate_limit,
+    parse_data_br,
+)
 from selenium.common.exceptions import WebDriverException
+
+BASE_URL = "https://www.race83.com.br"
+ORGANIZADOR = "Race83"
 
 
 def is_race83_domain(domain: str) -> bool:
@@ -77,3 +90,179 @@ def load_race83_soup(url: str, timeout: int = 5):
         except Exception:
             pass
         return None, created, None
+
+# ─── API dedicada (plataforma race83/smcrono) ────────────────────────────────
+_session = get_http_session()
+
+
+def _candidate_events_urls() -> list[str]:
+    """URLs candidatas do JSON de eventos (arquivo datado gerado pela plataforma)."""
+    urls = []
+    try:
+        html = get_with_rate_limit(_session, BASE_URL, timeout=20)
+        if html:
+            m = re.search(r"url_arquivo_events\s*=\s*'([^']+)'", html.text)
+            if m:
+                urls.append(m.group(1))
+    except Exception:
+        pass
+    for delta in (0, 1):
+        dia = datetime.now() - timedelta(days=delta)
+        urls.append(f"{BASE_URL}/session/{dia:%Y%m%d}_race83_events.json")
+    return urls
+
+
+def load_events_json() -> list[dict]:
+    """Carrega listEventos do arquivo JSON diário da plataforma."""
+    for url in _candidate_events_urls():
+        resp = get_with_rate_limit(_session, url, timeout=20)
+        if resp is None:
+            continue
+        try:
+            eventos = (resp.json() or {}).get("listEventos") or []
+        except Exception:
+            continue
+        if eventos:
+            print(f"Lista carregada de {url}: {len(eventos)} eventos")
+            return eventos
+    return []
+
+
+def fetch_event_details(url_evento: str) -> dict | None:
+    """Detalhes estruturados de um evento via api_evento.php (preços, percursos, edital)."""
+    resp = get_with_rate_limit(_session, f"{BASE_URL}/api_evento.php?url={url_evento}", timeout=20)
+    if resp is None:
+        return None
+    try:
+        return resp.json()
+    except Exception:
+        return None
+
+
+# Reparos conservadores para mojibake do banco da plataforma (ex.: 'SÃo' -> 'São',
+# 'VerÃo' -> 'Verão'). Nenhuma palavra portuguesa legítima contém esses padrões.
+_ORPHAN_MOJIBAKE = re.compile(r"Ã([oa])\b")
+
+
+def _limpar_nome(nome: str) -> str:
+    return _ORPHAN_MOJIBAKE.sub(r"ã\1", fix_encoding(nome))
+
+
+def _extrair_cidade(local: str, ev: dict) -> str:
+    m = re.match(r"^(.*?)\s*-\s*[A-Z]{2}\s*$", fix_encoding((local or "").strip()))
+    if m:
+        return m.group(1).strip()
+    cidade = fix_encoding((ev.get("eve_cidade") or "").strip())
+    return cidade.title() if cidade.isupper() else cidade
+
+
+def _montar_precos(precos_categorias) -> list[str]:
+    """Converte lotes/categorias da API em entradas legíveis ordenadas por preço."""
+    from data_collection.utils.PriceUtils import parse_price_str
+
+    lotes = precos_categorias or []
+    multi_lote = len(lotes) > 1
+    entradas = []
+    vistos = set()
+
+    for lote in lotes:
+        lote_nome = str(lote.get("lote_nome") or "").strip()
+        for p in lote.get("precos") or []:
+            valor = (p.get("valor") or "").strip()
+            preco = parse_price_str(valor)
+            if not valor or not preco:
+                continue
+            partes = [x.strip() for x in (p.get("modalidade"), p.get("categoria")) if x and x.strip()]
+            label = " — ".join(fix_encoding(x) for x in partes) or "Geral"
+            if multi_lote and lote_nome:
+                label = f"Lote {lote_nome}: {label}"
+
+            chave = (preco, label)
+            if chave in vistos:
+                continue
+            vistos.add(chave)
+            entradas.append({"label": label, "price": preco, "formatted": fix_encoding(valor)})
+
+    entradas.sort(key=lambda x: x["price"])
+    return [f"{e['formatted']} | {e['label']}" for e in entradas]
+
+
+def _event_slug(ev: dict) -> str:
+    slug = (ev.get("url_evento") or "").rstrip("/").split("/")[-1]
+    return f"{ev.get('eve_id')}/{slug}" if slug and ev.get("eve_id") else ""
+
+
+def get_race83_events(estado_filter: str = "PB", somente_futuros: bool = True) -> list[dict]:
+    """Coleta completa dos eventos Race83 direto da API da plataforma.
+
+    Retorna registros no schema padrão do projeto (Nome do Evento, precos_entries, ...),
+    sem depender do listing do Brasil Que Corre nem de Selenium.
+    """
+    events_data = []
+    vistos = set()
+
+    for ev in load_events_json():
+        nome_ref = ev.get("eve_nome", "?")
+        try:
+            api_url = _event_slug(ev)
+            if not api_url or api_url in vistos:
+                continue
+            vistos.add(api_url)
+
+            estado = (ev.get("eve_estado") or "").strip()[-2:].upper()
+            if estado_filter and estado != estado_filter.upper():
+                continue
+
+            data_ev = ev.get("eve_data_evento") or ""
+            data_parsed = parse_data_br(data_ev)
+            if somente_futuros and data_parsed and data_parsed < datetime.now():
+                continue
+
+            print(f"Analisando: {nome_ref}")
+            det = fetch_event_details(api_url)
+            if not det:
+                print("  -> detalhes indisponíveis")
+                continue
+
+            # Re-checa a data com o valor canônico dos detalhes (a lista às vezes erra)
+            data_final = det.get("data_evento") or data_ev
+            data_final_parsed = parse_data_br(data_final) or data_parsed
+            if somente_futuros and data_final_parsed and data_final_parsed < datetime.now():
+                print(f"  -> Ignorado: evento passado ({data_final})")
+                continue
+
+            edital_link = "edital não encontrado"
+            for doc in det.get("documentos") or []:
+                doc_url = (doc.get("url") or "").strip()
+                if doc_url.lower().endswith(".pdf"):
+                    edital_link = doc_url
+                    break
+
+            percursos = [
+                fix_encoding((p.get("nome") or "").strip())
+                for p in det.get("percursos") or []
+                if (p.get("nome") or "").strip()
+            ]
+            precos = _montar_precos(det.get("precos_categorias"))
+            nome = _limpar_nome((det.get("titulo") or "").strip()) or _limpar_nome(nome_ref)
+
+            events_data.append(
+                {
+                    "Nome do Evento": nome,
+                    "Link de Inscrição": f"{BASE_URL}/evento/{api_url}",
+                    "Link da Imagem": (det.get("imagem_capa") or ev.get("imagem_capa") or "").strip(),
+                    "Data": formatar_data_br(data_final),
+                    "Horário": (det.get("hora_evento") or ev.get("eve_hora") or "").strip(),
+                    "Cidade": _extrair_cidade(det.get("local") or "", ev),
+                    "Distância": ", ".join(percursos),
+                    "Organizador": ORGANIZADOR,
+                    "Link do Edital": edital_link,
+                    "precos_entries": json.dumps(precos, ensure_ascii=False) if precos else "[]",
+                }
+            )
+            print(f"  [OK] {events_data[-1]['Data']} | Preços: {len(precos)} entradas")
+        except Exception as e:
+            print(f"  [ERRO]: {e} ({nome_ref})")
+            continue
+
+    return events_data
