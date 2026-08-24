@@ -18,6 +18,7 @@ SCRAPERS = [
     "scraper_smcrono.py",
     "scraper_race83.py",
     "scraper_zenite.py",
+    "scraper_circuitodasestacoes.py",
 ]
 
 CSV_MAP = {
@@ -25,6 +26,7 @@ CSV_MAP = {
     "smcrono": DATA_DIR / "eventos_smcrono.csv",
     "race83": DATA_DIR / "eventos_race83.csv",
     "zenite": DATA_DIR / "eventos_zenite.csv",
+    "circuitodasestacoes": DATA_DIR / "eventos_circuitodasestacoes.csv",
 }
 
 _background_tasks: set[asyncio.Task[None]] = set()

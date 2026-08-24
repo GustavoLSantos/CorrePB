@@ -116,11 +116,14 @@ MESES_EXTENSO = {
 
 
 def parse_data_br(data_str: str | None) -> datetime | None:
-    """Converte 'dd/mm/yyyy' em datetime; retorna None se inválido."""
-    try:
-        return datetime.strptime((data_str or "").strip(), "%d/%m/%Y")
-    except ValueError:
-        return None
+    """Converte 'dd/mm/yyyy' ou 'yyyy-mm-dd' em datetime; None se inválido."""
+    s = (data_str or "").strip()
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def formatar_data_br(data_str: str | None) -> str:

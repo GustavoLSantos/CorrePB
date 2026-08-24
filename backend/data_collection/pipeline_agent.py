@@ -31,6 +31,7 @@ SCRAPERS = [
     'scraper_smcrono.py',
     'scraper_race83.py',
     'scraper_zenite.py',
+    'scraper_circuitodasestacoes.py',
 ]
 
 CSV_MAP: Dict[str, Path] = {
@@ -38,6 +39,7 @@ CSV_MAP: Dict[str, Path] = {
     'smcrono':        DATA_DIR / 'eventos_smcrono.csv',
     'race83':         DATA_DIR / 'eventos_race83.csv',
     'zenite':         DATA_DIR / 'eventos_zenite.csv',
+    'circuitodasestacoes': DATA_DIR / 'eventos_circuitodasestacoes.csv',
 }
 
 IMPORT_TO_DB_SCRIPT     = BASE_DIR / 'utils' / 'ImportToDB.py'
@@ -135,7 +137,9 @@ def run_scrapers_parallel() -> List[StepResult]:
 # ─── CSV Validation ───────────────────────────────────────────────────────────
 
 REQUIRED_FIELDS = ['Nome do Evento', 'Data', 'Cidade', 'Link de Inscrição']
-ENCODING_GARBAGE_RE = re.compile(r'[?\ufffd]')
+# Mojibake real: replacement char, Ã+minúscula ('JoÃo'), Â+°/»/£, â€ (smart quotes)
+# '?' sozinho é conteúdo legítimo e não deve ser sinalizado.
+ENCODING_GARBAGE_RE = re.compile(r'\ufffd|Ã[a-zà-ú]|Â[°»£¢]|â€')
 MESES = {
     'janeiro': 1, 'fevereiro': 2, 'março': 3, 'abril': 4, 'maio': 5, 'junho': 6,
     'julho': 7, 'agosto': 8, 'setembro': 9, 'outubro': 10, 'novembro': 11, 'dezembro': 12

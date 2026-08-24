@@ -34,11 +34,6 @@ from data_collection.core.ScraperCommon import (
     write_events_csv,
 )
 from selenium.webdriver.remote.webdriver import WebDriver
-from data_collection.sources.CircuitoDasEstacoes import (
-    extract_circuito_ticket_prices,
-    is_circuito_domain,
-    load_circuito_soup,
-)
 from data_collection.sources.Nightrun import (
     extract_nightrun_ticket_prices,
     is_nightrun_domain,
@@ -299,10 +294,6 @@ def extract_price_entries(
                 raw_prices = extract_nightrun_ticket_prices(driver)
                 if raw_prices:
                     return raw_prices
-            if is_circuito_domain(domain) and driver:
-                prices = extract_circuito_ticket_prices(driver)
-                if prices:
-                    return prices
     except Exception:
         # Se o extractor específico falhar, segue com heurísticas genéricas abaixo
         pass
@@ -653,11 +644,11 @@ FONTES_COM_SCRAPER_DEDICADO = (
     "race83.com.br",
     "zeniteesportes.com",
     "smcrono.com.br",
+    "circuitodasestacoes.com",
 )
 
 _SELENIUM_SOURCE_CHECKS = (
     is_sympla_domain,
-    is_circuito_domain,
     is_ticketsports_domain,
     is_nightrun_domain,
 )
@@ -669,6 +660,7 @@ SELENIUM_MAX_DRIVERS = 2
 def _is_selenium_source(domain: str) -> bool:
     """Fontes cujas páginas exigem JavaScript real para expor preços/detalhes."""
     return any(check(domain) for check in _SELENIUM_SOURCE_CHECKS)
+
 
 
 def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
@@ -730,9 +722,6 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
     try:
         if is_sympla_domain(domain):
             soup, _, _ = load_sympla_soup(url, driver=driver)
-        elif is_circuito_domain(domain):
-            soup, _, _, loader_horario = load_circuito_soup(url)
-            horario = horario or loader_horario
         elif is_ticketsports_domain(domain):
             soup, _, _, loader_horario = load_ticketsports_soup(
                 url, driver=driver, wait_seconds=30, debug=False

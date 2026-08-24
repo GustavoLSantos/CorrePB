@@ -1,4 +1,7 @@
 import contextlib
+import json
+import re
+from datetime import datetime
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -15,6 +18,231 @@ def is_circuito_domain(domain: str) -> bool:
         return False
     domain = domain.lower()
     return 'circuitodasestacoes.com' in domain
+
+
+from typing import TypedDict, cast
+
+import requests
+
+from data_collection.core.ScraperCommon import (
+    PriceEntry,
+    fix_encoding,
+    formatar_data_br,
+    parse_data_br,
+    _as_object_list,
+    _as_str_object_dict,
+    get_http_session,
+    get_with_rate_limit,
+)
+
+ORGANIZADOR = "TTK MKT ESPORTIVO"
+
+_NORTEMKT_HOME = "https://hotsites.nortemkt.com/api/v2/events/circuito-das-estacoes/home"
+_RUNNINGLAND_GRAPHQL = "https://www.runningland.com.br/graphql"
+_EVENT_SLUG = "circuito-das-estacoes"
+
+_api_session = get_http_session()
+
+
+class _Stage(TypedDict, total=False):
+    name: str
+    slug: str
+    url_key: str | None
+    date: str
+    finished: bool
+    coming_soon: bool
+    modalities: list[dict[str, object]]
+
+
+class _Location(TypedDict, total=False):
+    name: str
+    slug: str
+    stages: list[_Stage]
+
+
+class _KitItem(TypedDict, total=False):
+    name: str
+    prime_price: float | None
+    regular_price: float | None
+    special_price: float | None
+
+
+def _parse_circuito_url(url: str) -> tuple[str, str] | None:
+    """Extrai (location_slug, stage_slug) de URLs como /joao-pessoa/verao."""
+    path = urlparse(url).path.strip("/")
+    parts = [seg for seg in path.split("/") if seg]
+    if len(parts) < 2:
+        return None
+    return parts[-2].lower(), parts[-1].lower()
+
+
+def _runningland_graphql(query: str, variables: dict[str, object]) -> dict[str, object] | None:
+    try:
+        resp = _api_session.post(
+            _RUNNINGLAND_GRAPHQL,
+            data=json.dumps({"query": query, "variables": variables}),
+            headers={"Content-Type": "application/json"},
+            timeout=20,
+        )
+        resp.raise_for_status()
+        payload = _as_str_object_dict(cast("object", resp.json()))
+        return cast("dict[str, object] | None", (payload or {}).get("data"))
+    except Exception:
+        return None
+
+
+def _kit_prices_by_sku(sku: str) -> list[_KitItem]:
+    data = _runningland_graphql(
+        "query KitPrice($sku: String) {"
+        " bundleChildrenItems(sku: $sku)"
+        " { prime_price regular_price special_price name } }",
+        {"sku": sku},
+    )
+    if not data:
+        return []
+    kits: list[_KitItem] = []
+    for item in _as_object_list(data.get("bundleChildrenItems")):
+        kit = _as_str_object_dict(item)
+        if kit is not None:
+            kits.append(cast("_KitItem", cast("object", kit)))
+    return kits
+
+
+def _sku_por_url_key(url_key: str) -> str | None:
+    data = _runningland_graphql(
+        "query getEventProduct($url_key: String!) {"
+        " products(filter: {url_key: {eq: $url_key}}) { items { sku } } }",
+        {"url_key": url_key},
+    )
+    if not data:
+        return None
+    products = _as_str_object_dict(data.get("products"))
+    items = _as_object_list((products or {}).get("items"))
+    if not items:
+        return None
+    first = _as_str_object_dict(items[0])
+    sku = (first or {}).get("sku")
+    return str(sku) if sku else None
+
+
+
+def _horario_por_page(location_slug: str, stage_slug: str) -> str:
+    """Horário de largada publicado nos components da página da etapa."""
+    base = _NORTEMKT_HOME.rsplit("/home", 1)[0]
+    resp = get_with_rate_limit(
+        _api_session,
+        f"{base}/locations/{location_slug}",
+        timeout=25,
+    )
+    if resp is None:
+        return ""
+    try:
+        root = _as_str_object_dict(cast("object", resp.json()))
+        payload = _as_str_object_dict((root or {}).get("data") or {})
+        pages = _as_object_list((payload or {}).get("pages"))
+    except Exception:
+        return ""
+
+    for raw_page in pages:
+        page = _as_str_object_dict(raw_page)
+        stage_info = _as_str_object_dict((page or {}).get("stage") or {})
+        if (stage_info or {}).get("slug") != stage_slug:
+            continue
+        blob = json.dumps(page or {}, ensure_ascii=False)
+        m = re.search(r"HOR[AÁ]RIO DE LARGADA.{0,200}?(\d{1,2})\s*h\s*(\d{2})?", blob, re.IGNORECASE | re.DOTALL)
+        if m:
+            hh = int(m.group(1))
+            mm = int(m.group(2) or "0")
+            if 0 <= hh <= 23 and 0 <= mm <= 59:
+                return f"{hh:02d}:{mm:02d}"
+        break
+    return ""
+
+
+def fetch_circuito_api_data(url: str) -> dict[str, str] | None:
+    """Coleta cidade/data/distâncias/preços da etapa via APIs públicas
+    (hotsites.nortemkt.com + GraphQL RunningLand), sem Selenium.
+
+    Retorna dict com chaves 'cidade','data','distancia','precos_entries'
+    ou None se a etapa não for encontrada.
+    """
+    alvo = _parse_circuito_url(url)
+    if not alvo:
+        return None
+    location_slug, stage_slug = alvo
+
+    resp = get_with_rate_limit(_api_session, _NORTEMKT_HOME, timeout=25)
+    if resp is None:
+        return None
+    try:
+        root = _as_str_object_dict(cast("object", resp.json()))
+        payload = _as_str_object_dict((root or {}).get("data") or {})
+        event = _as_str_object_dict((payload or {}).get("event") or {})
+    except Exception:
+        return None
+    if not event:
+        return None
+
+    location_name = ""
+    stage: _Stage | None = None
+    for raw_loc in _as_object_list(event.get("locations")):
+        loc = _as_str_object_dict(raw_loc)
+        if loc is None or loc.get("slug") != location_slug:
+            continue
+        location_name = str(loc.get("name") or "")
+        loc_typed = cast("_Location", cast("object", loc))
+        for raw_stage in _as_object_list(loc_typed.get("stages")):
+            st = _as_str_object_dict(raw_stage)
+            if st is None or st.get("slug") != stage_slug:
+                continue
+            stage = cast("_Stage", cast("object", st))
+            break
+        break
+
+    if stage is None:
+        return None
+
+    distancias = ", ".join(
+        str(mod.get("name") or "")
+        for mod in (_as_object_list(stage.get("modalities")))
+        if isinstance(mod, dict) and mod.get("name")
+    )
+
+    precos_entries: list[str] = []
+    url_key = stage.get("url_key")
+    if url_key and not stage.get("finished") and not stage.get("coming_soon"):
+        sku = _sku_por_url_key(url_key)
+        if sku:
+            candidatos: list[PriceEntry] = []
+            for kit in _kit_prices_by_sku(sku):
+                precos_kit: list[float] = []
+                for campo in (
+                    kit.get("special_price"),
+                    kit.get("prime_price"),
+                    kit.get("regular_price"),
+                ):
+                    if isinstance(campo, (int, float)) and campo > 0:
+                        precos_kit.append(float(campo))
+                if not precos_kit:
+                    continue
+                nome_kit = str(kit.get("name") or "Inscrição")
+                melhor = min(precos_kit)
+                preco_br = f"R$ {melhor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                candidatos.append({"label": nome_kit, "price": melhor, "formatted": preco_br})
+            candidatos.sort(key=lambda x: x["price"])
+            precos_entries = [
+                f"{e['formatted']} | {e['label']}" for e in candidatos
+            ]
+
+    horario = _horario_por_page(location_slug, stage_slug)
+
+    return {
+        "cidade": location_name,
+        "data": str(stage.get("date") or ""),
+        "distancia": distancias,
+        "horario": horario,
+        "precos_entries": json.dumps(precos_entries, ensure_ascii=False) if precos_entries else "[]",
+    }
 
 def load_circuito_soup(
     url: str, timeout: int = 20, driver: WebDriver | None = None
@@ -371,3 +599,133 @@ def extract_circuito_schedule(soup: BeautifulSoup) -> str:
     except Exception:
         pass
     return ''
+
+
+def _preco_kit_key(e: PriceEntry) -> float:
+    preco = e.get("price")
+    return float(preco) if isinstance(preco, (int, float)) else 0.0
+
+
+# Localidades da Paraíba conhecidas na plataforma (slug); None = todas
+LOCALIZACOES_PB = frozenset({"joao-pessoa"})
+
+
+def get_circuito_events(
+    somente_futuros: bool = True,
+    localidades: frozenset[str] | set[str] | None = LOCALIZACOES_PB,
+) -> list[dict[str, str]]:
+    """Coleta completa das etapas do Circuito das Estações via APIs públicas.
+
+    - Catálogo: hotsites.nortemkt.com/api/v2/events/circuito-das-estacoes/home
+      (localizações × etapas com cidade, data, modalidades e url_key)
+    - Preços: GraphQL RunningLand (sku via url_key -> bundleChildrenItems)
+    - Horário de largada: components da página da etapa
+
+    Retorna registros no schema padrão do projeto, sem Selenium.
+    """
+    resp = get_with_rate_limit(_api_session, _NORTEMKT_HOME, timeout=25)
+    if resp is None:
+        return []
+    try:
+        root = _as_str_object_dict(cast("object", resp.json()))
+        payload = _as_str_object_dict((root or {}).get("data") or {})
+        event = _as_str_object_dict((payload or {}).get("event") or {})
+    except Exception:
+        return []
+    if not event:
+        return []
+
+    records: list[dict[str, str]] = []
+
+    for raw_loc in _as_object_list(event.get("locations")):
+        loc = _as_str_object_dict(raw_loc)
+        if loc is None:
+            continue
+        location_name = str(loc.get("name") or "")
+        loc_typed = cast("_Location", cast("object", loc))
+        location_slug = str(loc_typed.get("slug") or "")
+        if localidades is not None and location_slug not in localidades:
+            continue
+
+        for raw_stage in _as_object_list(loc_typed.get("stages")):
+            st = _as_str_object_dict(raw_stage)
+            if st is None:
+                continue
+            stage = cast("_Stage", cast("object", st))
+
+            if somente_futuros and (
+                stage.get("finished") or stage.get("coming_soon")
+            ):
+                continue
+            if not stage.get("published", True):
+                continue
+
+            stage_slug = str(stage.get("slug") or "")
+            url_key = str(stage.get("url_key") or "")
+            data_br = str(stage.get("date") or "")
+
+            distancias = ", ".join(
+                str(mod.get("name") or "")
+                for mod in _as_object_list(stage.get("modalities"))
+                if isinstance(mod, dict) and mod.get("name")
+            )
+
+            precos_entries = "[]"
+            if url_key:
+                sku = _sku_por_url_key(url_key)
+                if sku:
+                    candidatos: list[PriceEntry] = []
+                    for kit in _kit_prices_by_sku(sku):
+                        precos_kit: list[float] = []
+                        for campo in (
+                            kit.get("special_price"),
+                            kit.get("prime_price"),
+                            kit.get("regular_price"),
+                        ):
+                            if isinstance(campo, (int, float)) and campo > 0:
+                                precos_kit.append(float(campo))
+                        if not precos_kit:
+                            continue
+                        nome_kit = str(kit.get("name") or "Inscrição")
+                        melhor = min(precos_kit)
+                        preco_br = (
+                            f"R$ {melhor:,.2f}"
+                            .replace(",", "X")
+                            .replace(".", ",")
+                            .replace("X", ".")
+                        )
+                        candidatos.append(
+                            {
+                                "label": nome_kit,
+                                "price": melhor,
+                                "formatted": preco_br,
+                            }
+                        )
+                    candidatos.sort(key=_preco_kit_key)
+                    precos_entries = json.dumps(
+                        [f"{e['formatted']} | {e['label']}" for e in candidatos],
+                        ensure_ascii=False,
+                    )
+
+            records.append(
+                {
+                    "Nome do Evento": (
+                        f"CIRCUITO DAS ESTAÇÕES {str(stage.get('name') or '').upper()}"
+                        f" - {location_name.upper()}"
+                    ).strip(),
+                    "Link de Inscrição": (
+                        f"https://www.circuitodasestacoes.com.br/{location_slug}/{stage_slug}"
+                    ),
+                    "Link da Imagem": "",
+                    "Data": formatar_data_br(data_br),
+                    "Horário": _horario_por_page(location_slug, stage_slug),
+                    "Cidade": fix_encoding(location_name),
+                    "Distância": distancias,
+                    "Organizador": ORGANIZADOR,
+                    "Link do Edital": "edital não encontrado",
+                    "precos_entries": precos_entries,
+                    "_data_br": data_br,
+                }
+            )
+
+    return records
