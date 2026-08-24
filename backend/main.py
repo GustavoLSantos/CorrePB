@@ -10,6 +10,7 @@ from app.api.sync import router as sync_router
 from app.api.scrape import router as scrape_router
 from app.core.config import settings
 from app.core.database import database
+from app.services.scraper_runner import cleanup_scraped_csvs
 
 Path("logs").mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.connect()
+    _ = cleanup_scraped_csvs(24.0)
     logger.info("Connected to MongoDB")
     yield
     await database.disconnect()

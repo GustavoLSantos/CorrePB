@@ -4,7 +4,12 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.auth import verify_api_key
 from app.services import scraper_import
-from app.services.scraper_runner import get_active_job_id, get_job, start_scrape_job
+from app.services.scraper_runner import (
+    cleanup_scraped_csvs,
+    get_active_job_id,
+    get_job,
+    start_scrape_job,
+)
 
 
 router = APIRouter(prefix="/api/v1/scrape", dependencies=[Depends(verify_api_key)], tags=["scrape"])
@@ -37,4 +42,6 @@ async def scrape_status(job_id: str):
 
 @router.post("/import")
 async def import_scraped():
-    return await asyncio.to_thread(scraper_import.import_scraped_csvs)
+    result = await asyncio.to_thread(scraper_import.import_scraped_csvs)
+    await asyncio.to_thread(cleanup_scraped_csvs)
+    return result

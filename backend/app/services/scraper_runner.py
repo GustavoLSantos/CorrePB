@@ -23,6 +23,25 @@ CSV_MAP = {
 _background_tasks: set[asyncio.Task[None]] = set()
 
 
+def cleanup_scraped_csvs(older_than_hours: float | None = None) -> list[str]:
+    removed: list[str] = []
+    now = time.time()
+    for path in CSV_MAP.values():
+        try:
+            if not path.exists():
+                continue
+            if (
+                older_than_hours is not None
+                and (now - path.stat().st_mtime) < older_than_hours * 3600
+            ):
+                continue
+            path.unlink()
+            removed.append(path.name)
+        except OSError:
+            continue
+    return removed
+
+
 class ScraperResult(TypedDict):
     nome: str
     ok: bool
@@ -134,6 +153,7 @@ async def _execute_job(job: ScraperJob) -> None:
     global _active_job_id
     job.started_at = _now_iso()
     try:
+        cleanup_scraped_csvs()
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         scraper_results = await asyncio.gather(
             *[asyncio.to_thread(_run_scraper, s) for s in SCRAPERS]
