@@ -1,6 +1,7 @@
-import time
 import re
+import time
 
+import requests
 from bs4 import BeautifulSoup
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -85,11 +86,29 @@ def open_regulation_modals(driver):
 
 def load_liverun_soup(url: str, timeout: int = 20):
     """
-    Carrega uma página LiveRun/Liverun usando Selenium e tenta abrir o modal
-    com id 'modal-regulation' para expor listas de preços/regulamento.
+    Carrega uma página LiveRun/Liverun e retorna o soup com preços/regulamento.
+
+    As páginas são Astro SSR: preços e regulamento já estão no HTML estático,
+    então usa requests primeiro (rápido). O caminho Selenium — que abria modais
+    para expor as listas de preço — permanece apenas como fallback.
 
     Retorna (soup, created, driver)
+    - created False e driver None indicam uso de requests (nada a fechar)
     """
+    try:
+        resp = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+        if soup.find("h1") or soup.find("title"):
+            return soup, False, None
+    except Exception:
+        pass
+
+    return _load_liverun_soup_selenium(url)
+
+
+def _load_liverun_soup_selenium(url: str):
+    """Fallback Selenium da load_liverun_soup (comportamento legado)."""
     driver = None
     created = False
     try:

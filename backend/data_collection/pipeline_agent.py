@@ -26,11 +26,18 @@ BASE_DIR = Path(__file__).parent          # data_collection/
 PROJECT_ROOT = BASE_DIR.parent            # backend/
 DATA_DIR = BASE_DIR / 'data'
 
-SCRAPERS = ['scraper_brasilquecorre.py', 'scraper_smcrono.py']
+SCRAPERS = [
+    'scraper_brasilquecorre.py',
+    'scraper_smcrono.py',
+    'scraper_race83.py',
+    'scraper_zenite.py',
+]
 
 CSV_MAP: Dict[str, Path] = {
     'brasilquecorre': DATA_DIR / 'eventos_brasilquecorre.csv',
     'smcrono':        DATA_DIR / 'eventos_smcrono.csv',
+    'race83':         DATA_DIR / 'eventos_race83.csv',
+    'zenite':         DATA_DIR / 'eventos_zenite.csv',
 }
 
 IMPORT_TO_DB_SCRIPT     = BASE_DIR / 'utils' / 'ImportToDB.py'

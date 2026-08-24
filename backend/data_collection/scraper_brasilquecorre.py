@@ -5,6 +5,7 @@ import os
 import sys
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urljoin
 
 import requests
@@ -21,106 +22,55 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from data_collection.core.Driver import setup_driver
+from data_collection.core.ScraperCommon import (
+    entries_to_json,
+    get_http_session,
+    get_with_rate_limit,
+    sync_csv_to_mongodb,
+    write_events_csv,
+)
 from data_collection.sources.CircuitoDasEstacoes import (
     extract_circuito_ticket_prices,
     is_circuito_domain,
     load_circuito_soup,
 )
 from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
-from data_collection.sources.Nightrun import is_nightrun_domain, load_nightrun_soup
-from data_collection.sources.Race83 import (
-    detect_redirects_to_listing,
-    is_race83_domain,
-    is_race83_listing_url,
-    load_race83_soup,
+from data_collection.sources.Nightrun import (
+    extract_nightrun_ticket_prices,
+    is_nightrun_domain,
+    load_nightrun_soup,
 )
-from data_collection.sources.Sympla import is_sympla_domain, load_sympla_soup
+from data_collection.sources.Race83 import is_race83_listing_url
+from data_collection.sources.Sympla import (
+    extract_sympla_ticket_prices,
+    is_sympla_domain,
+    load_sympla_soup,
+)
 from data_collection.sources.Ticketsports import (
     extract_ticketsports_schedule,
     extract_ticketsports_ticket_prices,
     is_ticketsports_domain,
     load_ticketsports_soup,
 )
-from data_collection.sources.Zenite import (
-    extract_zenite_schedule,
-    is_zenite_domain,
-    load_zenite_soup,
-)
+from data_collection.sources.Zenite import extract_zenite_ticket_prices
 from data_collection.utils.PriceUtils import fmt_entry, parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
 
 def _get_http_session():
-    """Cria sessão requests com retry automático e User-Agent.
-
-    Implementa:
-    - Retry com backoff exponencial (3 tentativas, espera 1s, 2s, 4s)
-    - User-Agent customizado para evitar bloqueios
-    - Timeout padrão de 10s
-    - Reúsa conexões TCP/HTTP para performance
-    """
-    session = requests.Session()
-
-    # User-Agent comum para não ser bloqueado como bot
-    session.headers.update(
-        {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-        }
-    )
-
-    # Retry automático com backoff exponencial
-    retry_strategy = Retry(
-        total=3,  # Máximo de 3 tentativas
-        status_forcelist=[
-            429,
-            500,
-            502,
-            503,
-            504,
-        ],  # Retry em rate limit e erros de servidor
-        allowed_methods=["GET", "POST"],  # Métodos para retentar
-        backoff_factor=1,  # Espera: 1s, 2s, 4s
-    )
-
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount("http://", adapter)
-    session.mount("https://", adapter)
-
-    return session
+    """Sessão HTTP compartilhada com retry automático e User-Agent (ver ScraperCommon)."""
+    return get_http_session()
 
 
 _global_session = _get_http_session()
-_last_request_time = {}  # Rastreia último request por domínio para rate limiting
+
+_HTTP_TIMEOUT = 15
 
 
 def _get_with_rate_limit(url, timeout=10, verify=True):
-    """Realiza GET com retry automático e rate limiting por domínio.
-
-    Args:
-        url: URL a acessar
-        timeout: Timeout em segundos (padrão 10s)
-        verify: Valida o certificado SSL (padrão True)
-
-    Returns:
-        Response object ou None se falhar após retries
-    """
-    try:
-        domain = urlparse(url).netloc
-
-        # Rate limiting: aguarda 0.5s entre requisições ao mesmo domínio
-        if domain in _last_request_time:
-            elapsed = time.time() - _last_request_time[domain]
-            if elapsed < 0.5:
-                time.sleep(0.5 - elapsed)
-
-        _last_request_time[domain] = time.time()
-
-        response = _global_session.get(url, timeout=timeout, verify=verify)
-        response.raise_for_status()
-        return response
-    except Exception as e:
-        logger.warning(f"Erro ao acessar {url}: {e}")
-        return None
+    """GET com retry automático e rate limiting por domínio (thread-safe)."""
+    return get_with_rate_limit(_global_session, url, timeout=timeout, verify=verify)
 
 
 def _safe_quit(driver):
@@ -231,38 +181,6 @@ def extract_time_from_text(text: str) -> str:
     return ""
 
 
-def _entries_to_json(entries):
-    """Serializa entradas de preço em uma lista JSON segura, sem calcular resumo."""
-    if not entries:
-        return "[]"
-    safe_prices = []
-    for p in entries:
-        formatted = None
-        if isinstance(p, str):
-            formatted = p.strip()
-        elif isinstance(p, dict):
-            label_atual = (p.get("label") or "").strip() or "GERAL"
-            formatted = (p.get("formatted") or "").strip()
-            if not formatted:
-                price_val = p.get("price")
-                if price_val is not None:
-                    try:
-                        price_s = (
-                            f"R$ {float(price_val):,.2f}".replace(",", "X")
-                            .replace(".", ",")
-                            .replace("X", ".")
-                        )
-                    except Exception:
-                        price_s = f"R$ {price_val}"
-                    formatted = f"{label_atual} — {price_s}"
-        if formatted:
-            safe_prices.append(formatted)
-    try:
-        return json.dumps(safe_prices, ensure_ascii=False) if safe_prices else "[]"
-    except Exception:
-        return "[]"
-
-
 # Extração de preços
 def extract_price_entries(soup, domain, driver=None):
     """
@@ -276,69 +194,18 @@ def extract_price_entries(soup, domain, driver=None):
     """
     candidates = []
 
-    # Tenta rodar extractors site-specific apenas se o domínio corresponder explicitamente
-    # Inicializa variáveis para evitar avisos de referência antes de atribuição
-    extract_sympla_ticket_prices = None
-    extract_ticketsports_ticket_prices = None
-    extract_nightrun_ticket_prices = None
-    extract_zenite_ticket_prices = None
-    try:
-        try:
-            from data_collection.sources.Sympla import extract_sympla_ticket_prices
-        except Exception:
-            extract_sympla_ticket_prices = None
-        try:
-            from data_collection.sources.Ticketsports import (
-                extract_ticketsports_ticket_prices,
-            )
-        except Exception:
-            extract_ticketsports_ticket_prices = None
-        try:
-            from data_collection.sources.Nightrun import extract_nightrun_ticket_prices
-        except Exception:
-            extract_nightrun_ticket_prices = None
-        try:
-            from data_collection.sources.Zenite import extract_zenite_ticket_prices
-        except Exception:
-            extract_zenite_ticket_prices = None
-    except Exception:
-        # falha ao importar/executar extractors: segue com heurísticas genéricas
-        pass
-
-    # Se o domínio for conhecido e houver um extractor específico, usa-o imediatamente
+    # Extractors site-specific: se o domínio corresponder, usa-o imediatamente
     try:
         if domain:
-            if (
-                "extract_sympla_ticket_prices" in locals()
-                and extract_sympla_ticket_prices
-                and is_sympla_domain(domain)
-            ):
+            if is_sympla_domain(domain):
                 return extract_sympla_ticket_prices(soup)
-            if (
-                "extract_ticketsports_ticket_prices" in locals()
-                and extract_ticketsports_ticket_prices
-                and is_ticketsports_domain(domain)
-            ):
+            if is_ticketsports_domain(domain):
                 # Ticketsports normalmente usa seu próprio loader/flow; keep generic fallback
                 return extract_ticketsports_ticket_prices(soup)
-            if (
-                "extract_nightrun_ticket_prices" in locals()
-                and extract_nightrun_ticket_prices
-                and is_nightrun_domain(domain)
-            ):
-                if driver:
-                    try:
-                        raw_prices = extract_nightrun_ticket_prices(driver)
-                        if raw_prices:
-                            return raw_prices
-                    except Exception:
-                        pass
-            if (
-                "extract_zenite_ticket_prices" in locals()
-                and extract_zenite_ticket_prices
-                and is_zenite_domain(domain)
-            ):
-                return extract_zenite_ticket_prices(soup)
+            if is_nightrun_domain(domain) and driver:
+                raw_prices = extract_nightrun_ticket_prices(driver)
+                if raw_prices:
+                    return raw_prices
             if is_circuito_domain(domain) and driver:
                 prices = extract_circuito_ticket_prices(driver)
                 if prices:
@@ -552,54 +419,27 @@ def extract_price_entries(soup, domain, driver=None):
             v = parse_price_str(m)
             if v is not None:
                 candidates.append({"label": None, "price": v, "tax": None, "raw": m})
-        for a, b in re.findall(
+
+        def _add_range(match: re.Match) -> None:
+            """Adiciona preços de uma faixa 'X a Y', evitando índices falsos (ex: '1-159,90')."""
+            a, b = match.group(1), match.group(2)
+            va, vb = parse_price_str(a), parse_price_str(b)
+            a_has_dec = "," in a or "." in a
+            b_has_dec = "," in b or "." in b
+            if va is not None and not (va < 10 and not a_has_dec and b_has_dec):
+                candidates.append({"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"})
+            if vb is not None and not (vb < 10 and not b_has_dec and a_has_dec):
+                candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
+
+        for faixa in (
             r"R\$\s*([\d.,]+)\s*(?:a|até|-)\s*(?:R\$)?\s*([\d.,]+)",
-            page_html,
-            re.IGNORECASE,
+            r"(?:R\$)?\s*([\d.,]+)\s*(?:a|até|-)\s*R\$\s*([\d.,]+)",
         ):
-            va = parse_price_str(a)
-            vb = parse_price_str(b)
-            # Evita capturar índices pequenos (ex: '1-159,90') como preço '1.0'.
-            # Se o lado esquerdo for <10 e não contiver separador decimal, e o direito contiver, ignora o esquerdo.
-            try:
-                a_has_dec = "," in a or "." in a
-            except Exception:
-                a_has_dec = False
-            try:
-                b_has_dec = "," in b or "." in b
-            except Exception:
-                b_has_dec = False
-            if va is not None:
-                if not (va < 10 and not a_has_dec and b_has_dec):
-                    candidates.append({"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"})
-            if vb is not None:
-                if not (vb < 10 and not b_has_dec and a_has_dec):
-                    candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
+            for match in re.finditer(faixa, page_html, re.IGNORECASE):
+                _add_range(match)
     except Exception:
         # Se regex fallback falhar, continua com autres testes
         pass
-
-    for a, b in re.findall(
-        r"(?:R\$)?\s*([\d.,]+)\s*(?:a|até|-)\s*R\$\s*([\d.,]+)",
-        page_html,
-        re.IGNORECASE,
-    ):
-        va = parse_price_str(a)
-        vb = parse_price_str(b)
-        try:
-            a_has_dec = "," in a or "." in a
-        except Exception:
-            a_has_dec = False
-        try:
-            b_has_dec = "," in b or "." in b
-        except Exception:
-            b_has_dec = False
-        if va is not None:
-            if not (va < 10 and not a_has_dec and b_has_dec):
-                candidates.append({"label": None, "price": va, "tax": None, "raw": f"{a}-{b}"})
-        if vb is not None:
-            if not (vb < 10 and not b_has_dec and a_has_dec):
-                candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
 
     # Após coletar candidatos, filtra valores de prêmios/premiações usando verificação contextual
     # Usa verificação sensível ao contexto: o raw/label do candidato pode não conter palavras-chave de prêmio,
@@ -710,14 +550,16 @@ def extract_price_entries(soup, domain, driver=None):
 
 
 # Extração de edital
-def extract_edital(url):
-    """Extrai o link do edital usando requests com retry automático."""
+def extract_edital(url, soup=None):
+    """Extrai o link do edital. Reusa o soup já carregado quando disponível
+    (evita refazer o fetch da mesma página)."""
     try:
-        response = _get_with_rate_limit(url, timeout=10)
-        if not response:
-            return "edital não encontrado"
+        if soup is None:
+            response = _get_with_rate_limit(url, timeout=10)
+            if not response:
+                return "edital não encontrado"
+            soup = BeautifulSoup(response.text, "html.parser")
 
-        soup = BeautifulSoup(response.text, "html.parser")
         domain = urlparse(url).netloc
 
         if "zeniteesportes.com" in domain:
@@ -753,6 +595,145 @@ def extract_edital(url):
 
 
 # PROCESSAMENTO PARALELO DE DETALHES DOS EVENTOS
+# Fontes com scraper dedicado próprio — ver scraper_race83.py,
+# scraper_zenite.py e scraper_smcrono.py
+FONTES_COM_SCRAPER_DEDICADO = (
+    "race83.com.br",
+    "zeniteesportes.com",
+    "smcrono.com.br",
+)
+
+_SELENIUM_SOURCE_CHECKS = (
+    is_sympla_domain,
+    is_circuito_domain,
+    is_ticketsports_domain,
+    is_nightrun_domain,
+)
+
+
+def _is_selenium_source(domain: str) -> bool:
+    """Fontes cujas páginas exigem JavaScript real para expor preços/detalhes."""
+    return any(check(domain) for check in _SELENIUM_SOURCE_CHECKS)
+
+
+def _fetch_details_http(event_info: dict) -> dict | None:
+    """Enriquece um evento cuja página é server-side rendered (requests puro)."""
+    evt = dict(event_info)
+    url = evt.get("link_inscricao", "") or ""
+    if not url:
+        evt.setdefault("link_edital", "edital não encontrado")
+        evt.setdefault("precos_entries", "[]")
+        return evt
+
+    horario = (evt.get("horario") or "").strip()
+    try:
+        response = _get_with_rate_limit(url, timeout=_HTTP_TIMEOUT)
+        soup = BeautifulSoup(response.text, "html.parser") if response else None
+
+        if soup:
+            try:
+                evt["link_edital"] = extract_edital(url, soup=soup)
+            except Exception:
+                evt["link_edital"] = "edital não encontrado"
+
+            if not horario:
+                try:
+                    extracted = extract_time_from_text(soup.get_text(" ", strip=True))
+                    if extracted:
+                        horario = extracted
+                except Exception:
+                    pass
+
+            try:
+                entries = extract_price_entries(soup, urlparse(url).netloc)
+            except Exception:
+                entries = []
+            evt["precos_entries"] = entries_to_json(entries)
+        else:
+            evt["link_edital"] = "edital não encontrado"
+            evt["precos_entries"] = "[]"
+
+        if horario:
+            evt["horario"] = horario
+        return evt
+    except Exception:
+        evt.setdefault("link_edital", "edital não encontrado")
+        evt.setdefault("precos_entries", "[]")
+        return evt
+
+
+def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
+    """Enriquece um evento usando fonte que exige JavaScript, reaproveitando o driver."""
+    evt = dict(event_info)
+    url = evt.get("link_inscricao", "") or ""
+    if not url:
+        evt.setdefault("link_edital", "edital não encontrado")
+        evt.setdefault("precos_entries", "[]")
+        return evt
+
+    domain = urlparse(url).netloc
+    horario = (evt.get("horario") or "").strip()
+    soup = None
+    try:
+        if is_sympla_domain(domain):
+            soup, _, _ = load_sympla_soup(url, driver=driver)
+        elif is_circuito_domain(domain):
+            soup, _, _, loader_horario = load_circuito_soup(url)
+            horario = horario or loader_horario
+        elif is_liverun_domain(domain):
+            soup, _, _ = load_liverun_soup(url)
+        elif is_ticketsports_domain(domain):
+            soup, _, _, loader_horario = load_ticketsports_soup(
+                url, driver=driver, wait_seconds=30, debug=False
+            )
+            horario = horario or loader_horario
+        elif is_nightrun_domain(domain):
+            soup, _, _, nightrun_schedule = load_nightrun_soup(
+                url, driver=driver, wait_seconds=30
+            )
+            horario = horario or nightrun_schedule
+    except Exception:
+        soup = None
+
+    try:
+        if soup:
+            try:
+                evt["link_edital"] = extract_edital(url, soup=soup)
+            except Exception:
+                evt["link_edital"] = "edital não encontrado"
+
+            try:
+                if is_ticketsports_domain(domain) and not horario:
+                    horario = extract_ticketsports_schedule(soup)
+                if not horario:
+                    extracted = extract_time_from_text(soup.get_text(" ", strip=True))
+                    if extracted:
+                        horario = extracted
+            except Exception:
+                pass
+
+            try:
+                entries = (
+                    extract_ticketsports_ticket_prices(soup, debug=False)
+                    if is_ticketsports_domain(domain)
+                    else extract_price_entries(soup, domain, driver)
+                )
+            except Exception:
+                entries = []
+            evt["precos_entries"] = entries_to_json(entries)
+        else:
+            evt["link_edital"] = "edital não encontrado"
+            evt["precos_entries"] = "[]"
+
+        if horario:
+            evt["horario"] = horario
+        return evt
+    except Exception:
+        evt["link_edital"] = "edital não encontrado"
+        evt["precos_entries"] = "[]"
+        return evt
+
+
 def process_event_details(events):
     """
     Processa editais e preços de múltiplos eventos sequencialmente.
@@ -760,195 +741,59 @@ def process_event_details(events):
     if not events:
         return []
 
-    def fetch_details(event_info):
-        """Busca detalhes de um evento específico (edital e preços)."""
-        evt = dict(event_info)
-        url = evt.get("link_inscricao", "") or ""
-        if not url:
-            evt.setdefault("link_edital", "edital não encontrado")
-            evt.setdefault("precos_entries", "[]")
-            return evt
+    # Fontes com coleta dedicada própria (scraper_race83.py / scraper_zenite.py):
+    # o listing BQC pula esses eventos para não duplicar trabalho.
+    dedicadas = []
+    restantes = []
+    for ev in events:
+        dom = urlparse(ev.get("link_inscricao", "")).netloc
+        if any(d in dom for d in FONTES_COM_SCRAPER_DEDICADO):
+            dedicadas.append(ev)
+        else:
+            restantes.append(ev)
+    for ev in dedicadas:
+        print(f"[SKIP] {ev.get('nome', '')} — coletado por scraper dedicado")
 
-        domain = urlparse(url).netloc
-        horario = (evt.get("horario") or "").strip()
-        drivers_to_close = []
-        current_driver = None  # Rastreia driver da sessão atual para extract_price_entries
+    http_events = []
+    selenium_events = []
+    for ev in restantes:
+        dom = urlparse(ev.get("link_inscricao", "")).netloc
+        if _is_selenium_source(dom):
+            selenium_events.append(ev)
+        else:
+            http_events.append(ev)
 
-        def _safe_register_driver(driver):
-            """Registra driver para fechamento garantido, mesmo se exceção ocorrer."""
-            if driver:
-                drivers_to_close.append(driver)
-            return driver
+    processed: list[dict] = []
 
-        try:
-            # Trata redirecionamentos do Race83 que levam para listagem
-            if is_race83_domain(domain):
-                try:
-                    is_listing, final = detect_redirects_to_listing(url, timeout=5)
-                    if is_listing:
-                        print(
-                            f"[SKIP] URL do Race83 redirecionou para listagem /eventos, pulando: {url} -> {final}"
-                        )
-                        return None
-                except Exception:
-                    pass
+    # Grupo HTTP (liverun, genéricos): paralelo com rate limiting por domínio
+    if http_events:
+        with ThreadPoolExecutor(max_workers=min(8, len(http_events))) as pool:
+            for result in pool.map(_fetch_details_http, http_events):
+                if result:
+                    processed.append(result)
 
-            soup = None
-            if is_sympla_domain(domain):
-                try:
-                    soup, _, driver = load_sympla_soup(url)
-                    current_driver = _safe_register_driver(driver)
-                except Exception:
-                    soup = None
-            elif is_circuito_domain(domain):
-                try:
-                    soup, _, driver, loader_horario = load_circuito_soup(url)
-                    current_driver = _safe_register_driver(driver)
-                    if loader_horario:
-                        horario = horario or loader_horario
-                except Exception:
-                    soup = None
-            elif is_liverun_domain(domain):
-                try:
-                    soup, _, driver = load_liverun_soup(url)
-                    current_driver = _safe_register_driver(driver)
-                except Exception:
-                    soup = None
-            elif is_race83_domain(domain):
-                try:
-                    soup, _, driver = load_race83_soup(url)
-                    current_driver = _safe_register_driver(driver)
-                except Exception:
-                    soup = None
-            elif is_ticketsports_domain(domain):
-                try:
-                    soup, _, driver, loader_horario = load_ticketsports_soup(
-                        url, driver=None, wait_seconds=30, debug=False
-                    )
-                    current_driver = _safe_register_driver(driver)
-                    if loader_horario:
-                        horario = horario or loader_horario
-                except Exception:
-                    soup = None
-            elif is_nightrun_domain(domain):
-                try:
-                    soup, _, driver, nightrun_schedule = load_nightrun_soup(
-                        url, driver=None, wait_seconds=30
-                    )
-                    current_driver = _safe_register_driver(driver)
-                    if nightrun_schedule:
-                        horario = horario or nightrun_schedule
-                except Exception:
-                    soup = None
-            elif is_zenite_domain(domain):
-                try:
-                    soup, _, driver, loader_horario = load_zenite_soup(
-                        url, driver=None, wait_seconds=30
-                    )
-                    current_driver = _safe_register_driver(driver)
-                    if loader_horario:
-                        horario = horario or loader_horario
-                except Exception:
-                    soup = None
-            else:
-                try:
-                    response = _get_with_rate_limit(url, timeout=10)
-                    soup = BeautifulSoup(response.text, "html.parser") if response else None
-                except Exception:
-                    soup = None
-
-            if soup:
-                try:
-                    evt["link_edital"] = extract_edital(url)
-                except Exception:
-                    evt["link_edital"] = "edital não encontrado"
-
-                try:
-                    if is_ticketsports_domain(domain) and not horario:
-                        horario = extract_ticketsports_schedule(soup)
-                    elif is_zenite_domain(domain) and not horario:
-                        horario = extract_zenite_schedule(soup)
-                    if not horario:
-                        page_text = soup.get_text(" ", strip=True)
-                        extracted = extract_time_from_text(page_text)
-                        if extracted:
-                            horario = extracted
-                except Exception:
-                    pass
-
-                try:
-                    entries = (
-                        extract_ticketsports_ticket_prices(soup, debug=False)
-                        if is_ticketsports_domain(domain)
-                        else extract_price_entries(soup, domain, current_driver)
-                    )
-                except Exception:
-                    entries = []
-
-                evt["precos_entries"] = _entries_to_json(entries)
-                if horario:
-                    evt["horario"] = horario
-
-                # Libera memória do objeto soup para evitar memory leak
-                del soup
-            else:
-                evt["link_edital"] = "edital não encontrado"
-                evt["precos_entries"] = "[]"
-                if horario:
-                    evt["horario"] = horario
-
-            return evt
-        except Exception:
-            evt["link_edital"] = "edital não encontrado"
-            evt["precos_entries"] = "[]"
-            if horario:
-                evt["horario"] = horario
-            return evt
-        finally:
-            # Garantir fechamento de todos drivers mesmo se exceção ocorreu
-            for drv in drivers_to_close:
-                _safe_quit(drv)
-
-    def _process_sequential(evts):
-        """Processa eventos sequencialmente para evitar race conditions com Selenium."""
-        if not evts:
-            return []
-
-        results = []
-        total = len(evts)
-        for idx, event in enumerate(evts, 1):
+    # Grupo Selenium (sympla, circuito, ticketsports, nightrun): sequencial com UM
+    # driver compartilhado, evitando o custo de subir um Chrome por evento.
+    shared_driver = None
+    try:
+        total = len(selenium_events)
+        for idx, event in enumerate(selenium_events, 1):
             try:
-                result = fetch_details(dict(event))
+                if shared_driver is None:
+                    shared_driver = setup_driver()
+                result = _fetch_details_selenium(dict(event), shared_driver)
                 if result is None:
                     continue
-                results.append(result)
+                processed.append(result)
                 print(f"[{idx}/{total}] OK {result.get('nome', '')}")
-                print(f"   Edital: {result.get('link_edital', '')[:50]}")
             except Exception:
                 logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
                 event = dict(event)
                 event["link_edital"] = "edital não encontrado"
                 event["precos_entries"] = "[]"
-                results.append(event)
-
-        return results
-
-    tickets = []
-    others = []
-    for ev in events:
-        try:
-            dom = urlparse(ev.get("link_inscricao", "")).netloc
-        except Exception:
-            dom = ""
-        if is_ticketsports_domain(dom):
-            tickets.append(ev)
-        else:
-            others.append(ev)
-
-    # Processar sequencialmente em vez de paralelo para evitar race conditions com Selenium
-    processed = []
-    processed += _process_sequential(tickets)
-    processed += _process_sequential(others)
+                processed.append(event)
+    finally:
+        _safe_quit(shared_driver)
 
     return processed
 
@@ -1112,54 +957,26 @@ def main():
 
     print(f"\nTotal de {len(event_data)} eventos encontrados. Salvando no CSV...")
 
-    # Salva dados em CSV
-    with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:
-        fieldnames = [
-            "Nome do Evento",
-            "Link de Inscrição",
-            "Link da Imagem",
-            "Data",
-            "Horário",
-            "Cidade",
-            "Distância",
-            "Organizador",
-            "Link do Edital",
-            "precos_entries",
-        ]
-        writer = csv.writer(csvfile, delimiter=";", quoting=csv.QUOTE_ALL)
-        writer.writerow(fieldnames)
-
-        for event in event_data:
-            writer.writerow(
-                [
-                    event.get("nome", ""),
-                    event.get("link_inscricao", ""),
-                    event.get("link_imagem", ""),
-                    event.get("data", ""),
-                    (event.get("horario") or "Horário de largada não encontrado"),
-                    event.get("cidade", ""),
-                    event.get("distancia", ""),
-                    event.get("organizador", ""),
-                    event.get("link_edital", ""),
-                    event.get("precos_entries", ""),
-                ]
-            )
+    records = [
+        {
+            "Nome do Evento": event.get("nome", ""),
+            "Link de Inscrição": event.get("link_inscricao", ""),
+            "Link da Imagem": event.get("link_imagem", ""),
+            "Data": event.get("data", ""),
+            "Horário": (event.get("horario") or "Horário de largada não encontrado"),
+            "Cidade": event.get("cidade", ""),
+            "Distância": event.get("distancia", ""),
+            "Organizador": event.get("organizador", ""),
+            "Link do Edital": event.get("link_edital", ""),
+            "precos_entries": event.get("precos_entries", ""),
+        }
+        for event in event_data
+    ]
+    write_events_csv(csv_path, records)
 
     print(f"\nDados salvos com sucesso em: {csv_path}")
 
-    # Tenta sincronizar o CSV para o MongoDB Atlas
-    if not os.environ.get("CORREPB_COLLEC_ONLY"):
-        try:
-            from data_collection.utils import ImportToDB as sync_module
-
-            try:
-                sync_module.import_csv_to_mongodb(
-                    sync_module.remote_db, csv_path, "brasilquecorre"
-                )
-            except Exception as e:
-                print(f"falha ao sincronizar csv para mongodb: {e}")
-        except Exception as e:
-            print(f"sincronização com mongodb ignorada (import failed): {e}")
+    sync_csv_to_mongodb(csv_path, "brasilquecorre")
 
 
 if __name__ == "__main__":

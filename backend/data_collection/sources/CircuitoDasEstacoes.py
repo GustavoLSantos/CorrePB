@@ -14,23 +14,25 @@ def is_circuito_domain(domain: str) -> bool:
     domain = domain.lower()
     return 'circuitodasestacoes.com' in domain
 
-def load_circuito_soup(url: str, timeout: int = 20):
+def load_circuito_soup(url: str, timeout: int = 20, driver=None):
     """
     Carrega a URL usando Selenium tratando quirks do CircuitoDasEstacoes.
+
+    Aceita um driver externo para reuso entre eventos (evita subir um Chrome por evento).
 
     Retorna (soup, created, driver, horario)
     - soup: BeautifulSoup da página (ou None em falha)
     - created: True se a função criou um driver (caller deve quit() se True)
-    - driver: o WebDriver criado (ou None)
+    - driver: o WebDriver usado (ou None)
     - horario: horário extraído ('' se não encontrado)
     """
     domain = urlparse(url).netloc.lower() if url else ''
-    driver = None
     created = False
     try:
-        # usar modo headless para execução sem UI
-        driver = setup_driver(headless=True)
-        created = True
+        # usar modo headless para execução sem UI; driver externo é reaproveitado
+        if driver is None:
+            driver = setup_driver(headless=True)
+            created = True
         try:
             driver.get(url)
 
