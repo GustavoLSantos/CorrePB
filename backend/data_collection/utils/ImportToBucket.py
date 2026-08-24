@@ -113,7 +113,7 @@ def gerar_e_enviar_para_bucket() -> str:
         with open(arquivo_local, 'r', encoding='utf-8') as f:
             eventos = json.load(f)
 
-        eventos = processar_imagens_para_s3(eventos, s3, AWS_BUCKET_NAME, AWS_STATIC_DOMAIN)
+        eventos = processar_imagens_para_s3(eventos, s3, AWS_BUCKET_NAME or '', AWS_STATIC_DOMAIN or '')
 
         with open(arquivo_local, 'w', encoding='utf-8') as f:
             json.dump(eventos, f, ensure_ascii=False, indent=4, default=str)

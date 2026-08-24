@@ -195,14 +195,14 @@ class EventoDeCorrida:
         # Se houver um JSON serializado nas entradas de preço (coluna 'precos_entries'), tenta carregar
         if "precos_entries" in row and row.get("precos_entries"):
             try:
-                precos_entries_val = json.loads(row.get("precos_entries"))
+                precos_entries_val = json.loads(row.get("precos_entries") or "[]")
             except Exception:
                 precos_entries_val = None
 
         percurso_val = None
         if "Percurso" in row and row.get("Percurso"):
             try:
-                percurso_val = json.loads(row.get("Percurso"))
+                percurso_val = json.loads(row.get("Percurso") or "{}")
                 if isinstance(percurso_val, dict):
                     percurso_val.setdefault("local_largada", "")
             except Exception:
@@ -211,7 +211,7 @@ class EventoDeCorrida:
         kits_val = None
         if "Kits" in row and row.get("Kits"):
             try:
-                kits_val = json.loads(row.get("Kits"))
+                kits_val = json.loads(row.get("Kits") or "[]")
                 if isinstance(kits_val, list):
                     for kit in kits_val:
                         if isinstance(kit, dict):

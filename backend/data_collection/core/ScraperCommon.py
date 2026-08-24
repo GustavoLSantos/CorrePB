@@ -9,6 +9,10 @@ import logging
 import os
 import threading
 import time
+from collections.abc import Iterable
+from typing import Any
+
+from data_collection.utils.PriceUtils import PriceEntry
 from urllib.parse import urlparse
 
 import requests
@@ -56,7 +60,7 @@ def get_with_rate_limit(
     url: str,
     timeout: int | tuple[int, int] = 10,
     verify: bool = True,
-):
+) -> requests.Response | None:
     """GET com retry automático e rate limiting por domínio (thread-safe).
 
     Reserva um slot de 0,5s por domínio antes da requisição, permitindo uso
@@ -86,7 +90,7 @@ def get_with_rate_limit(
         return None
 
 
-def fix_encoding(text):
+def fix_encoding(text: str | None) -> str:
     """Corrige texto com encoding latin1<->utf-8 quebrado (ex.: 'JoÃ£o' -> 'João')."""
     if not text:
         return ""
@@ -105,7 +109,7 @@ MESES_EXTENSO = {
 }
 
 
-def parse_data_br(data_str) -> datetime | None:
+def parse_data_br(data_str: str | None) -> datetime | None:
     """Converte 'dd/mm/yyyy' em datetime; retorna None se inválido."""
     try:
         return datetime.strptime((data_str or "").strip(), "%d/%m/%Y")
@@ -113,7 +117,7 @@ def parse_data_br(data_str) -> datetime | None:
         return None
 
 
-def formatar_data_br(data_str) -> str:
+def formatar_data_br(data_str: str | None) -> str:
     """Converte 'dd/mm/yyyy' em 'd de mês de aaaa'; devolve a entrada se inválida."""
     dt = parse_data_br(data_str)
     if not dt:
@@ -121,7 +125,7 @@ def formatar_data_br(data_str) -> str:
     return f"{dt.day} de {MESES_EXTENSO[dt.month]} de {dt.year}"
 
 
-def entries_to_json(entries) -> str:
+def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:
     """Serializa entradas de preço em lista JSON legível, sem calcular resumo."""
     if not entries:
         return "[]"
@@ -169,7 +173,11 @@ EVENTOS_CSV_FIELDNAMES = [
 ]
 
 
-def write_events_csv(csv_path: str, records: list[dict], fieldnames: list[str] | None = None):
+def write_events_csv(
+    csv_path: str,
+    records: list[dict[str, Any]],
+    fieldnames: list[str] | None = None,
+) -> None:
     """Grava registros no formato padrão do projeto (CSV ; com quoting total)."""
     fieldnames = fieldnames or EVENTOS_CSV_FIELDNAMES
     with open(csv_path, "w", newline="", encoding="utf-8") as csvfile:

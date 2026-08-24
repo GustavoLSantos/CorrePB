@@ -1,4 +1,3 @@
-import csv
 import json
 import logging
 import os
@@ -6,13 +5,13 @@ import sys
 import re
 import threading
 import time
+from collections.abc import Sequence
+from typing import cast
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urljoin
 
 import requests
-from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from bs4 import BeautifulSoup, Tag
 
 # O domínio brasilquecorre.com publica um certificado SSL inválido; as coletas para
 # ele usam verify=False e o aviso de conexão insegura é suprimido intencionalmente.
@@ -21,6 +20,9 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logger = logging.getLogger(__name__)
+
+# Registro de evento no schema CSV — todos os valores são strings
+EventInfo = dict[str, str]
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from data_collection.core.Driver import setup_driver
@@ -31,6 +33,7 @@ from data_collection.core.ScraperCommon import (
     sync_csv_to_mongodb,
     write_events_csv,
 )
+from selenium.webdriver.remote.webdriver import WebDriver
 from data_collection.sources.CircuitoDasEstacoes import (
     extract_circuito_ticket_prices,
     is_circuito_domain,
@@ -53,8 +56,7 @@ from data_collection.sources.Ticketsports import (
     is_ticketsports_domain,
     load_ticketsports_soup,
 )
-from data_collection.sources.Zenite import extract_zenite_ticket_prices
-from data_collection.utils.PriceUtils import fmt_entry, parse_price_str
+from data_collection.utils.PriceUtils import PriceEntry, fmt_entry, parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
 
@@ -70,7 +72,11 @@ _global_session = _get_http_session()
 _HTTP_TIMEOUT = (6, 12)
 
 
-def _get_with_rate_limit(url, timeout: int | tuple[int, int] = 10, verify=True):
+def _get_with_rate_limit(
+    url: str,
+    timeout: int | tuple[int, int] = 10,
+    verify: bool = True,
+) -> requests.Response | None:
     """GET com retry automático e rate limiting por domínio (thread-safe).
 
     `timeout` aceita int ou tupla (conexão, leitura) — repassado ao requests.
@@ -78,7 +84,7 @@ def _get_with_rate_limit(url, timeout: int | tuple[int, int] = 10, verify=True):
     return get_with_rate_limit(_global_session, url, timeout=timeout, verify=verify)
 
 
-def _safe_quit(driver):
+def _safe_quit(driver: WebDriver | None) -> None:
     """Fecha o driver Selenium sem propagar exceções."""
     try:
         if driver:
@@ -87,7 +93,7 @@ def _safe_quit(driver):
         pass
 
 
-def _strip_accents(s):
+def _strip_accents(s: str | None) -> str:
     """Remove acentos/diacríticos de uma string para buscas normalizadas."""
     import unicodedata
 
@@ -186,8 +192,90 @@ def extract_time_from_text(text: str) -> str:
     return ""
 
 
+
+def _as_object_list(value: object) -> list[object]:
+    """Narrowing seguro para listas de JSON dinâmico."""
+    if isinstance(value, list):
+        return cast("list[object]", value)
+    return [value]
+
+
+def _as_str_object_dict(value: object) -> dict[str, object] | None:
+    """Narrowing seguro para dicts de JSON dinâmico."""
+    if isinstance(value, dict):
+        return cast("dict[str, object]", value)
+    return None
+
+
+def _collect_jsonld_price_entries(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
+    """Extrai preços de blocos JSON-LD (schema.org), cuja estrutura é arbitrária."""
+    json_ld_scripts: list[Tag] = soup.find_all("script", type="application/ld+json")
+    for script in json_ld_scripts:
+        try:
+            payload = cast("object", json.loads(script.string or script.get_text() or "{}"))
+        except Exception:
+            continue
+
+        items = _as_object_list(payload)
+
+        for raw_item in items:
+            item = _as_str_object_dict(raw_item)
+            if item is None:
+                continue
+
+            offers_obj = item.get("offers") or item.get("priceSpecification")
+            offers_list: list[object] | None = None
+            offers_list = (
+                cast("list[object]", offers_obj) if isinstance(offers_obj, list) else None
+            )
+            if offers_list is None:
+                single_offer = _as_str_object_dict(cast("object", offers_obj))
+                if single_offer is not None:
+                    offers_list = [single_offer]
+
+            if offers_list:
+                for raw_off in offers_list:
+                    off = _as_str_object_dict(raw_off)
+                    if off is None:
+                        continue
+                    price = off.get("price") or off.get("priceSpecification") or off.get("priceCurrency")
+                    if price:
+                        v = parse_price_str(str(price))
+                        name = item.get("name")
+                        if v is not None:
+                            candidates.append(
+                                {"label": str(name) if name else None, "price": v, "tax": None, "raw": "ldjson"}
+                            )
+
+            direct_price = item.get("price")
+            if direct_price:
+                v = parse_price_str(str(direct_price))
+                name = item.get("name")
+                if v is not None:
+                    candidates.append(
+                        {"label": str(name) if name else None, "price": v, "tax": None, "raw": "ldjson-price"}
+                    )
+
+
+
+def _price_sort_key(e: PriceEntry) -> float:
+    price = e.get("price")
+    return float(price) if isinstance(price, (int, float)) else 0.0
+
+
+def _ensure_fields(evt: EventInfo, **defaults: str) -> None:
+    """Preenche chaves ausentes/vazias de um registro de evento."""
+    for key, value in defaults.items():
+        if not evt.get(key):
+            evt[key] = value
+
+
 # Extração de preços
-def extract_price_entries(soup, domain, driver=None):
+def extract_price_entries(
+    soup: BeautifulSoup,
+    domain: str,
+    driver: WebDriver | None = None,
+) -> Sequence[PriceEntry | str]:
     """
     Retorna uma lista de entradas de preço estruturadas encontradas na página.
 
@@ -197,7 +285,7 @@ def extract_price_entries(soup, domain, driver=None):
     NOTA: page_html é criado sob demanda (lazy) para evitar duplicar memória do objeto soup
     inteiro, e é deletado após uso para permitir garbage collection.
     """
-    candidates = []
+    candidates: list[PriceEntry] = []
 
     # Extractors site-specific: se o domínio corresponder, usa-o imediatamente
     try:
@@ -220,7 +308,7 @@ def extract_price_entries(soup, domain, driver=None):
         pass
 
     # Elementos de preço por classe
-    def has_price_class(classes):
+    def has_price_class(classes: str | list[str] | None) -> bool:
         if not classes:
             return False
         cls_list = [classes] if isinstance(classes, str) else list(classes)
@@ -233,11 +321,11 @@ def extract_price_entries(soup, domain, driver=None):
                 return True
         return False
 
-    price_elements = soup.find_all(["span", "div", "p"], class_=has_price_class)
+    price_elements: list[Tag] = soup.find_all(["span", "div", "p"], class_=has_price_class)
     for elem in price_elements:
         txt = elem.get_text(separator=" ", strip=True)
-        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt):
-            v = parse_price_str(m)
+        for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt):
+            v = parse_price_str(m.group(1))
             tax = None
             tax_m = re.search(r"\(\s*\+?([\d.,]+)\s*(?:taxa|tax|fee)\s*\)", txt, re.IGNORECASE)
             if tax_m:
@@ -247,27 +335,26 @@ def extract_price_entries(soup, domain, driver=None):
     # Detecta elementos com font-size inline grande que contêm R$
     try:
         for elem in soup.find_all(["span", "div", "p"]):
-            style = elem.get("style", "") or ""
+            style = str(elem.get("style") or "")
             if "font-size" in style and "R$" in elem.get_text():
                 m_px = re.search(r"font-size\s*:\s*(\d+)px", style)
                 if m_px and int(m_px.group(1)) >= 20:
-                    txt = elem.get_text(separator=" ", strip=True)
-                    for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt):
-                        v = parse_price_str(m)
-                        candidates.append({"label": None, "price": v, "tax": None, "raw": txt})
+                    txt2 = elem.get_text(separator=" ", strip=True)
+                    for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt2):
+                        v = parse_price_str(m.group(1))
+                        candidates.append({"label": None, "price": v, "tax": None, "raw": txt2})
     except Exception:
         pass
 
     # Tabelas e tbodies (trata cabeçalhos de seção com colspan e preço na primeira td)
     try:
-        blocks = soup.find_all(["table", "tbody"])
+        blocks: list[Tag] = soup.find_all(["table", "tbody"])
         for table in blocks:
-            current_section = None
+            current_section: str | None = None
             for tr in table.find_all("tr"):
-                tds = tr.find_all(["td", "th"])
+                tds: list[Tag] = tr.find_all(["td", "th"])
                 if len(tds) == 1 and tds[0].has_attr("colspan"):
-                    sec_text = tds[0].get_text(separator=" ", strip=True)
-                    sec_text = re.sub(r"\s+", " ", sec_text).strip()
+                    sec_text = re.sub(r"\s+", " ", tds[0].get_text(separator=" ", strip=True)).strip()
                     current_section = sec_text
                     continue
                 if len(tds) >= 2:
@@ -276,33 +363,31 @@ def extract_price_entries(soup, domain, driver=None):
                     left_has_price = bool(re.search(r"R\$", left_text))
                     right_has_price = bool(re.search(r"R\$", right_text))
                     if left_has_price and not right_has_price:
-                        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", left_text):
-                            v = parse_price_str(m)
-                            label = right_text or None
-                            if current_section and label and current_section not in label:
-                                label = f"{current_section} — {label}"
-                            elif current_section and not label:
-                                label = current_section
+                        label = right_text or None
+                        if current_section and label and current_section not in label:
+                            label = f"{current_section} — {label}"
+                        elif current_section and not label:
+                            label = current_section
+                        for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", left_text):
                             candidates.append(
                                 {
                                     "label": label,
-                                    "price": v,
+                                    "price": parse_price_str(m.group(1)),
                                     "tax": None,
                                     "raw": f"{left_text} | {right_text}",
                                 }
                             )
                     elif right_has_price and not left_has_price:
-                        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", right_text):
-                            v = parse_price_str(m)
-                            label = left_text or None
-                            if current_section and label and current_section not in label:
-                                label = f"{current_section} — {label}"
-                            elif current_section and not label:
-                                label = current_section
+                        label = left_text or None
+                        if current_section and label and current_section not in label:
+                            label = f"{current_section} — {label}"
+                        elif current_section and not label:
+                            label = current_section
+                        for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", right_text):
                             candidates.append(
                                 {
                                     "label": label,
-                                    "price": v,
+                                    "price": parse_price_str(m.group(1)),
                                     "tax": None,
                                     "raw": f"{left_text} | {right_text}",
                                 }
@@ -310,19 +395,18 @@ def extract_price_entries(soup, domain, driver=None):
                     else:
                         # fallback: extrai qualquer preço na linha e tenta associar um label próximo
                         rowtxt = tr.get_text(separator=" ", strip=True)
-                        for m in re.findall(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", rowtxt):
-                            v = parse_price_str(m)
-                            label = None
-                            if left_text and not re.search(r"R\$", left_text):
-                                label = left_text
-                                if current_section and current_section not in label:
-                                    label = f"{current_section} — {label}"
-                            elif right_text and not re.search(r"R\$", right_text):
-                                label = right_text
-                                if current_section and current_section not in label:
-                                    label = f"{current_section} — {label}"
+                        fallback_label: str | None = None
+                        if left_text and not re.search(r"R\$", left_text):
+                            fallback_label = left_text
+                            if current_section and current_section not in fallback_label:
+                                fallback_label = f"{current_section} — {fallback_label}"
+                        elif right_text and not re.search(r"R\$", right_text):
+                            fallback_label = right_text
+                            if current_section and current_section not in fallback_label:
+                                fallback_label = f"{current_section} — {fallback_label}"
+                        for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", rowtxt):
                             candidates.append(
-                                {"label": label, "price": v, "tax": None, "raw": rowtxt}
+                                {"label": fallback_label, "price": parse_price_str(m.group(1)), "tax": None, "raw": rowtxt}
                             )
     except Exception:
         pass
@@ -330,9 +414,10 @@ def extract_price_entries(soup, domain, driver=None):
     # Dados estruturados e atributos: meta tags, atributos data-price, JSON-LD
     try:
         # Meta tags
-        for meta in soup.find_all("meta"):
-            prop = (meta.get("property") or meta.get("name") or "").lower()
-            content = meta.get("content", "")
+        metas: list[Tag] = soup.find_all("meta")
+        for meta in metas:
+            prop = str(meta.get("property") or meta.get("name") or "").lower()
+            content = str(meta.get("content") or "")
             if prop in ("product:price:amount", "price", "og:price:amount") or "price" in prop:
                 if content:
                     v = parse_price_str(content)
@@ -347,68 +432,25 @@ def extract_price_entries(soup, domain, driver=None):
                         )
 
         # Atributos data como data-price, data-preco, data-value
-        for elem in soup.find_all(attrs=True):
-            for attr, val in list(elem.attrs.items()):
-                if re.search(r"data[-_]?(price|preco|valor|value)", attr, re.IGNORECASE):
-                    v = parse_price_str(val)
+        all_tags: list[Tag] = soup.find_all(True)
+        for elem in all_tags:
+            for attr, val in elem.attrs.items():
+                attr_name = str(attr)
+                if re.search(r"data[-_]?(price|preco|valor|value)", attr_name, re.IGNORECASE):
+                    v = parse_price_str(str(val))
                     if v is not None:
-                        label = None
                         text = elem.get_text(separator=" ", strip=True)
-                        if text and "R$" not in text:
-                            label = text
+                        label: str | None = text if (text and "R$" not in text) else None
                         candidates.append(
                             {
                                 "label": label,
                                 "price": v,
                                 "tax": None,
-                                "raw": f"{attr}={val}",
+                                "raw": f"{attr_name}={val}",
                             }
                         )
 
-        # Scripts JSON-LD
-        for script in soup.find_all("script", type="application/ld+json"):
-            try:
-                payload = json.loads(script.string or script.get_text() or "{}")
-            except Exception:
-                continue
-            items = payload if isinstance(payload, list) else [payload]
-            for item in items:
-                if isinstance(item, dict):
-                    offers = item.get("offers") or item.get("priceSpecification")
-                    if offers:
-                        offers_iter = offers if isinstance(offers, list) else [offers]
-                        for off in offers_iter:
-                            if isinstance(off, dict):
-                                price = (
-                                    off.get("price")
-                                    or off.get("priceSpecification")
-                                    or off.get("priceCurrency")
-                                )
-                                if price:
-                                    v = parse_price_str(price)
-                                    if v is not None:
-                                        label = item.get("name") if item.get("name") else None
-                                        candidates.append(
-                                            {
-                                                "label": label,
-                                                "price": v,
-                                                "tax": None,
-                                                "raw": "ldjson",
-                                            }
-                                        )
-                    # Campo direto de preço
-                    if "price" in item and item.get("price"):
-                        v = parse_price_str(item.get("price"))
-                        if v is not None:
-                            label = item.get("name") if item.get("name") else None
-                            candidates.append(
-                                {
-                                    "label": label,
-                                    "price": v,
-                                    "tax": None,
-                                    "raw": "ldjson-price",
-                                }
-                            )
+        _collect_jsonld_price_entries(soup, candidates)
     except Exception:
         pass
 
@@ -416,16 +458,16 @@ def extract_price_entries(soup, domain, driver=None):
     # Cria page_html apenas quando necessário para evitar duplicar memória do objeto soup inteiro
     page_html = str(soup)
     try:
-        for m in re.findall(r"R\$(?:&nbsp;|\s)*([\d.,]+)", page_html):
-            v = parse_price_str(m)
+        for m in re.finditer(r"R\$(?:&nbsp;|\s)*([\d.,]+)", page_html):
+            v = parse_price_str(m.group(1))
             if v is not None:
-                candidates.append({"label": None, "price": v, "tax": None, "raw": m})
-        for m in re.findall(r"([\d.,]+)\s*reais", page_html, re.IGNORECASE):
-            v = parse_price_str(m)
+                candidates.append({"label": None, "price": v, "tax": None, "raw": m.group(1)})
+        for m in re.finditer(r"([\d.,]+)\s*reais", page_html, re.IGNORECASE):
+            v = parse_price_str(m.group(1))
             if v is not None:
-                candidates.append({"label": None, "price": v, "tax": None, "raw": m})
+                candidates.append({"label": None, "price": v, "tax": None, "raw": m.group(1)})
 
-        def _add_range(match: re.Match) -> None:
+        def _add_range(match: re.Match[str]) -> None:
             """Adiciona preços de uma faixa 'X a Y', evitando índices falsos (ex: '1-159,90')."""
             a, b = match.group(1), match.group(2)
             va, vb = parse_price_str(a), parse_price_str(b)
@@ -436,23 +478,22 @@ def extract_price_entries(soup, domain, driver=None):
             if vb is not None and not (vb < 10 and not b_has_dec and a_has_dec):
                 candidates.append({"label": None, "price": vb, "tax": None, "raw": f"{a}-{b}"})
 
-        for faixa in (
+        faixas: tuple[str, ...] = (
             r"R\$\s*([\d.,]+)\s*(?:a|até|-)\s*(?:R\$)?\s*([\d.,]+)",
             r"(?:R\$)?\s*([\d.,]+)\s*(?:a|até|-)\s*R\$\s*([\d.,]+)",
-        ):
+        )
+        for faixa in faixas:
             for match in re.finditer(faixa, page_html, re.IGNORECASE):
                 _add_range(match)
     except Exception:
-        # Se regex fallback falhar, continua com autres testes
+        # Se regex fallback falhar, continua avec autres testes
         pass
 
     # Após coletar candidatos, filtra valores de prêmios/premiações usando verificação contextual
-    # Usa verificação sensível ao contexto: o raw/label do candidato pode não conter palavras-chave de prêmio,
-    # então inspeciona o HTML da página ao redor de onde o preço ocorre também.
     candidates = [e for e in candidates if not entry_is_prize(e, page_html)]
 
     # Se temos preços rotulados de tabelas/grids estruturados, prefere eles e descarta duplicatas não rotuladas
-    labeled_prices = {e.get("price") for e in candidates if e.get("label")}
+    labeled_prices: set[float | None] = {e.get("price") for e in candidates if e.get("label")}
     if labeled_prices:
         candidates = [
             e
@@ -460,10 +501,9 @@ def extract_price_entries(soup, domain, driver=None):
             if not (e.get("label") is None and e.get("price") in labeled_prices)
         ]
 
-    # Filtra preços de inscrição plausíveis (ajusta limites se necessário)
-    # Rastreia preços descartados para debug de problemas de parsing
-    discarded_prices = []
-    valid_entries = []
+    # Filtra preços de inscrição plausíveis; rastreia descartados para debug
+    discarded_prices: list[PriceEntry] = []
+    valid_entries: list[PriceEntry] = []
 
     for e in candidates:
         price = e.get("price")
@@ -498,8 +538,8 @@ def extract_price_entries(soup, domain, driver=None):
         )
 
     # Se há preços pagos, exclui entradas gratuitas (0.00) para evitar falsos positivos
-    if any(e["price"] > 0 for e in valid_entries):
-        valid_entries = [e for e in valid_entries if e["price"] > 0]
+    if any((e["price"] or 0) > 0 for e in valid_entries):
+        valid_entries = [e for e in valid_entries if (e["price"] or 0) > 0]
 
     if not valid_entries:
         # Se não há preços pagos, verifica indicadores de gratuito
@@ -509,43 +549,50 @@ def extract_price_entries(soup, domain, driver=None):
             re.IGNORECASE,
         ):
             return [
+                PriceEntry(
+                    {
+                        "label": None,
+                        "price": 0.0,
+                        "tax": None,
+                        "formatted": "R$ 0,00",
+                        "raw": page_html,
+                    }
+                )
+            ]
+        # Entrada informativa para o campo legível exibir 'Valor não encontrado'.
+        return [
+            PriceEntry(
                 {
                     "label": None,
-                    "price": 0.0,
+                    "price": None,
                     "tax": None,
-                    "formatted": "R$ 0,00",
+                    "formatted": "Valor não encontrado",
                     "raw": page_html,
                 }
-            ]
-        # Se não foi encontrado indicador de gratuidade, devolve uma entry informativa
-        # para que o campo legível de valor seja preenchido com 'Valor não encontrado'.
-        return [
-            {
-                "label": None,
-                "price": None,
-                "tax": None,
-                "formatted": "Valor não encontrado",
-                "raw": page_html,
-            }
+            )
         ]
 
     # Deduplica por (label, price, tax)
-    seen = set()
-    unique = []
+    seen: set[tuple[str, float, float | None]] = set()
+    unique: list[PriceEntry] = []
     for e in valid_entries:
-        key = (
+        raw_price = e.get("price")
+        raw_tax = e.get("tax")
+        price_f = float(raw_price) if isinstance(raw_price, (int, float)) else 0.0
+        tax_f = float(raw_tax) if isinstance(raw_tax, (int, float)) else None
+        key: tuple[str, float, float | None] = (
             e.get("label") or "",
-            float(e.get("price")),
-            e.get("tax") if e.get("tax") is None else float(e.get("tax")),
+            price_f,
+            tax_f,
         )
         if key not in seen:
             seen.add(key)
             unique.append(e)
 
     # Ordena por preço crescente
-    unique_sorted = sorted(unique, key=lambda x: x.get("price") or 0)
+    unique_sorted = sorted(unique, key=_price_sort_key)
 
-    result = [fmt_entry(e) for e in unique_sorted]
+    result: list[PriceEntry] = [fmt_entry(e) for e in unique_sorted]
 
     # Libera memória de page_html se foi criado
     if "page_html" in locals():
@@ -555,7 +602,7 @@ def extract_price_entries(soup, domain, driver=None):
 
 
 # Extração de edital
-def extract_edital(url, soup=None):
+def extract_edital(url: str, soup: BeautifulSoup | None = None) -> str:
     """Extrai o link do edital. Reusa o soup já carregado quando disponível
     (evita refazer o fetch da mesma página)."""
     try:
@@ -587,12 +634,12 @@ def extract_edital(url, soup=None):
             # Busca genérica por links PDF
             pdf_links = soup.find_all("a", href=re.compile(r"\.pdf", re.IGNORECASE))
             if pdf_links:
-                return pdf_links[0].get("href", "")
+                return str(pdf_links[0].get("href") or "")
 
         elif "race83.com.br" in domain or "correparaiba.com" in domain:
             pdf_link = soup.find("a", href=re.compile(r"\.pdf", re.IGNORECASE))
             if pdf_link:
-                return pdf_link.get("href", "")
+                return str(pdf_link.get("href") or "")
 
         return "edital não encontrado"
     except Exception:
@@ -624,13 +671,12 @@ def _is_selenium_source(domain: str) -> bool:
     return any(check(domain) for check in _SELENIUM_SOURCE_CHECKS)
 
 
-def _fetch_details_http(event_info: dict) -> dict | None:
+def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
     """Enriquece um evento cuja página é server-side rendered (requests puro)."""
     evt = dict(event_info)
     url = evt.get("link_inscricao", "") or ""
     if not url:
-        evt.setdefault("link_edital", "edital não encontrado")
-        evt.setdefault("precos_entries", "[]")
+        _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
     horario = (evt.get("horario") or "").strip()
@@ -652,10 +698,11 @@ def _fetch_details_http(event_info: dict) -> dict | None:
                 except Exception:
                     pass
 
+            entries: Sequence[PriceEntry | str] = ()
             try:
                 entries = extract_price_entries(soup, urlparse(url).netloc)
             except Exception:
-                entries = []
+                entries = ()
             evt["precos_entries"] = entries_to_json(entries)
         else:
             evt["link_edital"] = "edital não encontrado"
@@ -665,18 +712,16 @@ def _fetch_details_http(event_info: dict) -> dict | None:
             evt["horario"] = horario
         return evt
     except Exception:
-        evt.setdefault("link_edital", "edital não encontrado")
-        evt.setdefault("precos_entries", "[]")
+        _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
 
-def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
+def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> EventInfo | None:
     """Enriquece um evento usando fonte que exige JavaScript, reaproveitando o driver."""
     evt = dict(event_info)
     url = evt.get("link_inscricao", "") or ""
     if not url:
-        evt.setdefault("link_edital", "edital não encontrado")
-        evt.setdefault("precos_entries", "[]")
+        _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
     domain = urlparse(url).netloc
@@ -694,9 +739,7 @@ def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
             )
             horario = horario or loader_horario
         elif is_nightrun_domain(domain):
-            soup, _, _, nightrun_schedule = load_nightrun_soup(
-                url, driver=driver, wait_seconds=30
-            )
+            soup, _, _, nightrun_schedule = load_nightrun_soup(url, driver=driver, wait_seconds=30)
             horario = horario or nightrun_schedule
     except Exception:
         soup = None
@@ -735,12 +778,11 @@ def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
             evt["horario"] = horario
         return evt
     except Exception:
-        evt["link_edital"] = "edital não encontrado"
-        evt["precos_entries"] = "[]"
+        _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
 
-def process_event_details(events):
+def process_event_details(events: list[EventInfo]) -> list[EventInfo]:
     """Enriquece eventos com edital/preços/horário das páginas de inscrição.
 
     Estratégia de concorrência:
@@ -753,8 +795,8 @@ def process_event_details(events):
     if not events:
         return []
 
-    dedicadas = []
-    restantes = []
+    dedicadas: list[EventInfo] = []
+    restantes: list[EventInfo] = []
     for ev in events:
         dom = urlparse(ev.get("link_inscricao", "")).netloc
         if any(d in dom for d in FONTES_COM_SCRAPER_DEDICADO):
@@ -764,8 +806,8 @@ def process_event_details(events):
     for ev in dedicadas:
         print(f"[SKIP] {ev.get('nome', '')} — coletado por scraper dedicado")
 
-    http_events = []
-    selenium_events = []
+    http_events: list[EventInfo] = []
+    selenium_events: list[EventInfo] = []
     for ev in restantes:
         dom = urlparse(ev.get("link_inscricao", "")).netloc
         if _is_selenium_source(dom):
@@ -773,7 +815,7 @@ def process_event_details(events):
         else:
             http_events.append(ev)
 
-    processed: list[dict] = []
+    processed: list[EventInfo] = []
     lock = threading.Lock()
 
     def _run_selenium_group():
@@ -788,11 +830,13 @@ def process_event_details(events):
         n_drivers = max(1, min(SELENIUM_MAX_DRIVERS, len(selenium_events)))
         chunks = [c for c in (selenium_events[i::n_drivers] for i in range(n_drivers)) if c]
 
-        def _worker(chunk, worker_id):
+        def _worker(chunk: list[EventInfo], worker_id: int) -> None:
             try:
                 shared_driver = setup_driver()
             except Exception as e:
-                print(f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS")
+                print(
+                    f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS"
+                )
                 for event in chunk:
                     event = dict(event)
                     event["link_edital"] = "edital não encontrado"
@@ -873,7 +917,7 @@ def _fetch_bqc_listing_html(attempts: int = 3) -> str | None:
     return html
 
 
-def _extract_bqc_event_info(box) -> dict | None:
+def _extract_bqc_event_info(box: Tag) -> EventInfo | None:
     """Extrai os dados básicos de um box de evento da listagem do Brasil Que Corre.
 
     A listagem é renderizada server-side, contendo por evento:
@@ -887,7 +931,7 @@ def _extract_bqc_event_info(box) -> dict | None:
     if not name_element:
         return None
 
-    event_info: dict = {}
+    event_info: EventInfo = {}
     link_inscricao = str(name_element.get("href") or "").strip()
     event_info["nome"] = name_element.get_text(strip=True)
 
@@ -903,7 +947,9 @@ def _extract_bqc_event_info(box) -> dict | None:
 
     # Imagem do evento (resolve URLs relativas contra a URL da listagem)
     img_element = box.select_one("img.cs-chosen-image")
-    event_info["link_imagem"] = urljoin(BQC_LISTING_URL, str(img_element.get("src") or "")) if img_element else ""
+    event_info["link_imagem"] = (
+        urljoin(BQC_LISTING_URL, str(img_element.get("src") or "")) if img_element else ""
+    )
 
     # Extrai informações textuais (data, cidade, distâncias, organizador)
     paragraphs = [
@@ -917,8 +963,8 @@ def _extract_bqc_event_info(box) -> dict | None:
     if extracted_time:
         event_info["horario"] = extracted_time
 
-    distancias_encontradas = []
-    outros = []
+    distancias_encontradas: list[str] = []
+    outros: list[str] = []
     for text in texts:
         if _DATA_PATTERN.search(text):
             event_info["data"] = text
@@ -941,7 +987,7 @@ def _extract_bqc_event_info(box) -> dict | None:
     return event_info
 
 
-def get_event_data() -> list[dict]:
+def get_event_data() -> list[EventInfo]:
     """
     Extrai os dados dos eventos da página Brasil Que Corre - Paraíba.
 
@@ -959,7 +1005,7 @@ def get_event_data() -> list[dict]:
         soup = BeautifulSoup(html, "html.parser")
         event_boxes = soup.find_all("div", class_="cs-box")
 
-        event_data = []
+        event_data: list[EventInfo] = []
         total_events = len(event_boxes)
         print(f"\nEncontrados {total_events} boxes na listagem. Iniciando extração\n")
 
@@ -1023,7 +1069,9 @@ def main():
 
     print(f"\nDados salvos com sucesso em: {csv_path}")
 
-    sync_csv_to_mongodb(csv_path, "brasilquecorre")
+    synced = sync_csv_to_mongodb(csv_path, "brasilquecorre")
+    if not synced:
+        print("Sincronização com mongodb pulada ou falhou.")
 
 
 if __name__ == "__main__":

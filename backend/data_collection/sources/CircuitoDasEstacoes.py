@@ -2,6 +2,7 @@ import contextlib
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -15,7 +16,9 @@ def is_circuito_domain(domain: str) -> bool:
     domain = domain.lower()
     return 'circuitodasestacoes.com' in domain
 
-def load_circuito_soup(url: str, timeout: int = 20, driver=None):
+def load_circuito_soup(
+    url: str, timeout: int = 20, driver: WebDriver | None = None
+) -> tuple[BeautifulSoup | None, bool, WebDriver | None, str]:
     """
     Carrega a URL usando Selenium tratando quirks do CircuitoDasEstacoes.
 
@@ -166,7 +169,7 @@ def load_circuito_soup(url: str, timeout: int = 20, driver=None):
         return None, False, None, ''
 
 
-def _parse_price_str_to_float(token):
+def _parse_price_str_to_float(token: str | float | None) -> float | None:
     import re
     if not token:
         return None
@@ -186,7 +189,7 @@ def _parse_price_str_to_float(token):
             return None
 
 
-def extract_circuito_ticket_prices(driver, wait_seconds: int = 30):
+def extract_circuito_ticket_prices(driver: WebDriver, wait_seconds: int = 30) -> list[str]:
     """Extrai preços da página de inscrição do CircuitoDasEstacoes (RunningLand).
 
     O driver deve estar posicionado na página de compra (RunningLand).
@@ -257,7 +260,7 @@ def extract_circuito_ticket_prices(driver, wait_seconds: int = 30):
         return []
 
 
-def extract_circuito_schedule(soup) -> str:
+def extract_circuito_schedule(soup: BeautifulSoup) -> str:
     """Extrai o horário de largada das seções de "Informações" do site CircuitoDasEstacoes.
 
     O site rendeiriza via JavaScript; este extractor procura por blocos <details>

@@ -1,4 +1,8 @@
+from typing import Any
+
 from bs4 import BeautifulSoup
+from selenium.webdriver.remote.webdriver import WebDriver
+
 import time
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
@@ -15,7 +19,12 @@ def is_nightrun_domain(domain: str) -> bool:
     return 'nightrun.com.br' in d or 'nightrun' in d
 
 
-def load_nightrun_soup(url: str, driver=None, wait_seconds: int = 20, debug: bool = False):
+def load_nightrun_soup(
+    url: str,
+    driver: WebDriver | None = None,
+    wait_seconds: int = 20,
+    debug: bool = False,
+) -> tuple[BeautifulSoup | None, bool, WebDriver | None, str]:
     created = False
     local_driver = driver
     schedule = ''
@@ -176,7 +185,7 @@ def load_nightrun_soup(url: str, driver=None, wait_seconds: int = 20, debug: boo
         return None, created, None, schedule
 
 
-def _extract_schedule_from_detailed_component(url: str, wait_seconds: int):
+def _extract_schedule_from_detailed_component(url: str, wait_seconds: int) -> str:
     """Tenta carregar o componente RaceDetailedInfoProvider para extrair o horário."""
     detail_driver = None
     try:
@@ -203,7 +212,7 @@ def _extract_schedule_from_detailed_component(url: str, wait_seconds: int):
                 pass
 
 
-def extract_nightrun_schedule(soup) -> str:
+def extract_nightrun_schedule(soup: BeautifulSoup) -> str:
     """Extrai o horário de largada do site NightRun, retornando 'HH:MM', 'Em breve' ou '' se não encontrado."""
     if not soup:
         return ''
@@ -308,7 +317,7 @@ def extract_nightrun_schedule(soup) -> str:
     return ''
 
 
-def _parse_price_str_to_float(token):
+def _parse_price_str_to_float(token: str | float | None) -> float | None:
     import re
     if not token:
         return None
@@ -328,7 +337,7 @@ def _parse_price_str_to_float(token):
             return None
 
 
-def extract_nightrun_ticket_prices(driver, wait_seconds: int = 30):
+def extract_nightrun_ticket_prices(driver: WebDriver, wait_seconds: int = 30) -> list[str]:
     try:
         import re, time
         price_sel = 'div[class*="option-priceBlock"], span[class*="option-specialPrice"], span[class*="priceBlock-oldP"], div[class*="option-root"], [class*="option-rootLeft"]'

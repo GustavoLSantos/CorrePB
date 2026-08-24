@@ -1,7 +1,11 @@
 import re
+from typing import Any, TypeAlias
+
+# Entrada de preço: dict com chaves possíveis 'label', 'price', 'tax', 'formatted', 'raw'
+PriceEntry: TypeAlias = dict[str, Any]
 
 
-def parse_price_str(text):
+def parse_price_str(text: str | float | int | None) -> float | None:
     """
     Normaliza uma string de preço e retorna float ou None.
 
@@ -30,7 +34,7 @@ def parse_price_str(text):
 
 
 # Formatação padronizada de entradas de preço
-def fmt_entry(e):
+def fmt_entry(e: PriceEntry) -> PriceEntry:
     """Formata uma entrada de preço para exibição.
 
     Entrada: dict com chaves possivelmente 'label', 'price', 'tax', 'formatted', 'raw'.

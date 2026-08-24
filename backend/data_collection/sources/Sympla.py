@@ -1,6 +1,9 @@
 import re
 import time
+from typing import Any
+
 from bs4 import BeautifulSoup
+from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -16,7 +19,11 @@ def is_sympla_domain(domain: str) -> bool:
     return 'sympla' in domain.lower()
 
 
-def load_sympla_soup(url: str, driver=None, wait_seconds: int = 30):
+def load_sympla_soup(
+    url: str,
+    driver: WebDriver | None = None,
+    wait_seconds: int = 30,
+) -> tuple[BeautifulSoup | None, bool, WebDriver | None]:
     """
     Carrega a página Sympla usando Selenium (cria um driver se `driver` for None),
     aguarda o elemento de ticket-grid e retorna um BeautifulSoup da página.
@@ -65,7 +72,7 @@ def load_sympla_soup(url: str, driver=None, wait_seconds: int = 30):
         return None, created, None
 
 
-def extract_sympla_ticket_prices(soup):
+def extract_sympla_ticket_prices(soup: BeautifulSoup) -> list[dict[str, Any]]:
     """
     Extrai preços do ticket-grid do Sympla a partir do BeautifulSoup.
 
@@ -76,8 +83,8 @@ def extract_sympla_ticket_prices(soup):
         return candidates
 
     try:
-        for grid in soup.find_all(attrs={'data-testid': re.compile(r'ticket-grid', re.IGNORECASE)}):
-            items = grid.find_all(attrs={'data-testid': re.compile(r'ticket-grid-item', re.IGNORECASE)})
+        for grid in soup.select('[data-testid*=ticket-grid]'):
+            items = grid.select('[data-testid*=ticket-grid-item]')
             if not items:
                 # fallback para nós filhos diretos
                 items = grid.find_all(True, recursive=False)

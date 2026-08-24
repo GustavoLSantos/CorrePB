@@ -25,8 +25,8 @@ def open_regulation_modals(driver):
         html = driver.page_source
         soup = BeautifulSoup(html, 'html.parser')
         modal_candidates = []
-        for elem in soup.find_all(attrs={'id': re.compile(r'.*modal.*', re.IGNORECASE)}):
-            mid = elem.get('id')
+        for elem in soup.select('[id*=modal]'):
+            mid = str(elem.get('id') or '')
             text = ' '.join(elem.stripped_strings) or ''
             if re.search(r'regul|regulation|regulamento|rule|reglas|reglamento', mid, re.IGNORECASE) or re.search(r'regul|lote|lotes|R\$', text, re.IGNORECASE):
                 modal_candidates.append(mid)

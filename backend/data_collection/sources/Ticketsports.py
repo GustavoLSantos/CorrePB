@@ -7,7 +7,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from typing import Optional
+from typing import Any, Optional
 
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -24,7 +24,7 @@ def is_ticketsports_domain(domain: str) -> bool:
 
 def load_ticketsports_soup(
     url: str,
-    driver=None,
+    driver: WebDriver | None = None,
     wait_seconds: int = 20,
     debug: bool = False,
 ) -> tuple[Optional[BeautifulSoup], bool, Optional[WebDriver], str]:
@@ -43,6 +43,8 @@ def load_ticketsports_soup(
             return True
         except Exception:
             try:
+                if local_driver is None:
+                    return False
                 local_driver.execute_script("arguments[0].click();", elem)
                 time.sleep(0.6)
                 return True
@@ -169,9 +171,9 @@ def load_ticketsports_soup(
         soup = BeautifulSoup(local_driver.page_source, 'html.parser')
 
         # fallback: requests se não encontrar blocos de preço
-        if not soup.find('div', class_=lambda c: c and 'bloco-radio' in c):
+        if not soup.find('div', class_=lambda c: bool(c and 'bloco-radio' in c)):
             soup_req = _fetch_soup(inscreva_href or url)
-            if soup_req and soup_req.find('div', class_=lambda c: c and 'bloco-radio' in c):
+            if soup_req and soup_req.find('div', class_=lambda c: bool(c and 'bloco-radio' in c)):
                 soup = soup_req
 
         # fallback extra para horário
@@ -248,7 +250,7 @@ def load_ticketsports_soup(
         return None, created, None, horario
 
 
-def extract_ticketsports_modalities(soup, debug: bool = False):
+def extract_ticketsports_modalities(soup: BeautifulSoup, debug: bool = False) -> list[dict[str, Any]]:
     """
     Extrai modalidades e opções (km, price) de uma página Ticketsports.
 
@@ -276,7 +278,8 @@ def extract_ticketsports_modalities(soup, debug: bool = False):
 
     def parse_option(raw_text: str):
         raw_text = (raw_text or '').strip()
-        price = parse_price_str(price_regex.search(raw_text).group(1)) if price_regex.search(raw_text) else parse_price_str(raw_text)
+        m_price = price_regex.search(raw_text)
+        price = parse_price_str(m_price.group(1)) if m_price else parse_price_str(raw_text)
 
         km = None
         km_value = None
@@ -314,13 +317,15 @@ def extract_ticketsports_modalities(soup, debug: bool = False):
             if h and h.get_text(strip=True):
                 name = h.get_text(separator=' ', strip=True).strip()
 
-        list_div = card.find(lambda tag: tag.name == 'div' and tag.get('id') and 'ul-lista-card-modalidade' in tag.get('id'))
+        list_div = card.find(
+            lambda tag: tag.name == 'div' and 'ul-lista-card-modalidade' in str(tag.get('id') or '')
+        )
         if not list_div:
-            list_div = card.find('div', id=lambda x: x and 'lista-card-modalidade' in x)
+            list_div = card.find('div', id=lambda x: bool(x and 'lista-card-modalidade' in x))
 
         options = []
         if list_div:
-            radios = list_div.find_all('div', class_=lambda c: c and 'radio' in c and 'bloco-radio' in c)
+            radios = list_div.find_all('div', class_=lambda c: bool(c and 'radio' in c and 'bloco-radio' in c))
             if not radios:
                 radios = list_div.find_all('div', class_='bloco-radio')
             for r in radios:
@@ -334,7 +339,7 @@ def extract_ticketsports_modalities(soup, debug: bool = False):
 
     # Fallback: blocos de preço fora dos cards tradicionais
     extra_options = []
-    for r in soup.find_all('div', class_=lambda c: c and 'bloco-radio' in c):
+    for r in soup.find_all('div', class_=lambda c: bool(c and 'bloco-radio' in c)):
         raw = r.get_text(separator=' ', strip=True)
         if raw in seen_raw:
             continue
@@ -364,7 +369,7 @@ def extract_ticketsports_modalities(soup, debug: bool = False):
     return deduped
 
 
-def extract_ticketsports_ticket_prices(soup, debug: bool = False):
+def extract_ticketsports_ticket_prices(soup: BeautifulSoup, debug: bool = False) -> list[dict[str, Any]]:
     """
     Converte a estrutura de modalidades extraída por `extract_ticketsports_modalities`
     em uma lista de entradas de preço padronizadas compatíveis com o pipeline.
@@ -474,7 +479,7 @@ def extract_ticketsports_ticket_prices(soup, debug: bool = False):
     return valid
 
 
-def extract_ticketsports_schedule(soup) -> str:
+def extract_ticketsports_schedule(soup: BeautifulSoup) -> str:
     """Extrai o horário do evento a partir do HTML do Ticketsports (ex.: <b>HORÁRIO</b>: 04h00)."""
     if not soup:
         return ''
@@ -562,7 +567,7 @@ def extract_ticketsports_schedule(soup) -> str:
                     return norm
         # fallback: tenta no texto do pai
         try:
-            parent_text = label.parent.get_text(' ', strip=True)
+            parent_text = label.parent.get_text(' ', strip=True) if label.parent else ''
             parent_text_norm = _strip_accents(parent_text).lower()
             for pat in time_patterns:
                 m = pat.search(parent_text_norm)

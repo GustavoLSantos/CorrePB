@@ -1,7 +1,9 @@
 import re
 
+from data_collection.utils.PriceUtils import PriceEntry
 
-def is_prize_text(text):
+
+def is_prize_text(text: str | None) -> bool:
     """Detecta se um texto sugere tratar-se de prêmio/premiação.
 
     Mantém as heurísticas originais do scraper.
@@ -29,7 +31,7 @@ def is_prize_text(text):
     return False
 
 
-def entry_is_prize(entry, page_html: str) -> bool:
+def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
     """Decide se uma entrada de preço corresponde a premiação.
 
     entry: dict com keys 'raw','label','price' (pode ser None)
