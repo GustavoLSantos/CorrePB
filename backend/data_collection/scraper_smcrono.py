@@ -297,7 +297,22 @@ def _montar_precos(precos_categorias):
     return [f"{e['formatted']} | {e['label']}" for e in entradas]
 
 
-def get_smcrono_events_api(estado_filter="PB"):
+def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
+    """Coleta eventos SmCrono via API da plataforma.
+
+    somente_futuros descarta eventos cuja data (da lista ou dos detalhes)
+    já passou — os detalhes são a fonte canônica quando divergirem.
+    """
+    from datetime import datetime as _dt
+
+    def _parse_br(s):
+        try:
+            d, m, a = (s or "").strip().split("/")
+            return _dt(int(a), int(m), int(d))
+        except Exception:
+            return None
+
+
     eventos_lista = _load_events_json()
     events_data = []
     vistos = set()
@@ -310,8 +325,22 @@ def get_smcrono_events_api(estado_filter="PB"):
                 continue
             vistos.add(url_evento)
 
+            data_lista = ev.get("eve_data_evento") or ""
+            if somente_futuros and _parse_br(data_lista) and _parse_br(data_lista) < _dt.now():
+                continue
+
             print(f"Analisando: {nome_ref}")
             det = _fetch_event_details(url_evento)
+            if det is None:
+                det = {}
+
+            if somente_futuros:
+                data_final = det.get("data_evento") or data_lista
+                dt_final = _parse_br(data_final) or _parse_br(data_lista)
+                if dt_final and dt_final < _dt.now():
+                    print(f"  -> Ignorado: evento passado ({data_final})")
+                    continue
+
 
             cidade, estado = _extrair_cidade_estado(det.get("local"), ev)
             if estado_filter and estado != estado_filter:
