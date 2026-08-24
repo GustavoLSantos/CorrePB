@@ -58,23 +58,54 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Validate required secrets
+        env:
+          MONGODB_REMOTE_URI: ${{ secrets.MONGODB_REMOTE_URI }}
+          MONGODB_REMOTE_DB_NAME: ${{ secrets.MONGODB_REMOTE_DB_NAME }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
+          API_KEY: ${{ secrets.API_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+        run: |
+          err=0
+          for v in MONGODB_REMOTE_URI MONGODB_REMOTE_DB_NAME MONGO_DB_NAME \
+                   MONGODB_COLLECTION API_KEY AWS_REGION AWS_ACCESS_KEY \
+                   AWS_SECRET_ACCESS_KEY AWS_BUCKET_NAME; do
+            if [ -z "${!v:-}" ]; then
+              echo "::error::Secret ausente ou vazio no GitHub: $v"
+              err=1
+            fi
+          done
+          exit $err
+
       - name: Deploy Container App
-        uses: azure/container-apps-deploy-action@v1
-        with:
-          imageToDeploy: ghcr.io/gustavolsantos/correpb-backend:${{ github.event.workflow_run.head_sha }}
-          containerAppName: circuitoapp-api
-          resourceGroup: rg-circuitoapp
-          containerAppEnvironment: env-circuitoapp
-          targetPort: 8181
-          ingress: external
-          environmentVariables: |
-            MONGODB_REMOTE_URI=${{ secrets.MONGODB_REMOTE_URI }}
-            MONGODB_REMOTE_DB_NAME=${{ secrets.MONGODB_REMOTE_DB_NAME }}
-            MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
-            MONGODB_COLLECTION=${{ secrets.MONGODB_COLLECTION }}
-            API_PORT=8181
-            API_KEY=${{ secrets.API_KEY }}
-            AWS_REGION=${{ secrets.AWS_REGION }}
-            AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}
-            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}
+        env:
+          IMAGE_TAG: ${{ github.event.workflow_run.head_sha }}
+          MONGODB_REMOTE_URI: ${{ secrets.MONGODB_REMOTE_URI }}
+          MONGODB_REMOTE_DB_NAME: ${{ secrets.MONGODB_REMOTE_DB_NAME }}
+          MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
+          MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
+          API_KEY: ${{ secrets.API_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+        run: |
+          az containerapp update \
+            -n circuitoapp-api \
+            -g rg-circuitoapp \
+            -i "ghcr.io/gustavolsantos/correpb-backend:${IMAGE_TAG}" \
+            --set-env-vars \
+              MONGODB_REMOTE_URI="$MONGODB_REMOTE_URI" \
+              MONGODB_REMOTE_DB_NAME="$MONGODB_REMOTE_DB_NAME" \
+              MONGO_DB_NAME="$MONGO_DB_NAME" \
+              MONGODB_COLLECTION="$MONGODB_COLLECTION" \
+              API_PORT="8181" \
+              API_KEY="$API_KEY" \
+              AWS_REGION="$AWS_REGION" \
+              AWS_ACCESS_KEY="$AWS_ACCESS_KEY" \
+              AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+              AWS_BUCKET_NAME="$AWS_BUCKET_NAME"
