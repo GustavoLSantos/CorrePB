@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -21,6 +22,13 @@ class Settings(BaseSettings):
     BUCKET_JSON_KEY: str = "eventos_real.json"
 
     model_config = {"env_file": ".env", "extra": "ignore"}
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def strip_strings(cls, v):
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
 
 settings = Settings()
