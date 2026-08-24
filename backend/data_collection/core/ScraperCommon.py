@@ -9,10 +9,16 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Iterable
-from typing import Any
+from collections.abc import Callable, Iterable
+from typing import cast
 
 from data_collection.utils.PriceUtils import PriceEntry
+
+__all__ = [
+    "PriceEntry",
+    "_as_object_list",
+    "_as_str_object_dict",
+]
 from urllib.parse import urlparse
 
 import requests
@@ -28,7 +34,7 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 _RATE_LIMIT_LOCK = threading.Lock()
-_LAST_REQUEST_TIME: dict = {}  # último request por domínio (reserva de slot)
+_LAST_REQUEST_TIME: dict[str, float] = {}  # último request por domínio (reserva de slot)
 
 
 def get_http_session(user_agent: str | None = None) -> requests.Session:
@@ -129,16 +135,19 @@ def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:
     """Serializa entradas de preço em lista JSON legível, sem calcular resumo."""
     if not entries:
         return "[]"
-    safe_prices = []
-    for p in entries:
-        formatted = None
-        if isinstance(p, str):
-            formatted = p.strip()
-        elif isinstance(p, dict):
-            label_atual = (p.get("label") or "").strip() or "GERAL"
-            formatted = (p.get("formatted") or "").strip()
+    import json
+
+    safe_prices: list[str] = []
+    for raw_entry in entries:
+        formatted: str | None = None
+        if isinstance(raw_entry, str):
+            formatted = raw_entry.strip()
+        else:
+            label_atual = str(raw_entry.get("label") or "").strip() or "GERAL"
+            existing = cast("str | None", raw_entry.get("formatted"))
+            formatted = existing.strip() if existing else None
             if not formatted:
-                price_val = p.get("price")
+                price_val = cast("float | int | None", raw_entry.get("price"))
                 if price_val is not None:
                     try:
                         price_s = (
@@ -152,14 +161,25 @@ def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:
         if formatted:
             safe_prices.append(formatted)
     try:
-        import json
-
         return json.dumps(safe_prices, ensure_ascii=False) if safe_prices else "[]"
     except Exception:
         return "[]"
 
+def _as_str_object_dict(value: object) -> dict[str, object] | None:
+    """Narrowing seguro para dicts de JSON dinâmico."""
+    if isinstance(value, dict):
+        return cast("dict[str, object]", value)
+    return None
 
-EVENTOS_CSV_FIELDNAMES = [
+
+def _as_object_list(value: object) -> list[object]:
+    """Narrowing seguro para listas de JSON dinâmico."""
+    if isinstance(value, list):
+        return cast("list[object]", value)
+    return [value]
+
+
+EVENTOS_CSV_FIELDNAMES: list[str] = [
     "Nome do Evento",
     "Link de Inscrição",
     "Link da Imagem",
@@ -175,7 +195,7 @@ EVENTOS_CSV_FIELDNAMES = [
 
 def write_events_csv(
     csv_path: str,
-    records: list[dict[str, Any]],
+    records: list[dict[str, str]],
     fieldnames: list[str] | None = None,
 ) -> None:
     """Grava registros no formato padrão do projeto (CSV ; com quoting total)."""
@@ -199,7 +219,12 @@ def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
     try:
         from data_collection.utils import ImportToDB as sync_module
 
-        sync_module.import_csv_to_mongodb(sync_module.remote_db, csv_path, collection)
+        remote_db = cast("object", sync_module.remote_db)
+        import_fn = cast(
+            "object",
+            getattr(sync_module, "import_csv_to_mongodb"),
+        )
+        _ = cast("Callable[[object, str, str], None]", import_fn)(remote_db, csv_path, collection)
         return True
     except Exception as e:
         print(f"sincronização com mongodb ignorada ({collection}): {e}")

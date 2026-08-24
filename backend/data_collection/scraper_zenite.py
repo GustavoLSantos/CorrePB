@@ -1,14 +1,3 @@
-"""Scraper dedicado do site Zenite Esportes (zeniteesportes.com).
-
-Coleta completa direto do catálogo OpenCart do organizador, sem depender do
-listing do Brasil Que Corre e sem Selenium (páginas server-side renderized):
-
-- Descoberta: links de produto na home (slugs SEO, ex.: /atacamixrun2026)
-- Detalhes por página: og:title/og:image, bloco 'Data da corrida' (data/horário),
-  'Local: Cidade – UF', 'Percursos:', spans pro_price e regulamento abrirPDF()
-
-Produz o mesmo schema CSV dos demais scrapers e sincroniza com a coleção "zenite".
-"""
 import os
 import sys
 

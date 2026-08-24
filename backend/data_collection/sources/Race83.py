@@ -1,4 +1,5 @@
 import json
+from typing import TypedDict, cast
 import re
 import time
 from datetime import datetime, timedelta
@@ -7,7 +8,10 @@ from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 import requests
 from data_collection.core.Driver import setup_driver
+from data_collection.utils.PriceUtils import PriceEntry
 from data_collection.core.ScraperCommon import (
+    _as_object_list,
+    _as_str_object_dict,
     fix_encoding,
     formatar_data_br,
     get_http_session,
@@ -92,12 +96,58 @@ def load_race83_soup(url: str, timeout: int = 5):
         return None, created, None
 
 # ─── API dedicada (plataforma race83/smcrono) ────────────────────────────────
+class EventoLista(TypedDict, total=False):
+    """Item de listEventos (arquivo session/*_events.json)."""
+
+    eve_id: int
+    eve_nome: str
+    eve_cidade: str
+    eve_estado: str
+    eve_data_evento: str
+    eve_hora: str
+    url_evento: str
+    imagem_capa: str
+
+
+class PrecoItem(TypedDict, total=False):
+    valor: str
+    categoria: str
+    modalidade: str
+
+
+class LotePrecos(TypedDict, total=False):
+    lote_nome: str
+    precos: list[PrecoItem]
+
+
+class Documento(TypedDict, total=False):
+    nome: str
+    url: str
+
+
+class Percurso(TypedDict, total=False):
+    nome: str
+
+
+class EventoDetalhes(TypedDict, total=False):
+    """Resposta de api_evento.php."""
+
+    titulo: str
+    data_evento: str
+    hora_evento: str
+    local: str
+    imagem_capa: str
+    documentos: list[Documento]
+    percursos: list[Percurso]
+    precos_categorias: list[LotePrecos]
+
+
 _session = get_http_session()
 
 
 def _candidate_events_urls() -> list[str]:
     """URLs candidatas do JSON de eventos (arquivo datado gerado pela plataforma)."""
-    urls = []
+    urls: list[str] = []
     try:
         html = get_with_rate_limit(_session, BASE_URL, timeout=20)
         if html:
@@ -112,14 +162,16 @@ def _candidate_events_urls() -> list[str]:
     return urls
 
 
-def load_events_json() -> list[dict]:
+def load_events_json() -> list[EventoLista]:
     """Carrega listEventos do arquivo JSON diário da plataforma."""
     for url in _candidate_events_urls():
         resp = get_with_rate_limit(_session, url, timeout=20)
         if resp is None:
             continue
         try:
-            eventos = (resp.json() or {}).get("listEventos") or []
+            payload = _as_str_object_dict(cast("object", resp.json()))
+            raw_list = _as_object_list((payload or {}).get("listEventos"))
+            eventos = [cast("EventoLista", item) for item in raw_list]
         except Exception:
             continue
         if eventos:
@@ -128,13 +180,15 @@ def load_events_json() -> list[dict]:
     return []
 
 
-def fetch_event_details(url_evento: str) -> dict | None:
+def fetch_event_details(url_evento: str) -> EventoDetalhes | None:
+    """Detalhes estruturados via api_evento.php (preços, percursos, edital)."""
     """Detalhes estruturados de um evento via api_evento.php (preços, percursos, edital)."""
     resp = get_with_rate_limit(_session, f"{BASE_URL}/api_evento.php?url={url_evento}", timeout=20)
     if resp is None:
         return None
     try:
-        return resp.json()
+        det = cast("EventoDetalhes | None", _as_str_object_dict(cast("object", resp.json())))
+        return det
     except Exception:
         return None
 
@@ -148,7 +202,7 @@ def _limpar_nome(nome: str) -> str:
     return _ORPHAN_MOJIBAKE.sub(r"ã\1", fix_encoding(nome))
 
 
-def _extrair_cidade(local: str, ev: dict) -> str:
+def _extrair_cidade(local: str, ev: EventoLista) -> str:
     m = re.match(r"^(.*?)\s*-\s*[A-Z]{2}\s*$", fix_encoding((local or "").strip()))
     if m:
         return m.group(1).strip()
@@ -156,14 +210,14 @@ def _extrair_cidade(local: str, ev: dict) -> str:
     return cidade.title() if cidade.isupper() else cidade
 
 
-def _montar_precos(precos_categorias) -> list[str]:
+def _montar_precos(precos_categorias: list[LotePrecos]) -> list[str]:
     """Converte lotes/categorias da API em entradas legíveis ordenadas por preço."""
     from data_collection.utils.PriceUtils import parse_price_str
 
     lotes = precos_categorias or []
     multi_lote = len(lotes) > 1
-    entradas = []
-    vistos = set()
+    entradas: list[PriceEntry] = []
+    vistos: set[tuple[float, str]] = set()
 
     for lote in lotes:
         lote_nome = str(lote.get("lote_nome") or "").strip()
@@ -183,23 +237,29 @@ def _montar_precos(precos_categorias) -> list[str]:
             vistos.add(chave)
             entradas.append({"label": label, "price": preco, "formatted": fix_encoding(valor)})
 
-    entradas.sort(key=lambda x: x["price"])
+    def _preco_num(x: PriceEntry) -> float:
+        v = x.get("price")
+        return float(v) if isinstance(v, (int, float)) else 0.0
+
+    entradas.sort(key=_preco_num)
     return [f"{e['formatted']} | {e['label']}" for e in entradas]
 
 
-def _event_slug(ev: dict) -> str:
+def _event_slug(ev: EventoLista) -> str:
     slug = (ev.get("url_evento") or "").rstrip("/").split("/")[-1]
     return f"{ev.get('eve_id')}/{slug}" if slug and ev.get("eve_id") else ""
 
 
-def get_race83_events(estado_filter: str = "PB", somente_futuros: bool = True) -> list[dict]:
+def get_race83_events(
+    estado_filter: str = "PB", somente_futuros: bool = True
+) -> list[dict[str, str]]:
     """Coleta completa dos eventos Race83 direto da API da plataforma.
 
     Retorna registros no schema padrão do projeto (Nome do Evento, precos_entries, ...),
     sem depender do listing do Brasil Que Corre nem de Selenium.
     """
-    events_data = []
-    vistos = set()
+    events_data: list[dict[str, str]] = []
+    vistos: set[str] = set()
 
     for ev in load_events_json():
         nome_ref = ev.get("eve_nome", "?")
@@ -243,7 +303,7 @@ def get_race83_events(estado_filter: str = "PB", somente_futuros: bool = True) -
                 for p in det.get("percursos") or []
                 if (p.get("nome") or "").strip()
             ]
-            precos = _montar_precos(det.get("precos_categorias"))
+            precos = _montar_precos(det.get("precos_categorias") or [])
             nome = _limpar_nome((det.get("titulo") or "").strip()) or _limpar_nome(nome_ref)
 
             events_data.append(
