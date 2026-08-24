@@ -193,17 +193,28 @@ def fetch_event_details(url_evento: str) -> EventoDetalhes | None:
         return None
 
 
-# Reparos conservadores para mojibake do banco da plataforma (ex.: 'SÃo' -> 'São',
-# 'VerÃo' -> 'Verão'). Nenhuma palavra portuguesa legítima contém esses padrões.
+# Reparos conservadores para mojibake do banco da plataforma
+# ('JoÃo' -> 'João', 'PraÇa' -> 'Praça', 'JosÉ' -> 'José').
+# Nenhuma palavra portuguesa legítima contém esses padrões mistos.
 _ORPHAN_MOJIBAKE = re.compile(r"Ã([oa])\b")
+_MID_UPPER_CEDILLA = re.compile(r"(?<=[a-z])Ç(?=[a-z])")
+_TRAIL_UPPER_ACUTE = re.compile(r"(?<=[a-z])É\b")
+
+
+def _reparar(texto: str) -> str:
+    texto = fix_encoding(texto)
+    texto = _ORPHAN_MOJIBAKE.sub(r"ã\1", texto)
+    texto = _MID_UPPER_CEDILLA.sub("ç", texto)
+    texto = _TRAIL_UPPER_ACUTE.sub("é", texto)
+    return texto
 
 
 def _limpar_nome(nome: str) -> str:
-    return _ORPHAN_MOJIBAKE.sub(r"ã\1", fix_encoding(nome))
+    return _reparar(nome)
 
 
 def _extrair_cidade(local: str, ev: EventoLista) -> str:
-    m = re.match(r"^(.*?)\s*-\s*[A-Z]{2}\s*$", fix_encoding((local or "").strip()))
+    m = re.match(r"^(.*?)\s*-\s*[A-Z]{2}\s*$", _reparar((local or "").strip()))
     if m:
         return m.group(1).strip()
     cidade = fix_encoding((ev.get("eve_cidade") or "").strip())
@@ -224,8 +235,8 @@ def _montar_precos(precos_categorias: list[LotePrecos]) -> list[str]:
         for p in lote.get("precos") or []:
             valor = (p.get("valor") or "").strip()
             preco = parse_price_str(valor)
-            if not valor or not preco:
-                continue
+            if not valor or preco is None:
+                continue  # valor inexistente/ininteligível na plataforma
             partes = [x.strip() for x in (p.get("modalidade"), p.get("categoria")) if x and x.strip()]
             label = " — ".join(fix_encoding(x) for x in partes) or "Geral"
             if multi_lote and lote_nome:
