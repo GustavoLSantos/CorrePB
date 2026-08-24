@@ -40,10 +40,10 @@ def get_http_session(user_agent: str | None = None) -> requests.Session:
         }
     )
     retry_strategy = Retry(
-        total=3,
+        total=2,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["GET", "POST"],
-        backoff_factor=1,
+        backoff_factor=0.5,
     )
     adapter = HTTPAdapter(max_retries=retry_strategy)
     session.mount("http://", adapter)
@@ -51,7 +51,12 @@ def get_http_session(user_agent: str | None = None) -> requests.Session:
     return session
 
 
-def get_with_rate_limit(session: requests.Session, url: str, timeout: int = 10, verify: bool = True):
+def get_with_rate_limit(
+    session: requests.Session,
+    url: str,
+    timeout: int | tuple[int, int] = 10,
+    verify: bool = True,
+):
     """GET com retry automático e rate limiting por domínio (thread-safe).
 
     Reserva um slot de 0,5s por domínio antes da requisição, permitindo uso

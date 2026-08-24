@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import urlparse, urljoin
@@ -35,7 +36,6 @@ from data_collection.sources.CircuitoDasEstacoes import (
     is_circuito_domain,
     load_circuito_soup,
 )
-from data_collection.sources.Liverun import is_liverun_domain, load_liverun_soup
 from data_collection.sources.Nightrun import (
     extract_nightrun_ticket_prices,
     is_nightrun_domain,
@@ -65,11 +65,16 @@ def _get_http_session():
 
 _global_session = _get_http_session()
 
-_HTTP_TIMEOUT = 15
+# Timeout como tupla (conexão, leitura): falha rápido em servidor inacessível
+# sem cortar downloads lentos porém saudáveis.
+_HTTP_TIMEOUT = (6, 12)
 
 
-def _get_with_rate_limit(url, timeout=10, verify=True):
-    """GET com retry automático e rate limiting por domínio (thread-safe)."""
+def _get_with_rate_limit(url, timeout: int | tuple[int, int] = 10, verify=True):
+    """GET com retry automático e rate limiting por domínio (thread-safe).
+
+    `timeout` aceita int ou tupla (conexão, leitura) — repassado ao requests.
+    """
     return get_with_rate_limit(_global_session, url, timeout=timeout, verify=verify)
 
 
@@ -610,6 +615,9 @@ _SELENIUM_SOURCE_CHECKS = (
     is_nightrun_domain,
 )
 
+# Cada driver Chrome consome ~250MB; 2 instâncias paralelas equilibram ganho e custo.
+SELENIUM_MAX_DRIVERS = 2
+
 
 def _is_selenium_source(domain: str) -> bool:
     """Fontes cujas páginas exigem JavaScript real para expor preços/detalhes."""
@@ -680,8 +688,6 @@ def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
         elif is_circuito_domain(domain):
             soup, _, _, loader_horario = load_circuito_soup(url)
             horario = horario or loader_horario
-        elif is_liverun_domain(domain):
-            soup, _, _ = load_liverun_soup(url)
         elif is_ticketsports_domain(domain):
             soup, _, _, loader_horario = load_ticketsports_soup(
                 url, driver=driver, wait_seconds=30, debug=False
@@ -735,14 +741,18 @@ def _fetch_details_selenium(event_info: dict, driver) -> dict | None:
 
 
 def process_event_details(events):
-    """
-    Processa editais e preços de múltiplos eventos sequencialmente.
+    """Enriquece eventos com edital/preços/horário das páginas de inscrição.
+
+    Estratégia de concorrência:
+    - Fontes com scraper dedicado são puladas (coletadas pelos scrapers próprios)
+    - Grupo HTTP (server-side): paralelo com ThreadPoolExecutor + rate limit por domínio
+    - Grupo Selenium: driver ÚNICO criado uma vez (fail-fast: se o Chrome não subir,
+      todos os eventos JS são degradados na hora, sem re-tentativa por evento) e
+      processado em thread própria, EM PARALELO com o grupo HTTP
     """
     if not events:
         return []
 
-    # Fontes com coleta dedicada própria (scraper_race83.py / scraper_zenite.py):
-    # o listing BQC pula esses eventos para não duplicar trabalho.
     dedicadas = []
     restantes = []
     for ev in events:
@@ -764,37 +774,74 @@ def process_event_details(events):
             http_events.append(ev)
 
     processed: list[dict] = []
+    lock = threading.Lock()
 
-    # Grupo HTTP (liverun, genéricos): paralelo com rate limiting por domínio
+    def _run_selenium_group():
+        """Processa eventos JS com um pool pequeno de drivers em paralelo.
+
+        Cada worker cria seu próprio driver UMA vez (fail-fast: se o Chrome não
+        subir, todos os eventos do worker são degradados na hora, sem re-tentativa).
+        """
+        if not selenium_events:
+            return
+
+        n_drivers = max(1, min(SELENIUM_MAX_DRIVERS, len(selenium_events)))
+        chunks = [c for c in (selenium_events[i::n_drivers] for i in range(n_drivers)) if c]
+
+        def _worker(chunk, worker_id):
+            try:
+                shared_driver = setup_driver()
+            except Exception as e:
+                print(f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS")
+                for event in chunk:
+                    event = dict(event)
+                    event["link_edital"] = "edital não encontrado"
+                    event["precos_entries"] = "[]"
+                    with lock:
+                        processed.append(event)
+                return
+
+            total = len(chunk)
+            for idx, event in enumerate(chunk, 1):
+                try:
+                    result = _fetch_details_selenium(dict(event), shared_driver)
+                    if result is None:
+                        continue
+                    with lock:
+                        processed.append(result)
+                    print(f"[w{worker_id} {idx}/{total}] OK {result.get('nome', '')}")
+                except Exception:
+                    logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
+                    event = dict(event)
+                    event["link_edital"] = "edital não encontrado"
+                    event["precos_entries"] = "[]"
+                    with lock:
+                        processed.append(event)
+            _safe_quit(shared_driver)
+
+        threads = [
+            threading.Thread(target=_worker, args=(chunk, i + 1), daemon=True)
+            for i, chunk in enumerate(chunks)
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    selenium_thread = threading.Thread(
+        target=_run_selenium_group, name="selenium-details", daemon=True
+    )
+    selenium_thread.start()
+
+    # Grupo HTTP roda enquanto o Selenium trabalha em paralelo
     if http_events:
         with ThreadPoolExecutor(max_workers=min(8, len(http_events))) as pool:
             for result in pool.map(_fetch_details_http, http_events):
                 if result:
-                    processed.append(result)
+                    with lock:
+                        processed.append(result)
 
-    # Grupo Selenium (sympla, circuito, ticketsports, nightrun): sequencial com UM
-    # driver compartilhado, evitando o custo de subir um Chrome por evento.
-    shared_driver = None
-    try:
-        total = len(selenium_events)
-        for idx, event in enumerate(selenium_events, 1):
-            try:
-                if shared_driver is None:
-                    shared_driver = setup_driver()
-                result = _fetch_details_selenium(dict(event), shared_driver)
-                if result is None:
-                    continue
-                processed.append(result)
-                print(f"[{idx}/{total}] OK {result.get('nome', '')}")
-            except Exception:
-                logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
-                event = dict(event)
-                event["link_edital"] = "edital não encontrado"
-                event["precos_entries"] = "[]"
-                processed.append(event)
-    finally:
-        _safe_quit(shared_driver)
-
+    selenium_thread.join()
     return processed
 
 

@@ -1,3 +1,4 @@
+import contextlib
 from urllib.parse import urlparse
 
 from bs4 import BeautifulSoup
@@ -36,6 +37,8 @@ def load_circuito_soup(url: str, timeout: int = 20, driver=None):
         try:
             driver.get(url)
 
+            # Uma única espera com todos os seletores combinados: antes eram até
+            # 5 x timeout (100s+) em páginas onde nenhum seletor existe.
             selectors = [
                 'p.kit-price-desktop, p.kit-price-mobile',
                 '#race-detailed-info',
@@ -43,15 +46,10 @@ def load_circuito_soup(url: str, timeout: int = 20, driver=None):
                 '.details-content',
                 'summary',
             ]
-            found = False
-            for sel in selectors:
-                try:
-                    WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.CSS_SELECTOR, sel)))
-                    found = True
-                    break
-                except Exception:
-                    continue
-
+            with contextlib.suppress(Exception):
+                WebDriverWait(driver, min(timeout, 12)).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, ', '.join(selectors)))
+                )
             # captura o HTML completo antes de qualquer clique que possa navegar
             price_soup = BeautifulSoup(driver.page_source, 'html.parser')
 
@@ -129,7 +127,7 @@ def load_circuito_soup(url: str, timeout: int = 20, driver=None):
                         return False
                     except Exception:
                         return False
-                WebDriverWait(driver, timeout).until(_ready)
+                WebDriverWait(driver, min(timeout, 15)).until(_ready)
             except Exception:
                 pass
 
@@ -141,19 +139,15 @@ def load_circuito_soup(url: str, timeout: int = 20, driver=None):
             if cta_href:
                 try:
                     driver.get(cta_href)
-                    try:
-                        WebDriverWait(driver, timeout).until(
-                            lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
+
+                    def _cta_ready(d):
+                        return (
+                            len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
                             or 'R$' in (d.page_source or '')
                         )
-                    except Exception:
-                        try:
-                            WebDriverWait(driver, 3).until(
-                                lambda d: len(d.find_elements(By.CSS_SELECTOR, 'div[class*="option-root"]')) > 0
-                                or 'R$' in (d.page_source or '')
-                            )
-                        except Exception:
-                            pass
+
+                    with contextlib.suppress(Exception):
+                        WebDriverWait(driver, min(timeout, 12)).until(_cta_ready)
                 except Exception:
                     pass
 
