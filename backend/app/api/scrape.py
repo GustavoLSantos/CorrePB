@@ -2,17 +2,18 @@ import asyncio
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.core.auth import verify_api_key
+from app.core.auth import verify_scrapers_api_key
 from app.services import scraper_import
 from app.services.scraper_runner import (
     cleanup_scraped_csvs,
     get_active_job_id,
     get_job,
+    get_last_run,
     start_scrape_job,
 )
 
 
-router = APIRouter(prefix="/api/v1/scrape", dependencies=[Depends(verify_api_key)], tags=["scrape"])
+router = APIRouter(prefix="/api/v1/scrape", dependencies=[Depends(verify_scrapers_api_key)], tags=["scrape"])
 
 
 @router.post("/run", status_code=202)
@@ -38,6 +39,12 @@ async def scrape_status(job_id: str):
         "report": job.report,
         "error": job.error,
     }
+
+
+@router.get("/last-run")
+async def scrape_last_run():
+    doc = await get_last_run()
+    return {"finished_at": (doc or {}).get("finished_at")}
 
 
 @router.post("/import")

@@ -64,6 +64,7 @@ jobs:
           MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
           MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
           API_KEY: ${{ secrets.API_KEY }}
+          SCRAPERS_API_KEY: ${{ secrets.SCRAPERS_API_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           MONGODB_REMOTE_DB: ${{ secrets.MONGODB_REMOTE_DB }}
@@ -72,7 +73,7 @@ jobs:
         run: |
           err=0
           for v in MONGODB_REMOTE_URI  MONGODB_REMOTE_DB MONGO_DB_NAME \
-                   MONGODB_COLLECTION API_KEY AWS_REGION AWS_ACCESS_KEY_ID \
+                   MONGODB_COLLECTION API_KEY SCRAPERS_API_KEY AWS_REGION AWS_ACCESS_KEY_ID \
                    AWS_SECRET_ACCESS_KEY AWS_BUCKET_NAME; do
             if [ -z "${!v:-}" ]; then
               echo "::error::Secret ausente ou vazio no GitHub: $v"
@@ -89,6 +90,7 @@ jobs:
           MONGO_DB_NAME: ${{ secrets.MONGO_DB_NAME }}
           MONGODB_COLLECTION: ${{ secrets.MONGODB_COLLECTION }}
           API_KEY: ${{ secrets.API_KEY }}
+          SCRAPERS_API_KEY: ${{ secrets.SCRAPERS_API_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -105,6 +107,7 @@ jobs:
               MONGODB_COLLECTION="$MONGODB_COLLECTION" \
               API_PORT="8181" \
               API_KEY="$API_KEY" \
+              SCRAPERS_API_KEY="$SCRAPERS_API_KEY" \
               AWS_REGION="$AWS_REGION" \
               AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
               AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
