@@ -27,6 +27,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from data_collection.core.Driver import setup_driver
 from data_collection.core.ScraperCommon import (
+    _as_object_list,
+    _as_str_object_dict,
     entries_to_json,
     get_http_session,
     get_with_rate_limit,
@@ -185,21 +187,6 @@ def extract_time_from_text(text: str) -> str:
             return out
 
     return ""
-
-
-
-def _as_object_list(value: object) -> list[object]:
-    """Narrowing seguro para listas de JSON dinâmico."""
-    if isinstance(value, list):
-        return cast("list[object]", value)
-    return [value]
-
-
-def _as_str_object_dict(value: object) -> dict[str, object] | None:
-    """Narrowing seguro para dicts de JSON dinâmico."""
-    if isinstance(value, dict):
-        return cast("dict[str, object]", value)
-    return None
 
 
 def _collect_jsonld_price_entries(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
