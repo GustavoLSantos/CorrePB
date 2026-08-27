@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
@@ -21,7 +23,10 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     BUCKET_JSON_KEY: str = "eventos_real.json"
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    model_config = {
+        "env_file": Path(__file__).resolve().parents[2] / ".env",
+        "extra": "ignore",
+    }
 
     @field_validator("*", mode="before")
     @classmethod

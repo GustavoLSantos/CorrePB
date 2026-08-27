@@ -6,6 +6,7 @@ from app.core.auth import verify_scrapers_api_key
 from app.services import scraper_import
 from app.services.scraper_runner import (
     cleanup_scraped_csvs,
+    deduplicate_db_and_bucket,
     get_active_job_id,
     get_job,
     get_last_run,
@@ -52,5 +53,6 @@ async def import_scraped():
     if get_active_job_id():
         raise HTTPException(status_code=409, detail="Coleta em andamento; tente importar depois")
     result = await asyncio.to_thread(scraper_import.import_scraped_csvs)
+    result["deduplicacao_db"] = await deduplicate_db_and_bucket()
     _ = await asyncio.to_thread(cleanup_scraped_csvs)
     return result

@@ -381,7 +381,21 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # 2. Validação dos CSVs
+    # 2. Deduplicação cross-scraper nos CSVs (prioriza completude)
+    try:
+        # Import tardio para evitar ciclo com app.services
+        import importlib
+        _mod = importlib.import_module("app.services.scraper_runner")
+        _dedup = getattr(_mod, "deduplicate_csvs", None)
+        if _dedup:
+            dup_stats = _dedup()
+            for s in dup_stats:
+                if s["removidos"]:
+                    logger.info(f"[dedup][CSV] {s['fonte']}: {s['removidos']} removidos, {s['mantidos']} mantidos")
+    except Exception as e:
+        logger.warning(f"Falha na deduplicação CSV: {e}")
+
+    # 3. Validação dos CSVs
     logger.info("Validando CSVs...")
     csv_summaries: List[CsvSummary] = []
     csv_critical_error = False
@@ -410,7 +424,7 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # 3. ImportToDB
+    # 4. ImportToDB
     logger.info("Executando ImportToDB...")
     import_db_result = run_import(IMPORT_TO_DB_SCRIPT, "ImportToDB")
 
@@ -426,7 +440,23 @@ def main() -> None:
         )
         sys.exit(1)
 
-    # 4. ImportToBucket
+    # 4.5 Deduplicação no banco/bucket (remove duplicatas históricas já persistidas)
+    try:
+        import asyncio as _asyncio
+
+        from app.services.scraper_runner import deduplicate_db_and_bucket as _dedup_db
+
+        _db_stats = _asyncio.run(_dedup_db())
+        if _db_stats and _db_stats.get("removidos_db"):
+            logger.info(
+                f"[dedup][DB] {_db_stats['removidos_db']} docs removidos em {_db_stats.get('grupos', '?')} grupos"
+            )
+            if _db_stats.get("removidos_bucket"):
+                logger.info(f"[dedup][S3] {_db_stats['removidos_bucket']} imagens órfãs removidas")
+    except Exception as e:
+        logger.warning(f"Falha na deduplicação DB/bucket: {e}")
+
+    # 5. ImportToBucket
     logger.info("Executando ImportToBucket...")
     import_bucket_result = run_import(IMPORT_TO_BUCKET_SCRIPT, "ImportToBucket")
 
