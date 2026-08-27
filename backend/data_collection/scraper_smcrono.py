@@ -13,6 +13,7 @@ from urllib3.util.retry import Retry
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from data_collection.core.ScraperCommon import fix_encoding
 from data_collection.utils.PriceUtils import parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -53,15 +54,6 @@ MESES_EXTENSO = {
     11: "novembro",
     12: "dezembro",
 }
-
-
-def fix_encoding(text):
-    if not text:
-        return ""
-    try:
-        return text.encode("latin1").decode("utf-8")
-    except Exception:
-        return text
 
 
 # ─── Kit (extração de itens a partir do PDF do regulamento) ──────────────────
