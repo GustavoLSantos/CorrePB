@@ -386,6 +386,7 @@ def get_apcrono_events(
                 "Data": data_fmt or data_br,
                 "Horário": horario,
                 "Cidade": fix_encoding(cidade),
+                "Estado": estado.upper() if estado else "",
                 "Distância": ", ".join(distancias) if isinstance(distancias, list) else distancia_str,
                 "Organizador": fix_encoding(organizador),
                 "Link do Edital": edital,

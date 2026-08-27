@@ -271,6 +271,7 @@ def get_cronoar_events(
                 "Data": data_fmt or data,
                 "Horário": horario,
                 "Cidade": fix_encoding(cidade),
+                "Estado": estado.upper() if estado else "",
                 "Distância": distancia_str,
                 "Organizador": "Cronoar",
                 "Link do Edital": edital,

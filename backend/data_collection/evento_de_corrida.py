@@ -194,11 +194,27 @@ class EventoDeCorrida:
             except Exception:
                 kits_val = None
 
+        # Estado: usa coluna "Estado" se presente, senão tenta extrair de "Cidade" (ex: "Santa Cruz - RN"), senão PB
+        estado_val = get_value("Estado") or get_value("estado")
+        cidade_raw = get_value("Cidade")
+        cidade_val = cidade_raw
+        if not estado_val:
+            import re as _re
+
+            m = _re.search(r"\s*[/\-]\s*([A-Za-z]{2})\s*$", cidade_raw)
+            if m:
+                estado_val = m.group(1).upper()
+                cidade_val = _re.sub(r"\s*[/\-]\s*[A-Za-z]{2}\s*$", "", cidade_raw).strip()
+            else:
+                estado_val = "PB"
+        else:
+            estado_val = estado_val.strip().upper() or "PB"
+
         return cls(
             nome_evento=get_value("Nome do Evento"),
             datas_realizacao=datas_realizacao,
-            cidade=get_value("Cidade"),
-            estado="PB",  # Estado fixo para este projeto
+            cidade=cidade_val,
+            estado=estado_val,
             organizador=get_value("Organizador"),
             site_coleta=fonte,
             data_coleta=datetime.now(),

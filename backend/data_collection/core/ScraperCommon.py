@@ -262,6 +262,7 @@ EVENTOS_CSV_FIELDNAMES: list[str] = [
     "Data",
     "Horário",
     "Cidade",
+    "Estado",
     "Distância",
     "Organizador",
     "Link do Edital",
