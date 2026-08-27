@@ -1,32 +1,19 @@
 version: '3.8'
 
 services:
-  mongodb:
+  scrapers:
     build:
       context: .
       dockerfile: ./data_collection/Dockerfile
-    container_name: mongodb-custom
-    restart: unless-stopped
+    image: correpb-data:latest
+    container_name: correpb-scrapers
+    restart: "no"
+    # Carrega credenciais (MongoDB Atlas + AWS) do backend/.env
+    env_file:
+      - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-      - MONGO_INITDB_DATABASE=dbcorridas
-    ports:
-      - "27018:27018"
+      - PYTHONPATH=/app
+    # Mantém os CSVs/JSON gerados persistidos no host
     volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-      - ./init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
-    networks:
-      - mongodb_network
-    command: mongod --port 27018 --auth
-
-networks:
-  mongodb_network:
-    driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
-  mongodb_config:
-    driver: local
+      - ./data_collection/data:/app/data_collection/data
+    command: ["python", "pipeline_agent.py"]
