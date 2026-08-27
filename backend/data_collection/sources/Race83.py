@@ -13,10 +13,10 @@ from data_collection.core.ScraperCommon import (
     _as_object_list,
     _as_str_object_dict,
     fix_encoding,
-    formatar_data_br,
+    format_date_string,
     get_http_session,
     get_with_rate_limit,
-    parse_data_br,
+    parse_date_string,
 )
 from selenium.common.exceptions import WebDriverException
 
@@ -285,7 +285,7 @@ def get_race83_events(
                 continue
 
             data_ev = ev.get("eve_data_evento") or ""
-            data_parsed = parse_data_br(data_ev)
+            data_parsed = parse_date_string(data_ev)
             if somente_futuros and data_parsed and data_parsed < datetime.now():
                 continue
 
@@ -297,7 +297,7 @@ def get_race83_events(
 
             # Re-checa a data com o valor canônico dos detalhes (a lista às vezes erra)
             data_final = det.get("data_evento") or data_ev
-            data_final_parsed = parse_data_br(data_final) or data_parsed
+            data_final_parsed = parse_date_string(data_final) or data_parsed
             if somente_futuros and data_final_parsed and data_final_parsed < datetime.now():
                 print(f"  -> Ignorado: evento passado ({data_final})")
                 continue
@@ -322,7 +322,7 @@ def get_race83_events(
                     "Nome do Evento": nome,
                     "Link de Inscrição": f"{BASE_URL}/evento/{api_url}",
                     "Link da Imagem": (det.get("imagem_capa") or ev.get("imagem_capa") or "").strip(),
-                    "Data": formatar_data_br(data_final),
+                    "Data": format_date_string(data_final),
                     "Horário": (det.get("hora_evento") or ev.get("eve_hora") or "").strip(),
                     "Cidade": _extrair_cidade(det.get("local") or "", ev),
                     "Distância": ", ".join(percursos),

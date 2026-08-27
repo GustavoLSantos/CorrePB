@@ -226,10 +226,10 @@ def extract_zenite_ticket_prices(soup: BeautifulSoup, debug: bool = False) -> li
 from data_collection.core.ScraperCommon import (
     entries_to_json,
     fix_encoding,
-    formatar_data_br,
+    format_date_string,
     get_http_session,
     get_with_rate_limit,
-    parse_data_br,
+    parse_date_string,
 )
 
 ZENITE_BASE_URL = "https://zeniteesportes.com"
@@ -482,7 +482,7 @@ def build_zenite_record(
         "Nome do Evento": nome,
         "Link de Inscrição": url,
         "Link da Imagem": imagem,
-        "Data": formatar_data_br(data_br or card.get("data", "")),
+        "Data": format_date_string(data_br or card.get("data", "")),
         "Horário": horario,
         "Cidade": _zenite_cidade(soup) or fix_encoding(card.get("cidade", "")),
         "Distância": _zenite_distancias(soup),
@@ -513,7 +513,7 @@ def get_zenite_events(somente_futuros: bool = True) -> list[dict[str, str]]:
                 continue
 
             if somente_futuros:
-                dt = parse_data_br(rec.pop("_data_br", ""))
+                dt = parse_date_string(rec.pop("_data_br", ""))
                 if dt and dt < datetime.now():
                     continue
             else:

@@ -20,10 +20,10 @@ from data_collection.core.ScraperCommon import (
     _as_object_list,
     _as_str_object_dict,
     fix_encoding,
-    formatar_data_br,
+    format_date_string,
     get_http_session,
     get_with_rate_limit,
-    parse_data_br,
+    parse_date_string,
 )
 
 try:
@@ -212,10 +212,10 @@ def get_cronoar_events(
                 continue
 
             if somente_futuros and data:
-                dt = parse_data_br(data)
+                dt = parse_date_string(data)
                 # tenta dataFormatada se parse falhou
                 if not dt:
-                    dt = parse_data_br(str(prova.get("dataFormatada") or ""))
+                    dt = parse_date_string(str(prova.get("dataFormatada") or ""))
                 if dt and dt < datetime.now():
                     continue
 
@@ -262,7 +262,7 @@ def get_cronoar_events(
             if prova.get("linkInscricao"):
                 link_inscricao = str(prova.get("linkInscricao"))
 
-            data_fmt = formatar_data_br(data) if data else ""
+            data_fmt = format_date_string(data) if data else ""
 
             records.append({
                 "Nome do Evento": fix_encoding(titulo),

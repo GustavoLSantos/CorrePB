@@ -149,28 +149,10 @@ class EventoDeCorrida:
             return value if value and value.strip() else ""
 
         horario_val = get_value("Horário") or get_value("Horario") or get_value("horario")
-        # Converter datas para lista de datetime
-        data_str = get_value("Data")
-        datas_realizacao = []
-        if data_str:
-            try:
-                # Exemplo: '02, 03 e 15 de Agosto de 2025'
-                data_str = data_str.lower().replace("  ", " ").replace(" e ", ", ")
-                partes = data_str.split(" de ")
-                if len(partes) == 3:
-                    dias = [d.strip() for d in partes[0].split(",")]
-                    mes = MONTH_BY_NAME[partes[1].strip()]
-                    ano = int(partes[2])
-                    for dia in dias:
-                        try:
-                            datas_realizacao.append(datetime(ano, mes, int(dia)))
-                        except Exception:
-                            continue
-            except Exception:
-                pass
-        # Se não conseguiu converter, salva lista vazia
-        if not datas_realizacao:
-            datas_realizacao = []
+        # Converter datas para lista de datetime (delegates to ScraperCommon)
+        from data_collection.core.ScraperCommon import parse_long_multi_dates
+
+        datas_realizacao = parse_long_multi_dates(get_value("Data"))
 
         link_edital = get_value("link_edital") or get_value("Link do Edital")
         categorias_premiadas = get_value("Categorias Premiadas")

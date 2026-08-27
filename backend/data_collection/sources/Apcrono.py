@@ -18,10 +18,10 @@ from data_collection.core.ScraperCommon import (
     _as_object_list,
     _as_str_object_dict,
     fix_encoding,
-    formatar_data_br,
+    format_date_string,
     get_http_session,
     get_with_rate_limit,
-    parse_data_br,
+    parse_date_string,
 )
 
 try:
@@ -339,7 +339,7 @@ def get_apcrono_events(
 
             # Filtro somente_futuros
             if somente_futuros and data_br:
-                dt = parse_data_br(data_br)
+                dt = parse_date_string(data_br)
                 if dt and dt < datetime.now():
                     continue
 
@@ -376,7 +376,7 @@ def get_apcrono_events(
             edital = str(tiquet_data.get("edital") or regulamento_ap or "edital não encontrado")
 
             # Formata data para "DD de mês de AAAA"
-            from data_collection.core.ScraperCommon import formatar_data_br as fmt_data
+            from data_collection.core.ScraperCommon import format_date_string as fmt_data
             data_fmt = fmt_data(data_br) if data_br else ""
 
             records.append({

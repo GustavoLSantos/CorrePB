@@ -150,21 +150,10 @@ ENCODING_GARBAGE_RE = re.compile(r"\ufffd|Ã[a-zà-ú]|Â[°»£¢]|â€")
 
 
 def _parse_first_date(data_str: str) -> Optional[datetime]:
-    """Tenta extrair a primeira data de um campo no formato 'DD de Mês de AAAA'."""
-    try:
-        normalized = data_str.lower().replace("  ", " ").replace(" e ", ", ")
-        partes = normalized.split(" de ")
-        if len(partes) != 3:
-            return None
-        primeiro_dia = partes[0].split(",")[0].strip()
-        mes_str = partes[1].strip()
-        mes = MONTH_BY_NAME.get(mes_str)
-        if mes is None:
-            return None
-        ano = int(partes[2].strip())
-        return datetime(ano, mes, int(primeiro_dia))
-    except Exception:
-        return None
+    """Extract first date from 'DD de Mês de AAAA' (delegates to ScraperCommon)."""
+    from data_collection.core.ScraperCommon import parse_long_date_string
+
+    return parse_long_date_string(data_str)
 
 
 def validate_csv(path: Path, fonte: str) -> CsvSummary:

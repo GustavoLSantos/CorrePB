@@ -4,6 +4,7 @@ Concentra sessão HTTP com retry/rate limiting, serialização de preços,
 escrita de CSV e sincronização com MongoDB — evitando duplicação entre
 scraper_brasilquecorre, scraper_race83, scraper_zenite e novos scrapers.
 """
+
 import csv
 import logging
 import os
@@ -110,16 +111,25 @@ def fix_encoding(text: str | None) -> str:
 from datetime import datetime  # noqa: E402
 
 MONTHS_PT: dict[int, str] = {
-    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril", 5: "maio", 6: "junho",
-    7: "julho", 8: "agosto", 9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
+    1: "janeiro",
+    2: "fevereiro",
+    3: "março",
+    4: "abril",
+    5: "maio",
+    6: "junho",
+    7: "julho",
+    8: "agosto",
+    9: "setembro",
+    10: "outubro",
+    11: "novembro",
+    12: "dezembro",
 }
 MONTH_BY_NAME: dict[str, int] = {v: k for k, v in MONTHS_PT.items()}
 MONTHS_CAPITALIZED: dict[int, str] = {k: v.capitalize() for k, v in MONTHS_PT.items()}
 
 
-def parse_data_br(data_str: str | None) -> datetime | None:
-    """Converte 'dd/mm/yyyy' ou 'yyyy-mm-dd' em datetime; None se inválido."""
-    s = (data_str or "").strip()
+def parse_date_string(date_str: str | None) -> datetime | None:
+    s = (date_str or "").strip()
     for fmt in ("%d/%m/%Y", "%Y-%m-%d"):
         try:
             return datetime.strptime(s, fmt)
@@ -128,12 +138,72 @@ def parse_data_br(data_str: str | None) -> datetime | None:
     return None
 
 
-def formatar_data_br(data_str: str | None) -> str:
-    """Converte 'dd/mm/yyyy' em 'd de mês de aaaa'; devolve a entrada se inválida."""
-    dt = parse_data_br(data_str)
+def format_date_string(date_str: str | None) -> str:
+    dt = parse_date_string(date_str)
     if not dt:
-        return data_str or ""
+        return date_str or ""
     return f"{dt.day} de {MONTHS_PT[dt.month]} de {dt.year}"
+
+
+def parse_long_date_string(date_str: str | None) -> datetime | None:
+    """Parse 'DD de Mês de AAAA' (first date) to datetime. Handles '02, 03 e 15 de Agosto de 2025'."""
+    if not date_str:
+        return None
+    try:
+        normalized = date_str.lower().replace("  ", " ").replace(" e ", ", ")
+        parts = normalized.split(" de ")
+        if len(parts) != 3:
+            return None
+        first_day = parts[0].split(",")[0].strip()
+        month_str = parts[1].strip()
+        month = MONTH_BY_NAME.get(month_str)
+        if month is None:
+            return None
+        year = int(parts[2].strip())
+        return datetime(year, month, int(first_day))
+    except Exception:
+        return None
+
+
+def parse_long_multi_dates(date_str: str | None) -> list[datetime]:
+    """Parse '02, 03 e 15 de Agosto de 2025' to list of datetimes. Returns empty list if invalid."""
+    if not date_str:
+        return []
+    try:
+        normalized = date_str.lower().replace("  ", " ").replace(" e ", ", ")
+        parts = normalized.split(" de ")
+        if len(parts) != 3:
+            return []
+        days = [d.strip() for d in parts[0].split(",")]
+        month = MONTH_BY_NAME.get(parts[1].strip())
+        if month is None:
+            return []
+        year = int(parts[2].strip())
+        result: list[datetime] = []
+        for day in days:
+            try:
+                result.append(datetime(year, month, int(day)))
+            except Exception:
+                continue
+        return result
+    except Exception:
+        return []
+
+
+def format_datetime_to_br(value: datetime | str | None) -> str:
+    if not value:
+        return ""
+    try:
+        if isinstance(value, str):
+            if "T" in value:
+                value = datetime.fromisoformat(value)
+            else:
+                return value
+        if isinstance(value, datetime):
+            return f"{value.day} de {MONTHS_CAPITALIZED[value.month]} de {value.year}"
+        return str(value)
+    except Exception:
+        return str(value)
 
 
 def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:
@@ -169,6 +239,7 @@ def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:
         return json.dumps(safe_prices, ensure_ascii=False) if safe_prices else "[]"
     except Exception:
         return "[]"
+
 
 def _as_str_object_dict(value: object) -> dict[str, object] | None:
     """Narrowing seguro para dicts de JSON dinâmico."""

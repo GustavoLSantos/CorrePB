@@ -27,8 +27,8 @@ import requests
 from data_collection.core.ScraperCommon import (
     PriceEntry,
     fix_encoding,
-    formatar_data_br,
-    parse_data_br,
+    format_date_string,
+    parse_date_string,
     _as_object_list,
     _as_str_object_dict,
     get_http_session,
@@ -717,7 +717,7 @@ def get_circuito_events(
                         f"https://www.circuitodasestacoes.com.br/{location_slug}/{stage_slug}"
                     ),
                     "Link da Imagem": "",
-                    "Data": formatar_data_br(data_br),
+                    "Data": format_date_string(data_br),
                     "Horário": _horario_por_page(location_slug, stage_slug),
                     "Cidade": fix_encoding(location_name),
                     "Distância": distancias,

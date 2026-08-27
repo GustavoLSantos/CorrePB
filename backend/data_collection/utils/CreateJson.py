@@ -11,7 +11,7 @@ import certifi
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-from data_collection.core.ScraperCommon import MONTHS_CAPITALIZED
+from data_collection.core.ScraperCommon import format_datetime_to_br
 from data_collection.utils.PriceUtils import fmt_entry
 
 load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env')))
@@ -21,28 +21,11 @@ DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or
 COLLECTION_NAME = os.getenv('MONGODB_COLLECTION') or 'eventos'
 CAMINHO_SAIDA = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'eventos_compilados.json'))
 
-def formatar_data_ptbr(data_obj):
-    if not data_obj:
-        return ""
-    try:
-        if isinstance(data_obj, str):
-            if 'T' in data_obj:
-                data_obj = datetime.fromisoformat(data_obj)
-            else:
-                return data_obj
-        
-        dia = data_obj.day
-        mes = MONTHS_CAPITALIZED[data_obj.month]
-        ano = data_obj.year
-        return f"{dia} de {mes} de {ano}"
-    except Exception:
-        return str(data_obj)
-
 def transformar_evento(evento_mongo):
     datas = evento_mongo.get('datas_realizacao', [])
     data_formatada = ""
     if datas and isinstance(datas, list) and len(datas) > 0:
-        data_formatada = formatar_data_ptbr(datas[0])
+        data_formatada = format_datetime_to_br(datas[0])
     
     dist = evento_mongo.get('distancias', [])
     if isinstance(dist, str):

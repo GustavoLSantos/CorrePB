@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_collection.core.ScraperCommon import MONTHS_PT, fix_encoding
+from data_collection.core.ScraperCommon import MONTHS_PT, fix_encoding, format_date_string
 from data_collection.utils.PriceUtils import parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -238,15 +238,6 @@ def _extrair_cidade_estado(local, ev):
     return fix_encoding(cidade.title()), estado_m.group(1) if estado_m else ""
 
 
-def _formatar_data(data_str):
-    """'30/08/2026' -> '30 de agosto de 2026'"""
-    try:
-        d, m, a = data_str.strip().split("/")
-        return f"{int(d)} de {MONTHS_PT[int(m)]} de {int(a)}"
-    except Exception:
-        return data_str
-
-
 def _montar_precos(precos_categorias):
     lotes = precos_categorias or []
     multi_lote = len(lotes) > 1
@@ -420,7 +411,7 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
                     "Link da Imagem": (
                         det.get("imagem_capa") or ev.get("imagem_capa") or ""
                     ).strip(),
-                    "Data": _formatar_data(
+                    "Data": format_date_string(
                         det.get("data_evento") or ev.get("eve_data_evento") or ""
                     ),
                     "Horário": (det.get("hora_evento") or ev.get("eve_hora") or "").replace(
