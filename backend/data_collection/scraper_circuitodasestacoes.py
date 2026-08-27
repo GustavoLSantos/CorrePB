@@ -34,6 +34,19 @@ def main():
         print("Nenhum evento encontrado.")
         return
 
+    for ev in events:
+        precos = ev.get("precos_entries", "[]")
+        try:
+            import json as _json
+
+            qtd = len(_json.loads(precos)) if precos.strip().startswith("[") else 1
+        except Exception:
+            qtd = 1
+        print(
+            f" - {ev.get('Nome do Evento','?')} | {ev.get('Data','')} {ev.get('Horário','')}"
+            f" | {ev.get('Cidade','')} | {ev.get('Distância','')} | Preços: {qtd} entradas"
+        )
+
     print(f"\nTotal de {len(events)} eventos encontrados. Salvando no CSV...")
     write_events_csv(csv_path, events, EVENTOS_CSV_FIELDNAMES)
     print(f"\nSalvo com sucesso: {csv_path}")
