@@ -33,6 +33,7 @@ SCRAPERS = [
     'scraper_zenite.py',
     'scraper_circuitodasestacoes.py',
     'scraper_apcrono.py',
+    'scraper_cronoar.py',
 ]
 
 CSV_MAP: Dict[str, Path] = {
@@ -42,6 +43,7 @@ CSV_MAP: Dict[str, Path] = {
     'zenite':         DATA_DIR / 'eventos_zenite.csv',
     'circuitodasestacoes': DATA_DIR / 'eventos_circuitodasestacoes.csv',
     'apcrono':        DATA_DIR / 'eventos_apcrono.csv',
+    'cronoar':        DATA_DIR / 'eventos_cronoar.csv',
 }
 
 IMPORT_TO_DB_SCRIPT     = BASE_DIR / 'utils' / 'ImportToDB.py'

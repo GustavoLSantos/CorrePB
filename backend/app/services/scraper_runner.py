@@ -25,6 +25,7 @@ SCRAPERS = [
     "scraper_zenite.py",
     "scraper_circuitodasestacoes.py",
     "scraper_apcrono.py",
+    "scraper_cronoar.py",
 ]
 
 CSV_MAP = {
@@ -34,6 +35,7 @@ CSV_MAP = {
     "zenite": DATA_DIR / "eventos_zenite.csv",
     "circuitodasestacoes": DATA_DIR / "eventos_circuitodasestacoes.csv",
     "apcrono": DATA_DIR / "eventos_apcrono.csv",
+    "cronoar": DATA_DIR / "eventos_cronoar.csv",
 }
 
 # Prioridade entre fontes: maior valor = mantido em caso de duplicata.
@@ -45,6 +47,7 @@ SCRAPER_PRIORITY: dict[str, int] = {
     "smcrono": 30,
     "zenite": 20,
     "apcrono": 15,
+    "cronoar": 14,
     "brasilquecorre": 10,
 }
 
