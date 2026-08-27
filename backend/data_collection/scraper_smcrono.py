@@ -13,7 +13,7 @@ from urllib3.util.retry import Retry
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_collection.core.ScraperCommon import fix_encoding
+from data_collection.core.ScraperCommon import MONTHS_PT, fix_encoding
 from data_collection.utils.PriceUtils import parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -39,22 +39,6 @@ _retry = Retry(
 _adapter = HTTPAdapter(max_retries=_retry, pool_connections=20, pool_maxsize=20)
 SESSION.mount("https://", _adapter)
 SESSION.mount("http://", _adapter)
-
-MESES_EXTENSO = {
-    1: "janeiro",
-    2: "fevereiro",
-    3: "março",
-    4: "abril",
-    5: "maio",
-    6: "junho",
-    7: "julho",
-    8: "agosto",
-    9: "setembro",
-    10: "outubro",
-    11: "novembro",
-    12: "dezembro",
-}
-
 
 # ─── Kit (extração de itens a partir do PDF do regulamento) ──────────────────
 
@@ -172,7 +156,7 @@ def _parse_kit_info(text):
             else:
                 nome_mes = g[1].lower().rstrip(".")
                 mes = next(
-                    (num for num, nome in MESES_EXTENSO.items() if nome.startswith(nome_mes[:3])),
+                    (num for num, nome in MONTHS_PT.items() if nome.startswith(nome_mes[:3])),
                     None,
                 )
                 if mes:
@@ -258,7 +242,7 @@ def _formatar_data(data_str):
     """'30/08/2026' -> '30 de agosto de 2026'"""
     try:
         d, m, a = data_str.strip().split("/")
-        return f"{int(d)} de {MESES_EXTENSO[int(m)]} de {int(a)}"
+        return f"{int(d)} de {MONTHS_PT[int(m)]} de {int(a)}"
     except Exception:
         return data_str
 

@@ -109,10 +109,12 @@ def fix_encoding(text: str | None) -> str:
 # ─── Datas ───────────────────────────────────────────────────────────────────
 from datetime import datetime  # noqa: E402
 
-MESES_EXTENSO = {
+MONTHS_PT: dict[int, str] = {
     1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril", 5: "maio", 6: "junho",
     7: "julho", 8: "agosto", 9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
 }
+MONTH_BY_NAME: dict[str, int] = {v: k for k, v in MONTHS_PT.items()}
+MONTHS_CAPITALIZED: dict[int, str] = {k: v.capitalize() for k, v in MONTHS_PT.items()}
 
 
 def parse_data_br(data_str: str | None) -> datetime | None:
@@ -131,7 +133,7 @@ def formatar_data_br(data_str: str | None) -> str:
     dt = parse_data_br(data_str)
     if not dt:
         return data_str or ""
-    return f"{dt.day} de {MESES_EXTENSO[dt.month]} de {dt.year}"
+    return f"{dt.day} de {MONTHS_PT[dt.month]} de {dt.year}"
 
 
 def entries_to_json(entries: Iterable[PriceEntry | str]) -> str:

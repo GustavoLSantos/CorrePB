@@ -39,11 +39,6 @@ SESSION = get_http_session(
 SESSION.headers.update({"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"})
 ORGANIZADOR_PADRAO = "AP CRONO"
 
-MESES_PT = {
-    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril", 5: "maio", 6: "junho",
-    7: "julho", 8: "agosto", 9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro",
-}
-
 
 def is_apcrono_domain(domain: str) -> bool:
     if not domain:

@@ -1,8 +1,15 @@
 import json
+import sys
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional, Any, Dict
 
 from bson import ObjectId
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from data_collection.core.ScraperCommon import MONTH_BY_NAME
 
 
 class EventoDeCorrida:
@@ -147,26 +154,12 @@ class EventoDeCorrida:
         datas_realizacao = []
         if data_str:
             try:
-                meses = {
-                    "janeiro": 1,
-                    "fevereiro": 2,
-                    "março": 3,
-                    "abril": 4,
-                    "maio": 5,
-                    "junho": 6,
-                    "julho": 7,
-                    "agosto": 8,
-                    "setembro": 9,
-                    "outubro": 10,
-                    "novembro": 11,
-                    "dezembro": 12,
-                }
                 # Exemplo: '02, 03 e 15 de Agosto de 2025'
                 data_str = data_str.lower().replace("  ", " ").replace(" e ", ", ")
                 partes = data_str.split(" de ")
                 if len(partes) == 3:
                     dias = [d.strip() for d in partes[0].split(",")]
-                    mes = meses[partes[1].strip()]
+                    mes = MONTH_BY_NAME[partes[1].strip()]
                     ano = int(partes[2])
                     for dia in dias:
                         try:

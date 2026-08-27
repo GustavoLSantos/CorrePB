@@ -1,10 +1,17 @@
 import json
 import os
 import re
+import sys
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
 import certifi
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+
+from data_collection.core.ScraperCommon import MONTHS_CAPITALIZED
 from data_collection.utils.PriceUtils import fmt_entry
 
 load_dotenv(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..', '.env')))
@@ -13,11 +20,6 @@ MONGO_URI = os.getenv('MONGODB_REMOTE_URI') or os.getenv('MONGODB_URI')
 DB_NAME = os.getenv('MONGODB_REMOTE_DB_NAME') or os.getenv('MONGODB_DB_NAME') or 'correpb'
 COLLECTION_NAME = os.getenv('MONGODB_COLLECTION') or 'eventos'
 CAMINHO_SAIDA = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'data', 'eventos_compilados.json'))
-
-MESES = {
-    1: 'Janeiro', 2: 'Fevereiro', 3: 'Março', 4: 'Abril', 5: 'Maio', 6: 'Junho',
-    7: 'Julho', 8: 'Agosto', 9: 'Setembro', 10: 'Outubro', 11: 'Novembro', 12: 'Dezembro'
-}
 
 def formatar_data_ptbr(data_obj):
     if not data_obj:
@@ -30,7 +32,7 @@ def formatar_data_ptbr(data_obj):
                 return data_obj
         
         dia = data_obj.day
-        mes = MESES[data_obj.month]
+        mes = MONTHS_CAPITALIZED[data_obj.month]
         ano = data_obj.year
         return f"{dia} de {mes} de {ano}"
     except Exception:
