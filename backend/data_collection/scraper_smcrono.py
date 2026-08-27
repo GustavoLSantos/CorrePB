@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 
 import requests
 from PyPDF2 import PdfReader
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -25,6 +27,17 @@ SESSION.headers.update(
         )
     }
 )
+# Retry com backoff para reduzir falhas transientes e evitar thundering herd
+_retry = Retry(
+    total=2,
+    backoff_factor=0.5,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["GET"],
+    raise_on_status=False,
+)
+_adapter = HTTPAdapter(max_retries=_retry, pool_connections=20, pool_maxsize=20)
+SESSION.mount("https://", _adapter)
+SESSION.mount("http://", _adapter)
 
 MESES_EXTENSO = {
     1: "janeiro",
@@ -298,11 +311,18 @@ def _montar_precos(precos_categorias):
 
 
 def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
-    """Coleta eventos SmCrono via API da plataforma.
+    """Coleta eventos SmCrono via API da plataforma (paralelizado).
 
     somente_futuros descarta eventos cuja data (da lista ou dos detalhes)
     já passou — os detalhes são a fonte canônica quando divergirem.
+
+    Otimizações:
+    - Deduplicação e filtro de data antes de I/O
+    - Fetch de detalhes em paralelo (ThreadPool)
+    - Extração de kits (PDF) em paralelo
     """
+    import concurrent.futures
+
     from datetime import datetime as _dt
 
     def _parse_br(s):
@@ -312,39 +332,86 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
         except Exception:
             return None
 
+    t0_total = __import__("time").monotonic()
 
     eventos_lista = _load_events_json()
-    events_data = []
-    vistos = set()
+    print(f"[profile] _load_events_json: {__import__('time').monotonic() - t0_total:.2f}s | {len(eventos_lista)} eventos na lista")
 
+    # --- Fase 1: deduplicação + filtro rápido antes de qualquer I/O ---
+    candidatos = []
+    vistos = set()
+    pre_filtrados = 0
     for ev in eventos_lista:
+        url_evento = (ev.get("url_evento") or "").strip("/")
+        if not url_evento or url_evento in vistos:
+            continue
+        vistos.add(url_evento)
+        # filtro de data usa apenas dado da lista (sem fetch)
+        if somente_futuros:
+            dl = ev.get("eve_data_evento") or ""
+            dt = _parse_br(dl)
+            if dt and dt < _dt.now():
+                pre_filtrados += 1
+                continue
+        # pré-filtro por estado quando disponível no campo eve_estado (evita fetch desnecessário)
+        if estado_filter:
+            eve_estado_raw = (ev.get("eve_estado") or "").strip().upper()
+            # eve_estado vem como " - PB" ou "PB"
+            if eve_estado_raw and estado_filter.upper() not in eve_estado_raw:
+                # mantém se campo vazio (fallback para det.local), senão pula
+                if eve_estado_raw not in ("", "-", " -"):
+                    # heurística: se contém UF diferente, provavelmente não é PB
+                    m_uf = __import__("re").search(r"\b([A-Z]{2})\b", eve_estado_raw)
+                    if m_uf and m_uf.group(1) != estado_filter.upper():
+                        pre_filtrados += 1
+                        continue
+        candidatos.append(ev)
+
+    print(f"[profile] pré-filtro: {len(candidatos)} candidatos (+{pre_filtrados} descartados antes de fetch)")
+
+    # --- Fase 2: fetch de detalhes em paralelo ---
+    t_fetch = __import__("time").monotonic()
+
+    def _fetch_safe(ev):
+        url_evento = (ev.get("url_evento") or "").strip("/")
         nome_ref = ev.get("eve_nome", "?")
         try:
-            url_evento = (ev.get("url_evento") or "").strip("/")
-            if not url_evento or url_evento in vistos:
-                continue
-            vistos.add(url_evento)
-
-            data_lista = ev.get("eve_data_evento") or ""
-            if somente_futuros and _parse_br(data_lista) and _parse_br(data_lista) < _dt.now():
-                continue
-
-            print(f"Analisando: {nome_ref}")
             det = _fetch_event_details(url_evento)
-            if det is None:
-                det = {}
+            return (ev, det or {}, None)
+        except Exception as e:
+            return (ev, {}, e)
 
+    max_workers_details = min(10, max(4, len(candidatos) // 2))
+    fetched = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_details) as ex:
+        futs = {ex.submit(_fetch_safe, ev): ev for ev in candidatos}
+        for fut in concurrent.futures.as_completed(futs):
+            ev, det, err = fut.result()
+            if err is not None:
+                print(f"  [WARN] falha ao buscar detalhes {ev.get('eve_nome','?')}: {err}")
+            fetched.append((ev, det))
+
+    print(f"[profile] fetch detalhes: {__import__('time').monotonic() - t_fetch:.2f}s para {len(fetched)} eventos (workers={max_workers_details})")
+
+    # --- Fase 3: processamento + filtro por estado/data final + coleta de kits ---
+    events_data = []
+    pendentes_kit = []  # [(idx, edital_link)]
+
+    for ev, det in fetched:
+        nome_ref = ev.get("eve_nome", "?")
+        url_evento = (ev.get("url_evento") or "").strip("/")
+        try:
+            # re-valida data com dado canônico dos detalhes
             if somente_futuros:
-                data_final = det.get("data_evento") or data_lista
-                dt_final = _parse_br(data_final) or _parse_br(data_lista)
+                data_final = det.get("data_evento") or ev.get("eve_data_evento") or ""
+                dt_final = _parse_br(data_final) or _parse_br(ev.get("eve_data_evento") or "")
                 if dt_final and dt_final < _dt.now():
-                    print(f"  -> Ignorado: evento passado ({data_final})")
+                    # print(f"  -> Ignorado: evento passado ({data_final}) [{nome_ref}]")
                     continue
-
 
             cidade, estado = _extrair_cidade_estado(det.get("local"), ev)
             if estado_filter and estado != estado_filter:
-                print(f"  -> Ignorado: Estado detectado '{estado}'")
+                # print(f"  -> Ignorado: Estado detectado '{estado}' [{nome_ref}]")
                 continue
 
             edital_link = "edital não encontrado"
@@ -363,13 +430,11 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
             precos = _montar_precos(det.get("precos_categorias"))
             json_precos_entries = json.dumps(precos, ensure_ascii=False) if precos else "[]"
 
-            kits = extract_kits_from_pdf(edital_link)
-            kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
-
             partida = fix_encoding((det.get("partida") or "").strip())
             percurso = {"local_largada": partida} if partida else None
             percurso_json = json.dumps(percurso, ensure_ascii=False) if percurso else ""
 
+            idx = len(events_data)
             events_data.append(
                 {
                     "Nome do Evento": fix_encoding(
@@ -391,14 +456,44 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
                     "Link do Edital": edital_link,
                     "precos_entries": json_precos_entries,
                     "Percurso": percurso_json,
-                    "Kits": kits_json,
+                    "Kits": "",  # preenchido na fase paralela abaixo
                 }
             )
-            print(f"  [OK] {events_data[-1]['Data']} | Precos: {len(precos)} entradas")
+            # mantém nome para log posterior ordenado
+            if edital_link.lower().endswith(".pdf"):
+                pendentes_kit.append((idx, edital_link))
+            print(f"  [OK] {events_data[-1]['Data']} | Precos: {len(precos)} entradas | {events_data[-1]['Nome do Evento'][:45]}")
         except Exception as e:
             print(f"  [ERRO]: {e} ({nome_ref})")
             continue
 
+    # --- Fase 4: extração de kits (PDF) em paralelo — gargalo mais pesado ---
+    if pendentes_kit:
+        t_kit = __import__("time").monotonic()
+        print(f"[profile] iniciando extração de kits para {len(pendentes_kit)} PDFs em paralelo...")
+
+        def _kit_safe(args):
+            idx, url = args
+            try:
+                kits = extract_kits_from_pdf(url)
+                return (idx, kits, None)
+            except Exception as e:
+                return (idx, None, e)
+
+        max_workers_kits = min(6, len(pendentes_kit))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_kits) as ex:
+            futs = {ex.submit(_kit_safe, a): a for a in pendentes_kit}
+            for fut in concurrent.futures.as_completed(futs):
+                idx, kits, err = fut.result()
+                if err is not None:
+                    print(f"  [WARN] kit falhou idx={idx}: {err}")
+                    kits = None
+                kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
+                events_data[idx]["Kits"] = kits_json
+
+        print(f"[profile] kits paralelos: {__import__('time').monotonic() - t_kit:.2f}s")
+
+    print(f"[profile] total get_smcrono_events_api: {__import__('time').monotonic() - t0_total:.2f}s | {len(events_data)} eventos finais")
     return events_data
 
 
