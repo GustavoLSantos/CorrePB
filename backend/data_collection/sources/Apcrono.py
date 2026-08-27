@@ -213,11 +213,16 @@ def _parse_tiquet_soup(html: str) -> dict[str, Any]:
 
     # Imagem do evento no tiquet
     imagem = ""
-    img = soup.select_one('img[src*="image-event"], img[src*="tiquet"]')
-    if img and img.get("src"):
-        imagem = str(img.get("src") or "")
-        if imagem.startswith("/"):
-            imagem = urljoin("https://tiquet.com.br", imagem)
+    # tiquet usa /visualizar/imagem/<id>/ como src; fallback para qualquer img do evento
+    for sel in ['img[src*="visualizar/imagem"]', 'img[src*="image-event"]', 'img[src*="tiquet"]', 'main img[src^="https://"]', 'img[src*="/wp-content/"]']:
+        img = soup.select_one(sel)
+        if img and img.get("src"):
+            src = str(img.get("src") or "").strip()
+            if src and "logo" not in src.lower() and "whats" not in src.lower():
+                imagem = src
+                if imagem.startswith("/"):
+                    imagem = urljoin("https://tiquet.com.br", imagem)
+                break
 
     return {
         "date": tiquet_date,
@@ -352,15 +357,23 @@ def get_apcrono_events(
             precos = tiquet_data.get("precos") or []
             precos_entries = entries_to_json(precos) if precos else "[]"
 
-            # Imagem
+            # Imagem (tiquet -> og:image -> img destaque apcrono)
             imagem = str(tiquet_data.get("imagem") or "")
             if not imagem:
-                # tenta og:image da página apcrono
                 try:
                     soup_tmp = BeautifulSoup(resp.text, "html.parser")
                     og = soup_tmp.find("meta", property="og:image")
                     if og and og.get("content"):
                         imagem = str(og.get("content") or "")
+                    if not imagem:
+                        # fallback: primeira imagem de conteúdo do evento
+                        for cand in soup_tmp.select('article img, main img, img[src*="/wp-content/"]'):
+                            src_img = str(cand.get("src") or "").strip()
+                            if src_img and "logo" not in src_img.lower():
+                                imagem = src_img
+                                if imagem.startswith("/"):
+                                    imagem = urljoin(BASE_URL, imagem)
+                                break
                 except Exception:
                     pass
 
