@@ -750,6 +750,98 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
         return evt
 
 
+def _split_events_by_source(
+    events: list[EventInfo],
+) -> tuple[list[EventInfo], list[EventInfo], list[EventInfo]]:
+    """Split events into (dedicated_scraper, http, selenium) groups."""
+    dedicated: list[EventInfo] = []
+    remaining: list[EventInfo] = []
+    for ev in events:
+        dom = urlparse(ev.get("link_inscricao", "")).netloc
+        if any(d in dom for d in FONTES_COM_SCRAPER_DEDICADO):
+            dedicated.append(ev)
+        else:
+            remaining.append(ev)
+
+    http_events: list[EventInfo] = []
+    selenium_events: list[EventInfo] = []
+    for ev in remaining:
+        dom = urlparse(ev.get("link_inscricao", "")).netloc
+        if _is_selenium_source(dom):
+            selenium_events.append(ev)
+        else:
+            http_events.append(ev)
+
+    return dedicated, http_events, selenium_events
+
+
+def _execute_selenium_workers(
+    selenium_events: list[EventInfo],
+    processed: list[EventInfo],
+    lock: threading.Lock,
+) -> None:
+    """Process Selenium events with small driver pool in parallel (English helper)."""
+    if not selenium_events:
+        return
+
+    n_drivers = max(1, min(SELENIUM_MAX_DRIVERS, len(selenium_events)))
+    chunks = [c for c in (selenium_events[i::n_drivers] for i in range(n_drivers)) if c]
+
+    def _worker(chunk: list[EventInfo], worker_id: int) -> None:
+        try:
+            shared_driver = setup_driver()
+        except Exception as e:
+            print(f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS")
+            for event in chunk:
+                event = dict(event)
+                event["link_edital"] = "edital não encontrado"
+                event["precos_entries"] = "[]"
+                with lock:
+                    processed.append(event)
+            return
+
+        total = len(chunk)
+        for idx, event in enumerate(chunk, 1):
+            try:
+                result = _fetch_details_selenium(dict(event), shared_driver)
+                if result is None:
+                    continue
+                with lock:
+                    processed.append(result)
+                print(f"[w{worker_id} {idx}/{total}] OK {result.get('nome', '')}")
+            except Exception:
+                logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
+                event = dict(event)
+                event["link_edital"] = "edital não encontrado"
+                event["precos_entries"] = "[]"
+                with lock:
+                    processed.append(event)
+        _safe_quit(shared_driver)
+
+    threads = [
+        threading.Thread(target=_worker, args=(chunk, i + 1), daemon=True) for i, chunk in enumerate(chunks)
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+
+def _process_http_events(
+    http_events: list[EventInfo],
+    processed: list[EventInfo],
+    lock: threading.Lock,
+) -> None:
+    """Process HTTP events in ThreadPool (English helper)."""
+    if not http_events:
+        return
+    with ThreadPoolExecutor(max_workers=min(8, len(http_events))) as pool:
+        for result in pool.map(_fetch_details_http, http_events):
+            if result:
+                with lock:
+                    processed.append(result)
+
+
 def process_event_details(events: list[EventInfo]) -> list[EventInfo]:
     """Enriquece eventos com edital/preços/horário das páginas de inscrição.
 
@@ -763,95 +855,21 @@ def process_event_details(events: list[EventInfo]) -> list[EventInfo]:
     if not events:
         return []
 
-    dedicadas: list[EventInfo] = []
-    restantes: list[EventInfo] = []
-    for ev in events:
-        dom = urlparse(ev.get("link_inscricao", "")).netloc
-        if any(d in dom for d in FONTES_COM_SCRAPER_DEDICADO):
-            dedicadas.append(ev)
-        else:
-            restantes.append(ev)
-    for ev in dedicadas:
+    dedicated, http_events, selenium_events = _split_events_by_source(events)
+    for ev in dedicated:
         print(f"[SKIP] {ev.get('nome', '')} — coletado por scraper dedicado")
-
-    http_events: list[EventInfo] = []
-    selenium_events: list[EventInfo] = []
-    for ev in restantes:
-        dom = urlparse(ev.get("link_inscricao", "")).netloc
-        if _is_selenium_source(dom):
-            selenium_events.append(ev)
-        else:
-            http_events.append(ev)
 
     processed: list[EventInfo] = []
     lock = threading.Lock()
 
-    def _run_selenium_group():
-        """Processa eventos JS com um pool pequeno de drivers em paralelo.
-
-        Cada worker cria seu próprio driver UMA vez (fail-fast: se o Chrome não
-        subir, todos os eventos do worker são degradados na hora, sem re-tentativa).
-        """
-        if not selenium_events:
-            return
-
-        n_drivers = max(1, min(SELENIUM_MAX_DRIVERS, len(selenium_events)))
-        chunks = [c for c in (selenium_events[i::n_drivers] for i in range(n_drivers)) if c]
-
-        def _worker(chunk: list[EventInfo], worker_id: int) -> None:
-            try:
-                shared_driver = setup_driver()
-            except Exception as e:
-                print(
-                    f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS"
-                )
-                for event in chunk:
-                    event = dict(event)
-                    event["link_edital"] = "edital não encontrado"
-                    event["precos_entries"] = "[]"
-                    with lock:
-                        processed.append(event)
-                return
-
-            total = len(chunk)
-            for idx, event in enumerate(chunk, 1):
-                try:
-                    result = _fetch_details_selenium(dict(event), shared_driver)
-                    if result is None:
-                        continue
-                    with lock:
-                        processed.append(result)
-                    print(f"[w{worker_id} {idx}/{total}] OK {result.get('nome', '')}")
-                except Exception:
-                    logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
-                    event = dict(event)
-                    event["link_edital"] = "edital não encontrado"
-                    event["precos_entries"] = "[]"
-                    with lock:
-                        processed.append(event)
-            _safe_quit(shared_driver)
-
-        threads = [
-            threading.Thread(target=_worker, args=(chunk, i + 1), daemon=True)
-            for i, chunk in enumerate(chunks)
-        ]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
     selenium_thread = threading.Thread(
-        target=_run_selenium_group, name="selenium-details", daemon=True
+        target=lambda: _execute_selenium_workers(selenium_events, processed, lock),
+        name="selenium-details",
+        daemon=True,
     )
     selenium_thread.start()
 
-    # Grupo HTTP roda enquanto o Selenium trabalha em paralelo
-    if http_events:
-        with ThreadPoolExecutor(max_workers=min(8, len(http_events))) as pool:
-            for result in pool.map(_fetch_details_http, http_events):
-                if result:
-                    with lock:
-                        processed.append(result)
+    _process_http_events(http_events, processed, lock)
 
     selenium_thread.join()
     return processed
