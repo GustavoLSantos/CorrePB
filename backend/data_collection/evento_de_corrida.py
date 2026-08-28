@@ -1,10 +1,13 @@
 import json
+import logging
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Any, Dict
 
 from bson import ObjectId
+
+logger = logging.getLogger(__name__)
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -171,7 +174,8 @@ class EventoDeCorrida:
         if "precos_entries" in row and row.get("precos_entries"):
             try:
                 precos_entries_val = json.loads(row.get("precos_entries") or "[]")
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"failed to parse precos_entries JSON: {exc}", exc_info=True)
                 precos_entries_val = None
 
         percurso_val = None
@@ -180,7 +184,8 @@ class EventoDeCorrida:
                 percurso_val = json.loads(row.get("Percurso") or "{}")
                 if isinstance(percurso_val, dict):
                     percurso_val.setdefault("local_largada", "")
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"failed to parse Percurso JSON: {exc}", exc_info=True)
                 percurso_val = None
 
         kits_val = None
@@ -191,7 +196,8 @@ class EventoDeCorrida:
                     for kit in kits_val:
                         if isinstance(kit, dict):
                             kit.setdefault("nome", "Kit")
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"failed to parse Kits JSON: {exc}", exc_info=True)
                 kits_val = None
 
         # Estado: usa coluna "Estado" se presente, senão tenta extrair de "Cidade" (ex: "Santa Cruz - RN"), senão PB

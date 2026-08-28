@@ -5,10 +5,14 @@ import io
 import json
 from datetime import datetime, timedelta
 
+import logging
+
 import requests
 from PyPDF2 import PdfReader
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+logger = logging.getLogger(__name__)
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -274,8 +278,8 @@ def _montar_precos(precos_categorias):
             try:
                 if entry_is_prize(entry, ""):
                     continue
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"entry_is_prize check failed: {exc}", exc_info=True)
 
             entradas.append({"label": label, "price": preco, "formatted": valor})
 
