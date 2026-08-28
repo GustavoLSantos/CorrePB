@@ -252,40 +252,8 @@ def _ensure_fields(evt: EventInfo, **defaults: str) -> None:
             evt[key] = value
 
 
-# Extração de preços
-def extract_price_entries(
-    soup: BeautifulSoup,
-    domain: str,
-    driver: WebDriver | None = None,
-) -> Sequence[PriceEntry | str]:
-    """
-    Retorna uma lista de entradas de preço estruturadas encontradas na página.
-
-    Cada entrada é um dict ou uma string formatada. Em casos específicos (ex: NightRun), o extractor
-    pode devolver diretamente valores como '5KM - 69,90'.
-
-    NOTA: page_html é criado sob demanda (lazy) para evitar duplicar memória do objeto soup
-    inteiro, e é deletado após uso para permitir garbage collection.
-    """
-    candidates: list[PriceEntry] = []
-
-    # Extractors site-specific: se o domínio corresponder, usa-o imediatamente
-    try:
-        if domain:
-            if is_sympla_domain(domain):
-                return extract_sympla_ticket_prices(soup)
-            if is_ticketsports_domain(domain):
-                # Ticketsports normalmente usa seu próprio loader/flow; keep generic fallback
-                return extract_ticketsports_ticket_prices(soup)
-            if is_nightrun_domain(domain) and driver:
-                raw_prices = extract_nightrun_ticket_prices(driver)
-                if raw_prices:
-                    return raw_prices
-    except Exception:
-        # Se o extractor específico falhar, segue com heurísticas genéricas abaixo
-        pass
-
-    # Elementos de preço por classe
+def _collect_prices_by_class(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
+    """Collect prices from elements with price-related CSS classes."""
     def has_price_class(classes: str | list[str] | None) -> bool:
         if not classes:
             return False
@@ -310,7 +278,9 @@ def extract_price_entries(
                 tax = parse_price_str(tax_m.group(1))
             candidates.append({"label": None, "price": v, "tax": tax, "raw": txt})
 
-    # Detecta elementos com font-size inline grande que contêm R$
+
+def _collect_prices_by_inline_style(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
+    """Collect prices from elements with large inline font-size containing R$."""
     try:
         for elem in soup.find_all(["span", "div", "p"]):
             style = str(elem.get("style") or "")
@@ -324,7 +294,9 @@ def extract_price_entries(
     except Exception:
         pass
 
-    # Tabelas e tbodies (trata cabeçalhos de seção com colspan e preço na primeira td)
+
+def _collect_prices_from_tables(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
+    """Collect prices from table/tbody rows (handles colspan section headers)."""
     try:
         blocks: list[Tag] = soup.find_all(["table", "tbody"])
         for table in blocks:
@@ -371,7 +343,6 @@ def extract_price_entries(
                                 }
                             )
                     else:
-                        # fallback: extrai qualquer preço na linha e tenta associar um label próximo
                         rowtxt = tr.get_text(separator=" ", strip=True)
                         fallback_label: str | None = None
                         if left_text and not re.search(r"R\$", left_text):
@@ -389,9 +360,10 @@ def extract_price_entries(
     except Exception:
         pass
 
-    # Dados estruturados e atributos: meta tags, atributos data-price, JSON-LD
+
+def _collect_prices_from_structured_data(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
+    """Collect prices from meta tags, data-* attributes and JSON-LD."""
     try:
-        # Meta tags
         metas: list[Tag] = soup.find_all("meta")
         for meta in metas:
             prop = str(meta.get("property") or meta.get("name") or "").lower()
@@ -409,7 +381,6 @@ def extract_price_entries(
                             }
                         )
 
-        # Atributos data como data-price, data-preco, data-value
         all_tags: list[Tag] = soup.find_all(True)
         for elem in all_tags:
             for attr, val in elem.attrs.items():
@@ -432,9 +403,9 @@ def extract_price_entries(
     except Exception:
         pass
 
-    # Fallbacks: R$ genérico, 'reais', faixas — apenas após parsing estruturado
-    # Cria page_html apenas quando necessário para evitar duplicar memória do objeto soup inteiro
-    page_html = str(soup)
+
+def _collect_fallback_prices(page_html: str, candidates: list[PriceEntry]) -> None:
+    """Generic R$ fallback and range handling on raw HTML."""
     try:
         for m in re.finditer(r"R\$(?:&nbsp;|\s)*([\d.,]+)", page_html):
             v = parse_price_str(m.group(1))
@@ -446,7 +417,6 @@ def extract_price_entries(
                 candidates.append({"label": None, "price": v, "tax": None, "raw": m.group(1)})
 
         def _add_range(match: re.Match[str]) -> None:
-            """Adiciona preços de uma faixa 'X a Y', evitando índices falsos (ex: '1-159,90')."""
             a, b = match.group(1), match.group(2)
             va, vb = parse_price_str(a), parse_price_str(b)
             a_has_dec = "," in a or "." in a
@@ -464,13 +434,13 @@ def extract_price_entries(
             for match in re.finditer(faixa, page_html, re.IGNORECASE):
                 _add_range(match)
     except Exception:
-        # Se regex fallback falhar, continua avec autres testes
         pass
 
-    # Após coletar candidatos, filtra valores de prêmios/premiações usando verificação contextual
+
+def _filter_and_validate_prices(candidates: list[PriceEntry], page_html: str) -> list[PriceEntry]:
+    """Filter prize entries, range [0,500], and free-price edge cases."""
     candidates = [e for e in candidates if not entry_is_prize(e, page_html)]
 
-    # Se temos preços rotulados de tabelas/grids estruturados, prefere eles e descarta duplicatas não rotuladas
     labeled_prices: set[float | None] = {e.get("price") for e in candidates if e.get("label")}
     if labeled_prices:
         candidates = [
@@ -479,18 +449,13 @@ def extract_price_entries(
             if not (e.get("label") is None and e.get("price") in labeled_prices)
         ]
 
-    # Filtra preços de inscrição plausíveis; rastreia descartados para debug
     discarded_prices: list[PriceEntry] = []
     valid_entries: list[PriceEntry] = []
 
     for e in candidates:
         price = e.get("price")
-
         if price is None:
-            # Valores None são esperados, apenas continua
             continue
-
-        # Verifica se preço está fora do intervalo válido
         if not (0 <= price <= 500):
             discarded_prices.append(
                 {
@@ -500,32 +465,26 @@ def extract_price_entries(
                     "reason": "fora do intervalo [0, 500]",
                 }
             )
-            # Log se preço é negativo (possível bug de parsing)
             if price < 0:
-                logger.warning(
-                    f"Preco negativo descartado: {e}. Possivelmente bug em parse_price_str()."
-                )
+                logger.warning(f"Preco negativo descartado: {e}. Possivelmente bug em parse_price_str().")
             continue
-
         valid_entries.append(e)
 
-    # Log resumo se muitos preços foram descartados
     if discarded_prices and len(discarded_prices) > len(valid_entries):
         logger.info(
             f"Descartados {len(discarded_prices)} precos invalidos contra {len(valid_entries)} validos. Precos descartados: {discarded_prices[:3]}"
         )
 
-    # Se há preços pagos, exclui entradas gratuitas (0.00) para evitar falsos positivos
     if any((e["price"] or 0) > 0 for e in valid_entries):
         valid_entries = [e for e in valid_entries if (e["price"] or 0) > 0]
 
+    return valid_entries
+
+
+def _deduplicate_and_format_prices(valid_entries: list[PriceEntry], page_html: str) -> Sequence[PriceEntry | str]:
+    """Deduplicate by (label, price, tax), sort and format. Handles free-value fallback."""
     if not valid_entries:
-        # Se não há preços pagos, verifica indicadores de gratuito
-        if re.search(
-            r"\b(grátis|gratis|gratuito|gratuita|isento|free)\b",
-            page_html,
-            re.IGNORECASE,
-        ):
+        if re.search(r"\b(grátis|gratis|gratuito|gratuita|isento|free)\b", page_html, re.IGNORECASE):
             return [
                 PriceEntry(
                     {
@@ -537,7 +496,6 @@ def extract_price_entries(
                     }
                 )
             ]
-        # Entrada informativa para o campo legível exibir 'Valor não encontrado'.
         return [
             PriceEntry(
                 {
@@ -550,7 +508,6 @@ def extract_price_entries(
             )
         ]
 
-    # Deduplica por (label, price, tax)
     seen: set[tuple[str, float, float | None]] = set()
     unique: list[PriceEntry] = []
     for e in valid_entries:
@@ -567,16 +524,51 @@ def extract_price_entries(
             seen.add(key)
             unique.append(e)
 
-    # Ordena por preço crescente
     unique_sorted = sorted(unique, key=_price_sort_key)
-
     result: list[PriceEntry] = [fmt_entry(e) for e in unique_sorted]
-
-    # Libera memória de page_html se foi criado
-    if "page_html" in locals():
-        del page_html
-
     return result
+
+
+# Extração de preços
+def extract_price_entries(
+    soup: BeautifulSoup,
+    domain: str,
+    driver: WebDriver | None = None,
+) -> Sequence[PriceEntry | str]:
+    """
+    Retorna uma lista de entradas de preço estruturadas encontradas na página.
+
+    Cada entrada é um dict ou uma string formatada. Em casos específicos (ex: NightRun), o extractor
+    pode devolver diretamente valores como '5KM - 69,90'.
+
+    NOTA: page_html é criado sob demanda (lazy) para evitar duplicar memória do objeto soup
+    inteiro, e é deletado após uso para permitir garbage collection.
+    """
+    candidates: list[PriceEntry] = []
+
+    try:
+        if domain:
+            if is_sympla_domain(domain):
+                return extract_sympla_ticket_prices(soup)
+            if is_ticketsports_domain(domain):
+                return extract_ticketsports_ticket_prices(soup)
+            if is_nightrun_domain(domain) and driver:
+                raw_prices = extract_nightrun_ticket_prices(driver)
+                if raw_prices:
+                    return raw_prices
+    except Exception:
+        pass
+
+    _collect_prices_by_class(soup, candidates)
+    _collect_prices_by_inline_style(soup, candidates)
+    _collect_prices_from_tables(soup, candidates)
+    _collect_prices_from_structured_data(soup, candidates)
+
+    page_html = str(soup)
+    _collect_fallback_prices(page_html, candidates)
+
+    valid_entries = _filter_and_validate_prices(candidates, page_html)
+    return _deduplicate_and_format_prices(valid_entries, page_html)
 
 
 # Extração de edital
