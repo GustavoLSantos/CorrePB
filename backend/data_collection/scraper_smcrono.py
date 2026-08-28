@@ -16,6 +16,7 @@ from data_collection.core.ScraperCommon import (
     MONTHS_PT,
     fix_encoding,
     format_date_string,
+    parse_date_string,
     sync_csv_to_mongodb,
     write_events_csv,
 )
@@ -282,190 +283,185 @@ def _montar_precos(precos_categorias):
     return [f"{e['formatted']} | {e['label']}" for e in entradas]
 
 
-def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
-    """Coleta eventos SmCrono via API da plataforma (paralelizado).
+def _parse_br_date(date_str: str | None):
+    return parse_date_string(date_str)
 
-    somente_futuros descarta eventos cuja data (da lista ou dos detalhes)
-    já passou — os detalhes são a fonte canônica quando divergirem.
 
-    Otimizações:
-    - Deduplicação e filtro de data antes de I/O
-    - Fetch de detalhes em paralelo (ThreadPool)
-    - Extração de kits (PDF) em paralelo
-    """
-    import concurrent.futures
-
-    from datetime import datetime as _dt
-
-    def _parse_br(s):
-        try:
-            d, m, a = (s or "").strip().split("/")
-            return _dt(int(a), int(m), int(d))
-        except Exception:
-            return None
-
-    t0_total = __import__("time").monotonic()
-
-    eventos_lista = _load_events_json()
-    print(f"[profile] _load_events_json: {__import__('time').monotonic() - t0_total:.2f}s | {len(eventos_lista)} eventos na lista")
-
-    # --- Fase 1: deduplicação + filtro rápido antes de qualquer I/O ---
-    candidatos = []
-    vistos = set()
-    pre_filtrados = 0
+def _filter_candidates(
+    eventos_lista: list, estado_filter: str | None, somente_futuros: bool
+) -> tuple[list, int]:
+    candidates: list = []
+    seen: set[str] = set()
+    pre_filtered = 0
     for ev in eventos_lista:
         url_evento = (ev.get("url_evento") or "").strip("/")
-        if not url_evento or url_evento in vistos:
+        if not url_evento or url_evento in seen:
             continue
-        vistos.add(url_evento)
-        # filtro de data usa apenas dado da lista (sem fetch)
+        seen.add(url_evento)
         if somente_futuros:
-            dl = ev.get("eve_data_evento") or ""
-            dt = _parse_br(dl)
-            if dt and dt < _dt.now():
-                pre_filtrados += 1
+            dt = _parse_br_date(ev.get("eve_data_evento") or "")
+            if dt and dt < datetime.now():
+                pre_filtered += 1
                 continue
-        # pré-filtro por estado quando disponível no campo eve_estado (evita fetch desnecessário)
         if estado_filter:
-            eve_estado_raw = (ev.get("eve_estado") or "").strip().upper()
-            # eve_estado vem como " - PB" ou "PB"
-            if eve_estado_raw and estado_filter.upper() not in eve_estado_raw:
-                # mantém se campo vazio (fallback para det.local), senão pula
-                if eve_estado_raw not in ("", "-", " -"):
-                    # heurística: se contém UF diferente, provavelmente não é PB
-                    m_uf = __import__("re").search(r"\b([A-Z]{2})\b", eve_estado_raw)
+            raw_state = (ev.get("eve_estado") or "").strip().upper()
+            if raw_state and estado_filter.upper() not in raw_state:
+                if raw_state not in ("", "-", " -"):
+                    m_uf = re.search(r"\b([A-Z]{2})\b", raw_state)
                     if m_uf and m_uf.group(1) != estado_filter.upper():
-                        pre_filtrados += 1
+                        pre_filtered += 1
                         continue
-        candidatos.append(ev)
+        candidates.append(ev)
+    return candidates, pre_filtered
 
-    print(f"[profile] pré-filtro: {len(candidatos)} candidatos (+{pre_filtrados} descartados antes de fetch)")
 
-    # --- Fase 2: fetch de detalhes em paralelo ---
-    t_fetch = __import__("time").monotonic()
+def _fetch_details_parallel(candidates: list) -> list[tuple[dict, dict]]:
+    import concurrent.futures
 
-    def _fetch_safe(ev):
+    def _fetch_safe(ev: dict):
         url_evento = (ev.get("url_evento") or "").strip("/")
-        nome_ref = ev.get("eve_nome", "?")
         try:
             det = _fetch_event_details(url_evento)
             return (ev, det or {}, None)
         except Exception as e:
             return (ev, {}, e)
 
-    max_workers_details = min(10, max(4, len(candidatos) // 2))
-    fetched = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_details) as ex:
-        futs = {ex.submit(_fetch_safe, ev): ev for ev in candidatos}
+    max_workers = min(10, max(4, len(candidates) // 2)) if candidates else 1
+    fetched: list[tuple[dict, dict]] = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(_fetch_safe, ev): ev for ev in candidates}
         for fut in concurrent.futures.as_completed(futs):
             ev, det, err = fut.result()
             if err is not None:
-                print(f"  [WARN] falha ao buscar detalhes {ev.get('eve_nome','?')}: {err}")
+                print(f"  [WARN] falha ao buscar detalhes {ev.get('eve_nome', '?')}: {err}")
             fetched.append((ev, det))
+    return fetched
 
-    print(f"[profile] fetch detalhes: {__import__('time').monotonic() - t_fetch:.2f}s para {len(fetched)} eventos (workers={max_workers_details})")
 
-    # --- Fase 3: processamento + filtro por estado/data final + coleta de kits ---
-    events_data = []
-    pendentes_kit = []  # [(idx, edital_link)]
+def _build_event_record(ev: dict, det: dict) -> tuple[dict | None, str | None]:
+    url_evento = (ev.get("url_evento") or "").strip("/")
+    cidade, _ = _extrair_cidade_estado(det.get("local"), ev)
+
+    edital_link = "edital não encontrado"
+    for doc in det.get("documentos") or []:
+        doc_url = (doc.get("url") or "").strip()
+        if doc_url.lower().endswith(".pdf"):
+            edital_link = doc_url
+            break
+
+    percursos = [
+        fix_encoding((p.get("nome") or "").strip())
+        for p in det.get("percursos") or []
+        if (p.get("nome") or "").strip()
+    ]
+
+    precos = _montar_precos(det.get("precos_categorias"))
+    json_precos = json.dumps(precos, ensure_ascii=False) if precos else "[]"
+
+    partida = fix_encoding((det.get("partida") or "").strip())
+    percurso = {"local_largada": partida} if partida else None
+    percurso_json = json.dumps(percurso, ensure_ascii=False) if percurso else ""
+
+    record = {
+        "Nome do Evento": fix_encoding((det.get("titulo") or ev.get("eve_nome") or "").strip()),
+        "Link de Inscrição": f"{BASE_URL}/new/{url_evento}",
+        "Link da Imagem": (det.get("imagem_capa") or ev.get("imagem_capa") or "").strip(),
+        "Data": format_date_string(det.get("data_evento") or ev.get("eve_data_evento") or ""),
+        "Horário": (det.get("hora_evento") or ev.get("eve_hora") or "").replace(":", "h"),
+        "Cidade": cidade,
+        "Distância": ", ".join(percursos),
+        "Organizador": "SmCrono",
+        "Link do Edital": edital_link,
+        "precos_entries": json_precos,
+        "Percurso": percurso_json,
+        "Kits": "",
+    }
+    edital_pdf = edital_link if edital_link.lower().endswith(".pdf") else None
+    return record, edital_pdf
+
+
+def _fetch_kits_parallel(events_data: list[dict], pending_kits: list[tuple[int, str]]) -> None:
+    """Fetch kit PDFs in parallel and update events_data in place."""
+    import concurrent.futures
+
+    if not pending_kits:
+        return
+    print(f"[profile] iniciando extração de kits para {len(pending_kits)} PDFs em paralelo...")
+
+    def _kit_safe(args: tuple[int, str]):
+        idx, url = args
+        try:
+            kits = extract_kits_from_pdf(url)
+            return (idx, kits, None)
+        except Exception as e:
+            return (idx, None, e)
+
+    t_kit = __import__("time").monotonic()
+    max_workers = min(6, len(pending_kits))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
+        futs = {ex.submit(_kit_safe, a): a for a in pending_kits}
+        for fut in concurrent.futures.as_completed(futs):
+            idx, kits, err = fut.result()
+            if err is not None:
+                print(f"  [WARN] kit falhou idx={idx}: {err}")
+                kits = None
+            kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
+            events_data[idx]["Kits"] = kits_json
+
+    print(f"[profile] kits paralelos: {__import__('time').monotonic() - t_kit:.2f}s")
+
+
+def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
+    """Coleta eventos SmCrono via API da plataforma (paralelizado).
+
+    somente_futuros descarta eventos cuja data (da lista ou dos detalhes)
+    já passou — os detalhes são a fonte canônica quando divergirem.
+    """
+    t0_total = __import__("time").monotonic()
+
+    eventos_lista = _load_events_json()
+    print(
+        f"[profile] _load_events_json: {__import__('time').monotonic() - t0_total:.2f}s | {len(eventos_lista)} eventos na lista"
+    )
+
+    candidates, pre_filtered = _filter_candidates(eventos_lista, estado_filter, somente_futuros)
+    print(
+        f"[profile] pré-filtro: {len(candidates)} candidatos (+{pre_filtered} descartados antes de fetch)"
+    )
+
+    t_fetch = __import__("time").monotonic()
+    fetched = _fetch_details_parallel(candidates)
+    print(
+        f"[profile] fetch detalhes: {__import__('time').monotonic() - t_fetch:.2f}s para {len(fetched)} eventos (workers={min(10, max(4, len(candidates) // 2)) if candidates else 1})"
+    )
+
+    events_data: list[dict] = []
+    pending_kits: list[tuple[int, str]] = []
 
     for ev, det in fetched:
-        nome_ref = ev.get("eve_nome", "?")
-        url_evento = (ev.get("url_evento") or "").strip("/")
-        try:
-            # re-valida data com dado canônico dos detalhes
-            if somente_futuros:
-                data_final = det.get("data_evento") or ev.get("eve_data_evento") or ""
-                dt_final = _parse_br(data_final) or _parse_br(ev.get("eve_data_evento") or "")
-                if dt_final and dt_final < _dt.now():
-                    # print(f"  -> Ignorado: evento passado ({data_final}) [{nome_ref}]")
-                    continue
-
-            cidade, estado = _extrair_cidade_estado(det.get("local"), ev)
-            if estado_filter and estado != estado_filter:
-                # print(f"  -> Ignorado: Estado detectado '{estado}' [{nome_ref}]")
+        if somente_futuros:
+            data_final = det.get("data_evento") or ev.get("eve_data_evento") or ""
+            dt_final = _parse_br_date(data_final) or _parse_br_date(ev.get("eve_data_evento") or "")
+            if dt_final and dt_final < datetime.now():
                 continue
-
-            edital_link = "edital não encontrado"
-            for doc in det.get("documentos") or []:
-                doc_url = (doc.get("url") or "").strip()
-                if doc_url.lower().endswith(".pdf"):
-                    edital_link = doc_url
-                    break
-
-            percursos = [
-                fix_encoding((p.get("nome") or "").strip())
-                for p in det.get("percursos") or []
-                if (p.get("nome") or "").strip()
-            ]
-
-            precos = _montar_precos(det.get("precos_categorias"))
-            json_precos_entries = json.dumps(precos, ensure_ascii=False) if precos else "[]"
-
-            partida = fix_encoding((det.get("partida") or "").strip())
-            percurso = {"local_largada": partida} if partida else None
-            percurso_json = json.dumps(percurso, ensure_ascii=False) if percurso else ""
-
-            idx = len(events_data)
-            events_data.append(
-                {
-                    "Nome do Evento": fix_encoding(
-                        (det.get("titulo") or ev.get("eve_nome") or "").strip()
-                    ),
-                    "Link de Inscrição": f"{BASE_URL}/new/{url_evento}",
-                    "Link da Imagem": (
-                        det.get("imagem_capa") or ev.get("imagem_capa") or ""
-                    ).strip(),
-                    "Data": format_date_string(
-                        det.get("data_evento") or ev.get("eve_data_evento") or ""
-                    ),
-                    "Horário": (det.get("hora_evento") or ev.get("eve_hora") or "").replace(
-                        ":", "h"
-                    ),
-                    "Cidade": cidade,
-                    "Distância": ", ".join(percursos),
-                    "Organizador": "SmCrono",
-                    "Link do Edital": edital_link,
-                    "precos_entries": json_precos_entries,
-                    "Percurso": percurso_json,
-                    "Kits": "",  # preenchido na fase paralela abaixo
-                }
-            )
-            # mantém nome para log posterior ordenado
-            if edital_link.lower().endswith(".pdf"):
-                pendentes_kit.append((idx, edital_link))
-            print(f"  [OK] {events_data[-1]['Data']} | Precos: {len(precos)} entradas | {events_data[-1]['Nome do Evento'][:45]}")
-        except Exception as e:
-            print(f"  [ERRO]: {e} ({nome_ref})")
+        cidade, estado = _extrair_cidade_estado(det.get("local"), ev)
+        if estado_filter and estado != estado_filter:
             continue
 
-    # --- Fase 4: extração de kits (PDF) em paralelo — gargalo mais pesado ---
-    if pendentes_kit:
-        t_kit = __import__("time").monotonic()
-        print(f"[profile] iniciando extração de kits para {len(pendentes_kit)} PDFs em paralelo...")
+        record, edital_pdf = _build_event_record(ev, det)
+        record["Cidade"] = cidade
+        events_data.append(record)
+        if edital_pdf:
+            pending_kits.append((len(events_data) - 1, edital_pdf))
+        print(
+            f"  [OK] {record['Data']} | Precos: {len(_montar_precos(det.get('precos_categorias') or []))} entradas | {record['Nome do Evento'][:45]}"
+        )
 
-        def _kit_safe(args):
-            idx, url = args
-            try:
-                kits = extract_kits_from_pdf(url)
-                return (idx, kits, None)
-            except Exception as e:
-                return (idx, None, e)
+    _fetch_kits_parallel(events_data, pending_kits)
 
-        max_workers_kits = min(6, len(pendentes_kit))
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers_kits) as ex:
-            futs = {ex.submit(_kit_safe, a): a for a in pendentes_kit}
-            for fut in concurrent.futures.as_completed(futs):
-                idx, kits, err = fut.result()
-                if err is not None:
-                    print(f"  [WARN] kit falhou idx={idx}: {err}")
-                    kits = None
-                kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
-                events_data[idx]["Kits"] = kits_json
-
-        print(f"[profile] kits paralelos: {__import__('time').monotonic() - t_kit:.2f}s")
-
-    print(f"[profile] total get_smcrono_events_api: {__import__('time').monotonic() - t0_total:.2f}s | {len(events_data)} eventos finais")
+    print(
+        f"[profile] total get_smcrono_events_api: {__import__('time').monotonic() - t0_total:.2f}s | {len(events_data)} eventos finais"
+    )
     return events_data
 
 
