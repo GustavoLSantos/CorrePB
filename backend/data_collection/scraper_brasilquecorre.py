@@ -82,12 +82,12 @@ def _get_with_rate_limit(
 
 
 def _safe_quit(driver: WebDriver | None) -> None:
-    """Fecha o driver Selenium sem propagar exceções."""
+    """Close Selenium driver without propagating exceptions."""
     try:
         if driver:
             driver.quit()
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"driver quit failed: {exc}", exc_info=True)
 
 
 def _strip_accents(s: str | None) -> str:
@@ -291,8 +291,8 @@ def _collect_prices_by_inline_style(soup: BeautifulSoup, candidates: list[PriceE
                     for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", txt2):
                         v = parse_price_str(m.group(1))
                         candidates.append({"label": None, "price": v, "tax": None, "raw": txt2})
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"inline style price collect failed: {exc}", exc_info=True)
 
 
 def _collect_prices_from_tables(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
@@ -357,8 +357,8 @@ def _collect_prices_from_tables(soup: BeautifulSoup, candidates: list[PriceEntry
                             candidates.append(
                                 {"label": fallback_label, "price": parse_price_str(m.group(1)), "tax": None, "raw": rowtxt}
                             )
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"table price collect failed: {exc}", exc_info=True)
 
 
 def _collect_prices_from_structured_data(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
@@ -400,8 +400,8 @@ def _collect_prices_from_structured_data(soup: BeautifulSoup, candidates: list[P
                         )
 
         _collect_jsonld_price_entries(soup, candidates)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"structured data price collect failed: {exc}", exc_info=True)
 
 
 def _collect_fallback_prices(page_html: str, candidates: list[PriceEntry]) -> None:
@@ -433,8 +433,8 @@ def _collect_fallback_prices(page_html: str, candidates: list[PriceEntry]) -> No
         for faixa in faixas:
             for match in re.finditer(faixa, page_html, re.IGNORECASE):
                 _add_range(match)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"fallback price collect failed: {exc}", exc_info=True)
 
 
 def _filter_and_validate_prices(candidates: list[PriceEntry], page_html: str) -> list[PriceEntry]:
@@ -556,8 +556,8 @@ def extract_price_entries(
                 raw_prices = extract_nightrun_ticket_prices(driver)
                 if raw_prices:
                     return raw_prices
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug(f"site-specific price extractor failed for {domain}: {exc}", exc_info=True)
 
     _collect_prices_by_class(soup, candidates)
     _collect_prices_by_inline_style(soup, candidates)
@@ -658,7 +658,8 @@ def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
         if soup:
             try:
                 evt["link_edital"] = extract_edital(url, soup=soup)
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"extract_edital failed for {url}: {exc}", exc_info=True)
                 evt["link_edital"] = "edital não encontrado"
 
             if not horario:
@@ -666,13 +667,14 @@ def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
                     extracted = extract_time_from_text(soup.get_text(" ", strip=True))
                     if extracted:
                         horario = extracted
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug(f"extract_time failed for {url}: {exc}", exc_info=True)
 
             entries: Sequence[PriceEntry | str] = ()
             try:
                 entries = extract_price_entries(soup, urlparse(url).netloc)
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"extract_price_entries failed for {url}: {exc}", exc_info=True)
                 entries = ()
             evt["precos_entries"] = entries_to_json(entries)
         else:
@@ -682,7 +684,8 @@ def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
         if horario:
             evt["horario"] = horario
         return evt
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"_fetch_details_http failed for {url}: {exc}", exc_info=True)
         _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
@@ -709,14 +712,16 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
         elif is_nightrun_domain(domain):
             soup, _, _, nightrun_schedule = load_nightrun_soup(url, driver=driver, wait_seconds=30)
             horario = horario or nightrun_schedule
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"selenium loader failed for {url}: {exc}", exc_info=True)
         soup = None
 
     try:
         if soup:
             try:
                 evt["link_edital"] = extract_edital(url, soup=soup)
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"extract_edital failed for {url}: {exc}", exc_info=True)
                 evt["link_edital"] = "edital não encontrado"
 
             try:
@@ -726,8 +731,8 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
                     extracted = extract_time_from_text(soup.get_text(" ", strip=True))
                     if extracted:
                         horario = extracted
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug(f"extract_time failed for {url}: {exc}", exc_info=True)
 
             try:
                 entries = (
@@ -735,7 +740,8 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
                     if is_ticketsports_domain(domain)
                     else extract_price_entries(soup, domain, driver)
                 )
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"price extraction failed for {url}: {exc}", exc_info=True)
                 entries = []
             evt["precos_entries"] = entries_to_json(entries)
         else:
@@ -745,7 +751,8 @@ def _fetch_details_selenium(event_info: EventInfo, driver: WebDriver | None) -> 
         if horario:
             evt["horario"] = horario
         return evt
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"_fetch_details_selenium failed for {url}: {exc}", exc_info=True)
         _ensure_fields(evt, link_edital="edital não encontrado", precos_entries="[]")
         return evt
 
