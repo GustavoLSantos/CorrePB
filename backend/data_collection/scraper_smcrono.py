@@ -1,6 +1,5 @@
 import sys
 import os
-import csv
 import re
 import io
 import json
@@ -13,7 +12,13 @@ from urllib3.util.retry import Retry
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from data_collection.core.ScraperCommon import MONTHS_PT, fix_encoding, format_date_string
+from data_collection.core.ScraperCommon import (
+    MONTHS_PT,
+    fix_encoding,
+    format_date_string,
+    sync_csv_to_mongodb,
+    write_events_csv,
+)
 from data_collection.utils.PriceUtils import parse_price_str
 from data_collection.utils.PrizeDetection import entry_is_prize
 
@@ -490,28 +495,12 @@ def main():
     ]
 
     print(f"\nTotal de {len(events)} eventos encontrados. Salvando no CSV...")
-
-    with open(csv_path, "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f,
-            fieldnames=fieldnames,
-            delimiter=";",
-            quoting=csv.QUOTE_ALL,
-            extrasaction="ignore",
-        )
-        writer.writeheader()
-        writer.writerows(events)
+    write_events_csv(csv_path, events, fieldnames)
 
     print(f"\nSalvo com sucesso: {csv_path}")
 
-    # Sincronização
-    if not os.environ.get("CORREPB_COLLECT_ONLY"):
-        try:
-            from data_collection.utils import ImportToDB as sync_module
-
-            sync_module.import_csv_to_mongodb(sync_module.remote_db, csv_path, "smcrono")
-        except Exception as e:
-            print(f"Sincronização ignorada: {e}")
+    if not sync_csv_to_mongodb(csv_path, "smcrono"):
+        print("Sincronização pulada ou falhou.")
 
 
 if __name__ == "__main__":
