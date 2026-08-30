@@ -6,10 +6,13 @@ Extrai eventos do calendário via WP REST (wp/v2/etn) + detalhe HTML
 Sem Selenium, apenas requests + BeautifulSoup + ScraperCommon.
 """
 
+import logging
 import re
 from datetime import datetime
 from typing import Any
 from urllib.parse import urljoin
+
+logger = logging.getLogger(__name__)
 
 from bs4 import BeautifulSoup, Tag
 
@@ -393,7 +396,12 @@ def get_apcrono_events(
                 "precos_entries": precos_entries,
             })
         except Exception as e:
-            print(f"[WARN] apcrono {slug}: {e}")
+            # 404 for non-corrida events (e.g., AI summit) is expected — log at INFO
+            msg = str(e)
+            if "404" in msg:
+                logger.info(f"apcrono {slug}: resource not found (404), skipping: {e}")
+            else:
+                logger.warning(f"apcrono {slug}: {e}")
             continue
 
     return records

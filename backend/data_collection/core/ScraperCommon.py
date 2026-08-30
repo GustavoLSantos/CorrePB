@@ -105,6 +105,15 @@ def get_with_rate_limit(
             response = session.get(url, timeout=timeout, verify=verify)
         response.raise_for_status()
         return response
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response is not None else None
+        if status == 404:
+            logger.info(f"Resource not found (404) at {url}: {e}")
+        elif status == 403:
+            logger.info(f"Access forbidden (403) at {url}: {e}")
+        else:
+            logger.warning(f"Erro ao acessar {url}: {e}")
+        return None
     except Exception as e:
         logger.warning(f"Erro ao acessar {url}: {e}")
         return None

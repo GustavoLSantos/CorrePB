@@ -1,5 +1,6 @@
 import asyncio
 import csv
+import logging
 import os
 import re
 import subprocess
@@ -13,6 +14,8 @@ from pathlib import Path
 from typing import TypedDict
 
 from app.core.database import database
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
 DATA_COLLECTION_DIR = BASE_DIR / "data_collection"
@@ -558,14 +561,26 @@ def _run_scraper(script_name: str) -> ScraperResult:
             env=env,
             cwd=str(BASE_DIR),
         )
+        duration = round(time.monotonic() - start, 1)
+        ok = proc.returncode == 0
+        status = "OK" if ok else "FAIL"
+        logger.info(f"Scraper {script_name}: {status} ({duration:.1f}s)")
+        if proc.stdout:
+            for line in proc.stdout.strip().splitlines():
+                logger.info(f"[{script_name}] {line}")
+        if proc.stderr:
+            for line in proc.stderr.strip().splitlines():
+                level = logger.warning if ok else logger.error
+                level(f"[{script_name}] {line}")
         return {
             "nome": script_name,
-            "ok": proc.returncode == 0,
-            "duration_s": round(time.monotonic() - start, 1),
+            "ok": ok,
+            "duration_s": duration,
             "detail": (proc.stdout or "")[-2000:],
             "stderr": (proc.stderr or "")[-1000:],
         }
     except Exception as e:
+        logger.error(f"Scraper {script_name} exception: {e}", exc_info=True)
         return {
             "nome": script_name,
             "ok": False,
