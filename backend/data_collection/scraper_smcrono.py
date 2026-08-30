@@ -70,10 +70,24 @@ def _normalize_item(item):
     return KIT_ITEMS_NORMALIZE.get(item, item)
 
 
+MAX_PDF_BYTES = 10 * 1024 * 1024  # 10MB limit to avoid OOM
+
+
 def _extract_pdf_text(pdf_url):
-    resp = SESSION.get(pdf_url, timeout=15)
+    resp = SESSION.get(pdf_url, timeout=15, stream=True)
     resp.raise_for_status()
-    reader = PdfReader(io.BytesIO(resp.content))
+
+    content_length = resp.headers.get("Content-Length")
+    if content_length and int(content_length) > MAX_PDF_BYTES:
+        raise ValueError(f"PDF too large: {content_length} bytes > {MAX_PDF_BYTES}")
+
+    content = b""
+    for chunk in resp.iter_content(chunk_size=8192):
+        content += chunk
+        if len(content) > MAX_PDF_BYTES:
+            raise ValueError(f"PDF exceeded {MAX_PDF_BYTES} bytes limit")
+
+    reader = PdfReader(io.BytesIO(content))
     return "\n".join(page.extract_text() or "" for page in reader.pages)
 
 
