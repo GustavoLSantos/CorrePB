@@ -1,5 +1,8 @@
+import logging
 import re
 from typing import Any, TypeAlias
+
+logger = logging.getLogger(__name__)
 
 # Entrada de preço: dict com chaves possíveis 'label', 'price', 'tax', 'formatted', 'raw'
 PriceEntry: TypeAlias = dict[str, Any]
@@ -29,7 +32,8 @@ def parse_price_str(text: str | float | int | None) -> float | None:
 
     try:
         return float(s)
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"parse_price_str failed for {text!r}: {exc}", exc_info=True)
         return None
 
 
@@ -56,13 +60,15 @@ def fmt_entry(e: PriceEntry) -> PriceEntry:
 
     try:
         price_s = f"R$ {v:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"price format failed for {v!r}: {exc}", exc_info=True)
         price_s = f"R$ {v}"
 
     if tax is not None:
         try:
             tax_s = f"(+{tax:,.2f} taxa)".replace(',', 'X').replace('.', ',').replace('X', '.')
-        except Exception:
+        except Exception as exc:
+            logger.debug(f"tax format failed for {tax!r}: {exc}", exc_info=True)
             tax_s = f"(+{tax} taxa)"
         if label:
             formatted = f"{label} — {price_s} {tax_s}"

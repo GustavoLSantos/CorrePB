@@ -1,6 +1,9 @@
+import logging
 import re
 
 from data_collection.utils.PriceUtils import PriceEntry
+
+logger = logging.getLogger(__name__)
 
 
 def is_prize_text(text: str | None) -> bool:
@@ -47,7 +50,8 @@ def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
         return False
     try:
         pv = float(price)
-    except Exception:
+    except Exception as exc:
+        logger.debug(f"price float conversion failed for {price!r}: {exc}", exc_info=True)
         return False
 
     # Constrói variantes de string comuns para corresponder como preços aparecem na página
