@@ -345,7 +345,8 @@ def _fetch_details_parallel(candidates: list) -> list[tuple[dict, dict]]:
         except Exception as e:
             return (ev, {}, e)
 
-    max_workers = min(10, max(4, len(candidates) // 2)) if candidates else 1
+    # Limit to 4 workers to avoid explosion when 7 scrapers run in parallel (7*10=70 threads)
+    max_workers = min(4, max(2, len(candidates) // 2)) if candidates else 1
     fetched: list[tuple[dict, dict]] = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(_fetch_safe, ev): ev for ev in candidates}
@@ -416,7 +417,7 @@ def _fetch_kits_parallel(events_data: list[dict], pending_kits: list[tuple[int, 
             return (idx, None, e)
 
     t_kit = __import__("time").monotonic()
-    max_workers = min(6, len(pending_kits))
+    max_workers = min(4, len(pending_kits))
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as ex:
         futs = {ex.submit(_kit_safe, a): a for a in pending_kits}
         for fut in concurrent.futures.as_completed(futs):

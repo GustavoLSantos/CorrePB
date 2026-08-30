@@ -33,13 +33,11 @@ Composta por dois subsistemas: a **API REST** (FastAPI + MongoDB) e o **pipeline
 │   │   ├── PriceUtils.py         # Utilitários de preço
 │   │   ├── PrizeDetection.py     # Detecção de categorias premiadas
 │   │   └── ProcessImages.py      # Download e upload de imagens
-│   ├── scraper_brasilcorrida.py  # Scraper: Brasil Corrida
+│   ├── scraper_brasilcorrida.py  # Scraper: Brasil Corrida (legado, ignorado)
 │   ├── scraper_brasilquecorre.py # Scraper: Brasil que Corre
 │   ├── scraper_smcrono.py        # Scraper: SM Crono
-│   ├── run_all_scrapers.py       # Executa todos os scrapers
 │   ├── pipeline_agent.py         # Pipeline de coleta automatizado
 │   ├── evento_de_corrida.py      # Classe EventoDeCorrida (contrato scrapers → MongoDB)
-│   ├── extrai_categoria.py       # Extração de categorias via IA
 │   ├── Dockerfile                # Dockerfile dos scrapers
 │   └── requirements.txt          # Dependências dos scrapers
 ├── main.py                       # Entrada da aplicação (FastAPI + lifespan)

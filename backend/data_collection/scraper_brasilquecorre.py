@@ -836,7 +836,8 @@ def _process_http_events(
     """Process HTTP events in ThreadPool (English helper)."""
     if not http_events:
         return
-    with ThreadPoolExecutor(max_workers=min(8, len(http_events))) as pool:
+    # Limit to 4 workers to avoid 7 scrapers * 8 workers = 56 threads when pipeline runs in parallel
+    with ThreadPoolExecutor(max_workers=min(4, len(http_events))) as pool:
         for result in pool.map(_fetch_details_http, http_events):
             if result:
                 with lock:

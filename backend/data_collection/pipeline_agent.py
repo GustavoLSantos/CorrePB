@@ -134,7 +134,8 @@ def run_scraper(script_name: str) -> StepResult:
 
 def run_scrapers_parallel() -> List[StepResult]:
     results: List[StepResult] = []
-    with ThreadPoolExecutor(max_workers=len(SCRAPERS)) as executor:
+    # Limit to 4 parallel scrapers to avoid RAM explosion (each may spawn 4 workers + 2 Chrome drivers ~1GB)
+    with ThreadPoolExecutor(max_workers=min(4, len(SCRAPERS))) as executor:
         futures = {executor.submit(run_scraper, s): s for s in SCRAPERS}
         for future in as_completed(futures):
             results.append(future.result())
@@ -365,8 +366,9 @@ def main() -> None:
 
     logger.info("=== Pipeline Corre PB iniciado ===")
 
-    # 1. Scrapers em paralelo
-    logger.info(f"Executando {len(SCRAPERS)} scrapers em paralelo...")
+    # 1. Scrapers em paralelo (limitado a 4 workers para evitar OOM — Task 4)
+    max_workers = min(4, len(SCRAPERS))
+    logger.info(f"Executando {len(SCRAPERS)} scrapers em paralelo (max {max_workers} workers)...")
     scraper_results = run_scrapers_parallel()
 
     scrapers_ok = all(r.ok for r in scraper_results)
