@@ -76,11 +76,13 @@ class CsvSummary:
 
 
 def setup_logging() -> logging.Logger:
-    logger = logging.getLogger("pipeline")
+    logger = logging.getLogger('pipeline')
     logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(message)s", "%H:%M:%S"))
-    logger.addHandler(handler)
+    if not logger.handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%H:%M:%S'))
+        logger.addHandler(handler)
+        logger.propagate = False
     return logger
 
 
