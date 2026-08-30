@@ -613,11 +613,13 @@ def extract_edital(url: str, soup: BeautifulSoup | None = None) -> str:
 # PROCESSAMENTO PARALELO DE DETALHES DOS EVENTOS
 # Fontes com scraper dedicado próprio — ver scraper_race83.py,
 # scraper_zenite.py e scraper_smcrono.py
+# liverun.com.br bloqueia scraping (403) — pular detalhes e deixar para scraper dedicado futuro
 FONTES_COM_SCRAPER_DEDICADO = (
     "race83.com.br",
     "zeniteesportes.com",
     "smcrono.com.br",
     "circuitodasestacoes.com",
+    "liverun.com.br",
 )
 
 _SELENIUM_SOURCE_CHECKS = (

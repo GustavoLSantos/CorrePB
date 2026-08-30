@@ -305,6 +305,7 @@ def write_events_csv(
 def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
     """Sincronize CSV to MongoDB Atlas (ignored with CORREPB_COLLECT_ONLY=1)."""
     if os.environ.get("CORREPB_COLLEC_ONLY") or os.environ.get("CORREPB_COLLECT_ONLY"):
+        logger.debug(f"MongoDB sync skipped for {collection} (CORREPB_COLLECT_ONLY=1)")
         return False
     try:
         from data_collection.utils import ImportToDB as sync_module
@@ -317,7 +318,7 @@ def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
         _ = cast("Callable[[object, str, str], None]", import_fn)(remote_db, csv_path, collection)
         return True
     except Exception as e:
-        print(f"sincronização com mongodb ignorada ({collection}): {e}")
+        logger.warning(f"MongoDB sync failed for {collection}: {e}")
         return False
 
 
@@ -361,4 +362,8 @@ def run_standard_scraper(
     scraper_logger.info(f"Data saved successfully to: {csv_path}")
 
     if not sync_csv_to_mongodb(csv_path, collection):
-        scraper_logger.warning("MongoDB sync skipped or failed.")
+        # When run via app/services/scraper_runner (CORREPB_COLLECT_ONLY=1), skip is expected
+        if os.environ.get("CORREPB_COLLECT_ONLY") or os.environ.get("CORREPB_COLLEC_ONLY"):
+            scraper_logger.info("MongoDB sync skipped (CORREPB_COLLECT_ONLY=1) — will be handled by pipeline ImportToDB")
+        else:
+            scraper_logger.warning("MongoDB sync skipped or failed.")
