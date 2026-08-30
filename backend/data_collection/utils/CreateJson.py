@@ -7,6 +7,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
 import certifi
+import logging
+
+logger = logging.getLogger(__name__)
 
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
@@ -49,9 +52,8 @@ def transformar_evento(evento_mongo):
             loaded = _json.loads(precos_entries)
             if isinstance(loaded, list):
                 precos_entries = loaded
-        except Exception:
-            # permanece como string se não for JSON
-            pass
+        except Exception as exc:
+            logger.debug(f"precos_entries JSON parse failed: {exc}", exc_info=True)
 
     # Agora aceita precos_entries como lista de dicts ou lista de strings
     if precos_entries and isinstance(precos_entries, list):
@@ -64,7 +66,8 @@ def transformar_evento(evento_mongo):
                     if not formatted and (p.get('price') is not None or p.get('label')):
                         try:
                             formatted = fmt_entry(p).get('formatted')
-                        except Exception:
+                        except Exception as exc:
+                            logger.debug(f"fmt_entry failed: {exc}", exc_info=True)
                             formatted = ''
 
                     if formatted:
@@ -87,10 +90,12 @@ def transformar_evento(evento_mongo):
                     if price_val is not None:
                         try:
                             price_s = fmt_entry({'price': price_val}).get('formatted')
-                        except Exception:
+                        except Exception as exc:
+                            logger.debug(f"fmt_entry price failed: {exc}", exc_info=True)
                             try:
                                 price_s = f"R$ {float(price_val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                            except Exception:
+                            except Exception as exc2:
+                                logger.debug(f"price format fallback failed: {exc2}", exc_info=True)
                                 price_s = str(price_val)
                         if label:
                             lista_precos.append(f"{label.upper()} — {price_s}")
@@ -130,7 +135,8 @@ def transformar_evento(evento_mongo):
                             lista_precos.append(price_part)
                     else:
                         lista_precos.append(s)
-            except Exception:
+            except Exception as exc:
+                logger.debug(f"lista_precos item failed: {exc}", exc_info=True)
                 continue
 
         # deduplica preservando ordem

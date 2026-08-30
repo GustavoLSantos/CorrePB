@@ -171,8 +171,8 @@ def _parse_kit_info(text):
                 )
                 if mes:
                     data_retirada = datetime(int(g[2]), mes, int(g[0])).isoformat()
-        except (ValueError, KeyError):
-            pass
+        except (ValueError, KeyError) as exc:
+            logger.debug(f"kit date parse failed: {exc}", exc_info=True)
 
     if not itens:
         itens = list({_normalize_item(m.group(0)) for m in KIT_ITEMS_PATTERN.finditer(text)})
