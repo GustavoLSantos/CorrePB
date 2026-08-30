@@ -28,11 +28,11 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
-# O domínio brasilquecorre.com publica um certificado SSL inválido; as coletas para
-# ele usam verify=False e o aviso de conexão insegura é suprimido intencionalmente.
 import urllib3
+import warnings
 
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+# Allowlist of domains with known invalid certs — only these may use verify=False
+INSECURE_DOMAINS: set[str] = {"brasilquecorre.com"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _LAST_REQUEST_TIME: dict[str, float] = {}  # último request por domínio (reserva de slot)
@@ -73,11 +73,19 @@ def get_with_rate_limit(
     Reserva um slot de 0,5s por domínio antes da requisição, permitindo uso
     concorrente por threads sem estourar o domínio alvo.
 
+    verify=False é permitido apenas para domínios em INSECURE_DOMAINS.
+    Para esses, suprime InsecureRequestWarning apenas na requisição.
+
     Returns:
         Response em sucesso ou None após esgotar retries.
     """
     try:
         domain = urlparse(url).netloc
+        is_insecure_domain = any(domain.endswith(d) for d in INSECURE_DOMAINS)
+
+        if not verify and not is_insecure_domain:
+            logger.warning(f"verify=False used for non-allowlisted domain {domain} — potential MITM risk")
+
         wait = 0.0
         with _RATE_LIMIT_LOCK:
             now = time.time()
@@ -89,7 +97,12 @@ def get_with_rate_limit(
         if wait > 0:
             time.sleep(wait)
 
-        response = session.get(url, timeout=timeout, verify=verify)
+        if not verify and is_insecure_domain:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)
+                response = session.get(url, timeout=timeout, verify=verify)
+        else:
+            response = session.get(url, timeout=timeout, verify=verify)
         response.raise_for_status()
         return response
     except Exception as e:

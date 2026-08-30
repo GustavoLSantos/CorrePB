@@ -13,12 +13,6 @@ from urllib.parse import urlparse, urljoin
 import requests
 from bs4 import BeautifulSoup, Tag
 
-# O domínio brasilquecorre.com publica um certificado SSL inválido; as coletas para
-# ele usam verify=False e o aviso de conexão insegura é suprimido intencionalmente.
-import urllib3
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 logger = logging.getLogger(__name__)
 
 # Registro de evento no schema CSV — todos os valores são strings
