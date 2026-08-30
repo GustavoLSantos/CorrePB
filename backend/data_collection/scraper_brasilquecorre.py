@@ -798,7 +798,7 @@ def _execute_selenium_workers(
         try:
             shared_driver = setup_driver()
         except Exception as e:
-            print(f"[WARN] Selenium indisponível (worker {worker_id}: {e}); {len(chunk)} evento(s) sem detalhes JS")
+            logger.warning(f"Selenium unavailable (worker {worker_id}: {e}); {len(chunk)} event(s) without JS details")
             for event in chunk:
                 event = dict(event)
                 event["link_edital"] = "edital não encontrado"
@@ -815,7 +815,7 @@ def _execute_selenium_workers(
                     continue
                 with lock:
                     processed.append(result)
-                print(f"[w{worker_id} {idx}/{total}] OK {result.get('nome', '')}")
+                logger.info(f"[w{worker_id} {idx}/{total}] OK {result.get('nome', '')}")
             except Exception:
                 logger.exception(f"Erro ao processar evento: {event.get('nome', 'N/A')}")
                 event = dict(event)
@@ -864,7 +864,7 @@ def process_event_details(events: list[EventInfo]) -> list[EventInfo]:
 
     dedicated, http_events, selenium_events = _split_events_by_source(events)
     for ev in dedicated:
-        print(f"[SKIP] {ev.get('nome', '')} — coletado por scraper dedicado")
+        logger.info(f"[SKIP] {ev.get('nome', '')} — collected by dedicated scraper")
 
     processed: list[EventInfo] = []
     lock = threading.Lock()
@@ -905,7 +905,7 @@ def _fetch_bqc_listing_html(attempts: int = 3) -> str | None:
         if response is not None:
             html = response.text
             break
-        print(f"[get_event_data] Tentativa {attempt} falhou ao baixar a listagem")
+        logger.warning(f"[get_event_data] Attempt {attempt} failed to download listing")
         time.sleep(2)
     return html
 
@@ -930,10 +930,10 @@ def _extract_bqc_event_info(box: Tag) -> EventInfo | None:
 
     # Ignorar URLs redirecionadas/que não são de evento
     if link_inscricao.startswith("https://www.liverun.com.br/calendario"):
-        print(f"[SKIP] Pulando link de calendário genérico do Liverun: {link_inscricao}")
+        logger.info(f"[SKIP] Skipping generic Liverun calendar link: {link_inscricao}")
         return None
     if is_race83_listing_url(link_inscricao):
-        print(f"[SKIP] Pulando link de eventos genérico do Race83: {link_inscricao}")
+        logger.info(f"[SKIP] Skipping generic Race83 events link: {link_inscricao}")
         return None
 
     event_info["link_inscricao"] = link_inscricao
@@ -992,7 +992,7 @@ def get_event_data() -> list[EventInfo]:
     try:
         html = _fetch_bqc_listing_html()
         if not html:
-            print(f"Erro crítico ao buscar dados dos eventos: falha ao baixar {BQC_LISTING_URL}")
+            logger.error(f"Critical error fetching events: failed to download {BQC_LISTING_URL}")
             return []
 
         soup = BeautifulSoup(html, "html.parser")
@@ -1000,7 +1000,7 @@ def get_event_data() -> list[EventInfo]:
 
         event_data: list[EventInfo] = []
         total_events = len(event_boxes)
-        print(f"\nEncontrados {total_events} boxes na listagem. Iniciando extração\n")
+        logger.info(f"Found {total_events} boxes in listing. Starting extraction")
 
         for idx, box in enumerate(event_boxes, 1):
             try:
@@ -1008,18 +1008,18 @@ def get_event_data() -> list[EventInfo]:
                 if event_info is None:
                     continue
                 event_data.append(event_info)
-                print(f"[{idx}/{total_events}] ✓ Dados básicos: {event_info.get('nome', '')}")
+                logger.info(f"[{idx}/{total_events}] Basic data: {event_info.get('nome', '')}")
             except Exception:
                 continue
 
         # Busca editais e preços para complementar os dados básicos
-        print("\nBuscando editais e preços...\n")
+        logger.info("Fetching editais and prices...")
         event_data = process_event_details(event_data)
 
         return event_data
 
     except Exception as e:
-        print(f"Erro crítico ao buscar dados dos eventos: {e}")
+        logger.error(f"Critical error fetching events: {e}")
         return []
 
 
@@ -1038,10 +1038,10 @@ def main():
     event_data = get_event_data()
 
     if not event_data:
-        print("Nenhum evento encontrado ou ocorreu um erro.")
+        logger.warning("No events found or error occurred.")
         return
 
-    print(f"\nTotal de {len(event_data)} eventos encontrados. Salvando no CSV...")
+    logger.info(f"Total {len(event_data)} events found. Saving to CSV...")
 
     records = [
         {
@@ -1060,11 +1060,11 @@ def main():
     ]
     write_events_csv(csv_path, records)
 
-    print(f"\nDados salvos com sucesso em: {csv_path}")
+    logger.info(f"Data saved successfully to: {csv_path}")
 
     synced = sync_csv_to_mongodb(csv_path, "brasilquecorre")
     if not synced:
-        print("Sincronização com mongodb pulada ou falhou.")
+        logger.warning("MongoDB sync skipped or failed.")
 
 
 if __name__ == "__main__":

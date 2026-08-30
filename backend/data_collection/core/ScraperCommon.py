@@ -290,7 +290,7 @@ def write_events_csv(
 
 
 def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
-    """Sincroniza o CSV com o MongoDB Atlas (ignorado com CORREPB_COLLECT_ONLY=1)."""
+    """Sincronize CSV to MongoDB Atlas (ignored with CORREPB_COLLECT_ONLY=1)."""
     if os.environ.get("CORREPB_COLLEC_ONLY") or os.environ.get("CORREPB_COLLECT_ONLY"):
         return False
     try:
@@ -306,3 +306,46 @@ def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
     except Exception as e:
         print(f"sincronização com mongodb ignorada ({collection}): {e}")
         return False
+
+
+def run_standard_scraper(
+    fetch_fn: Callable[[], list[dict[str, str]]],
+    csv_filename: str,
+    collection: str,
+    fieldnames: list[str] | None = None,
+) -> None:
+    """Standard scraper runner (English API).
+
+    Centralizes base_dir/csv_path, empty check, price count logging,
+    CSV writing and MongoDB sync. All scrapers should use this to
+    keep the same pattern.
+    """
+    import json
+    from pathlib import Path
+
+    scraper_logger = logging.getLogger(collection)
+    base_dir = Path(__file__).parent.parent
+    csv_path = str(base_dir / "data" / csv_filename)
+
+    events = fetch_fn()
+    if not events:
+        scraper_logger.warning("No events found.")
+        return
+
+    for ev in events:
+        precos = ev.get("precos_entries", "[]")
+        try:
+            qtd = len(json.loads(precos)) if precos.strip().startswith("[") else 1
+        except Exception:
+            qtd = 1
+        scraper_logger.info(
+            f" - {ev.get('Nome do Evento','?')} | {ev.get('Data','')} {ev.get('Horário','')}"
+            f" | {ev.get('Cidade','')} | {ev.get('Distância','')} | Prices: {qtd} entries"
+        )
+
+    scraper_logger.info(f"Total {len(events)} events found. Saving to CSV...")
+    write_events_csv(csv_path, events, fieldnames or EVENTOS_CSV_FIELDNAMES)
+    scraper_logger.info(f"Data saved successfully to: {csv_path}")
+
+    if not sync_csv_to_mongodb(csv_path, collection):
+        scraper_logger.warning("MongoDB sync skipped or failed.")

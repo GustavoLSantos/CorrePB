@@ -21,6 +21,7 @@ from data_collection.core.ScraperCommon import (
     fix_encoding,
     format_date_string,
     parse_date_string,
+    run_standard_scraper,
     sync_csv_to_mongodb,
     write_events_csv,
 )
@@ -470,15 +471,6 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
 
 
 def main():
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "data/eventos_smcrono.csv")
-
-    events = get_smcrono_events_api(estado_filter="PB")
-
-    if not events:
-        print("Nenhum evento encontrado.")
-        return
-
     fieldnames = [
         "Nome do Evento",
         "Link de Inscrição",
@@ -493,14 +485,12 @@ def main():
         "Percurso",
         "Kits",
     ]
-
-    print(f"\nTotal de {len(events)} eventos encontrados. Salvando no CSV...")
-    write_events_csv(csv_path, events, fieldnames)
-
-    print(f"\nSalvo com sucesso: {csv_path}")
-
-    if not sync_csv_to_mongodb(csv_path, "smcrono"):
-        print("Sincronização pulada ou falhou.")
+    run_standard_scraper(
+        lambda: get_smcrono_events_api(estado_filter="PB"),
+        "eventos_smcrono.csv",
+        "smcrono",
+        fieldnames=fieldnames,
+    )
 
 
 if __name__ == "__main__":
