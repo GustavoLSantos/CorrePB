@@ -108,12 +108,16 @@ class EventoDeCorrida:
         return documento
 
     def __eq__(self, other):
-        """Compara dois eventos, ignorando campos específicos"""
+        """Compare two events for equality (English API).
+
+        Includes price entries, kits, percurso, edital and prize categories.
+        Ignores _id, data_coleta and site-specific transient fields.
+        """
         if not isinstance(other, EventoDeCorrida):
             return False
 
-        # Campos a serem comparados
-        campos_comparacao = [
+        # Fields to compare — covers all persisted data except _id/data_coleta
+        fields_to_compare = [
             "nome_evento",
             "datas_realizacao",
             "cidade",
@@ -126,18 +130,40 @@ class EventoDeCorrida:
             "url_imagem",
             "categoria",
             "preco",
+            "precos_entries",
+            "percurso",
+            "kits",
+            "link_edital",
+            "categorias_premiadas",
         ]
 
-        # Compara cada campo
-        for campo in campos_comparacao:
-            valor_self = getattr(self, campo)
-            valor_other = getattr(other, campo)
+        for field in fields_to_compare:
+            val_self = getattr(self, field)
+            val_other = getattr(other, field)
 
-            # Trata listas de forma especial
-            if isinstance(valor_self, list) and isinstance(valor_other, list):
-                if sorted(valor_self) != sorted(valor_other):
+            # Normalize None vs empty
+            if val_self in (None, "", []) and val_other in (None, "", []):
+                continue
+
+            # Lists of datetime / dict need stable comparison
+            if isinstance(val_self, list) and isinstance(val_other, list):
+                try:
+                    # For list of dicts (kits, precos_entries) sort by JSON dump
+                    if val_self and isinstance(val_self[0], dict):
+                        s_self = sorted(json.dumps(x, sort_keys=True) for x in val_self)
+                        s_other = sorted(json.dumps(x, sort_keys=True) for x in val_other)
+                        if s_self != s_other:
+                            return False
+                    else:
+                        if sorted(val_self) != sorted(val_other):
+                            return False
+                except Exception:
+                    if val_self != val_other:
+                        return False
+            elif isinstance(val_self, dict) and isinstance(val_other, dict):
+                if val_self != val_other:
                     return False
-            elif valor_self != valor_other:
+            elif val_self != val_other:
                 return False
 
         return True
