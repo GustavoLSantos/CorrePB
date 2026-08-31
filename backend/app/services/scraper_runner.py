@@ -576,8 +576,8 @@ def _run_scraper(script_name: str) -> ScraperResult:
             "nome": script_name,
             "ok": ok,
             "duration_s": duration,
-            "detail": (proc.stdout or "")[-2000:],
-            "stderr": (proc.stderr or "")[-1000:],
+            "detail": (proc.stdout or "")[-8000:],
+            "stderr": (proc.stderr or "")[-2000:],
         }
     except Exception as e:
         logger.error(f"Scraper {script_name} exception: {e}", exc_info=True)

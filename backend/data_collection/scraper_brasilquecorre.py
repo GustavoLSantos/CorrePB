@@ -14,6 +14,12 @@ import requests
 from bs4 import BeautifulSoup, Tag
 
 logger = logging.getLogger(__name__)
+if not logger.handlers and not logging.getLogger().handlers:
+    _h = logging.StreamHandler(sys.stdout)
+    _h.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
 # Registro de evento no schema CSV — todos os valores são strings
 EventInfo = dict[str, str]
@@ -26,6 +32,7 @@ from data_collection.core.ScraperCommon import (
     entries_to_json,
     get_http_session,
     get_with_rate_limit,
+    run_standard_scraper,
     sync_csv_to_mongodb,
     write_events_csv,
 )
@@ -201,9 +208,7 @@ def _collect_jsonld_price_entries(soup: BeautifulSoup, candidates: list[PriceEnt
 
             offers_obj = item.get("offers") or item.get("priceSpecification")
             offers_list: list[object] | None = None
-            offers_list = (
-                cast("list[object]", offers_obj) if isinstance(offers_obj, list) else None
-            )
+            offers_list = cast("list[object]", offers_obj) if isinstance(offers_obj, list) else None
             if offers_list is None:
                 single_offer = _as_str_object_dict(cast("object", offers_obj))
                 if single_offer is not None:
@@ -214,13 +219,22 @@ def _collect_jsonld_price_entries(soup: BeautifulSoup, candidates: list[PriceEnt
                     off = _as_str_object_dict(raw_off)
                     if off is None:
                         continue
-                    price = off.get("price") or off.get("priceSpecification") or off.get("priceCurrency")
+                    price = (
+                        off.get("price")
+                        or off.get("priceSpecification")
+                        or off.get("priceCurrency")
+                    )
                     if price:
                         v = parse_price_str(str(price))
                         name = item.get("name")
                         if v is not None:
                             candidates.append(
-                                {"label": str(name) if name else None, "price": v, "tax": None, "raw": "ldjson"}
+                                {
+                                    "label": str(name) if name else None,
+                                    "price": v,
+                                    "tax": None,
+                                    "raw": "ldjson",
+                                }
                             )
 
             direct_price = item.get("price")
@@ -229,9 +243,13 @@ def _collect_jsonld_price_entries(soup: BeautifulSoup, candidates: list[PriceEnt
                 name = item.get("name")
                 if v is not None:
                     candidates.append(
-                        {"label": str(name) if name else None, "price": v, "tax": None, "raw": "ldjson-price"}
+                        {
+                            "label": str(name) if name else None,
+                            "price": v,
+                            "tax": None,
+                            "raw": "ldjson-price",
+                        }
                     )
-
 
 
 def _price_sort_key(e: PriceEntry) -> float:
@@ -248,6 +266,7 @@ def _ensure_fields(evt: EventInfo, **defaults: str) -> None:
 
 def _collect_prices_by_class(soup: BeautifulSoup, candidates: list[PriceEntry]) -> None:
     """Collect prices from elements with price-related CSS classes."""
+
     def has_price_class(classes: str | list[str] | None) -> bool:
         if not classes:
             return False
@@ -298,7 +317,9 @@ def _collect_prices_from_tables(soup: BeautifulSoup, candidates: list[PriceEntry
             for tr in table.find_all("tr"):
                 tds: list[Tag] = tr.find_all(["td", "th"])
                 if len(tds) == 1 and tds[0].has_attr("colspan"):
-                    sec_text = re.sub(r"\s+", " ", tds[0].get_text(separator=" ", strip=True)).strip()
+                    sec_text = re.sub(
+                        r"\s+", " ", tds[0].get_text(separator=" ", strip=True)
+                    ).strip()
                     current_section = sec_text
                     continue
                 if len(tds) >= 2:
@@ -349,7 +370,12 @@ def _collect_prices_from_tables(soup: BeautifulSoup, candidates: list[PriceEntry
                                 fallback_label = f"{current_section} — {fallback_label}"
                         for m in re.finditer(r"R\$(?:\s|\xa0|&nbsp;)*([\d.,]+)", rowtxt):
                             candidates.append(
-                                {"label": fallback_label, "price": parse_price_str(m.group(1)), "tax": None, "raw": rowtxt}
+                                {
+                                    "label": fallback_label,
+                                    "price": parse_price_str(m.group(1)),
+                                    "tax": None,
+                                    "raw": rowtxt,
+                                }
                             )
     except Exception as exc:
         logger.debug(f"table price collect failed: {exc}", exc_info=True)
@@ -460,7 +486,9 @@ def _filter_and_validate_prices(candidates: list[PriceEntry], page_html: str) ->
                 }
             )
             if price < 0:
-                logger.warning(f"Preco negativo descartado: {e}. Possivelmente bug em parse_price_str().")
+                logger.warning(
+                    f"Preco negativo descartado: {e}. Possivelmente bug em parse_price_str()."
+                )
             continue
         valid_entries.append(e)
 
@@ -475,10 +503,14 @@ def _filter_and_validate_prices(candidates: list[PriceEntry], page_html: str) ->
     return valid_entries
 
 
-def _deduplicate_and_format_prices(valid_entries: list[PriceEntry], page_html: str) -> Sequence[PriceEntry | str]:
+def _deduplicate_and_format_prices(
+    valid_entries: list[PriceEntry], page_html: str
+) -> Sequence[PriceEntry | str]:
     """Deduplicate by (label, price, tax), sort and format. Handles free-value fallback."""
     if not valid_entries:
-        if re.search(r"\b(grátis|gratis|gratuito|gratuita|isento|free)\b", page_html, re.IGNORECASE):
+        if re.search(
+            r"\b(grátis|gratis|gratuito|gratuita|isento|free)\b", page_html, re.IGNORECASE
+        ):
             return [
                 PriceEntry(
                     {
@@ -637,7 +669,6 @@ def _is_selenium_source(domain: str) -> bool:
     return any(check(domain) for check in _SELENIUM_SOURCE_CHECKS)
 
 
-
 def _fetch_details_http(event_info: EventInfo) -> EventInfo | None:
     """Enriquece um evento cuja página é server-side rendered (requests puro)."""
     evt = dict(event_info)
@@ -794,7 +825,9 @@ def _execute_selenium_workers(
         try:
             shared_driver = setup_driver()
         except Exception as e:
-            logger.warning(f"Selenium unavailable (worker {worker_id}: {e}); {len(chunk)} event(s) without JS details")
+            logger.warning(
+                f"Selenium unavailable (worker {worker_id}: {e}); {len(chunk)} event(s) without JS details"
+            )
             for event in chunk:
                 event = dict(event)
                 event["link_edital"] = "edital não encontrado"
@@ -822,7 +855,8 @@ def _execute_selenium_workers(
         _safe_quit(shared_driver)
 
     threads = [
-        threading.Thread(target=_worker, args=(chunk, i + 1), daemon=True) for i, chunk in enumerate(chunks)
+        threading.Thread(target=_worker, args=(chunk, i + 1), daemon=True)
+        for i, chunk in enumerate(chunks)
     ]
     for t in threads:
         t.start()
@@ -861,7 +895,7 @@ def process_event_details(events: list[EventInfo]) -> list[EventInfo]:
 
     dedicated, http_events, selenium_events = _split_events_by_source(events)
     for ev in dedicated:
-        logger.info(f"[SKIP] {ev.get('nome', '')} — collected by dedicated scraper")
+        logger.debug(f"[SKIP] {ev.get('nome', '')} — collected by dedicated scraper")
 
     processed: list[EventInfo] = []
     lock = threading.Lock()
@@ -927,10 +961,10 @@ def _extract_bqc_event_info(box: Tag) -> EventInfo | None:
 
     # Ignorar URLs redirecionadas/que não são de evento
     if link_inscricao.startswith("https://www.liverun.com.br/calendario"):
-        logger.info(f"[SKIP] Skipping generic Liverun calendar link: {link_inscricao}")
+        logger.debug(f"[SKIP] Skipping generic Liverun calendar link: {link_inscricao}")
         return None
     if is_race83_listing_url(link_inscricao):
-        logger.info(f"[SKIP] Skipping generic Race83 events link: {link_inscricao}")
+        logger.debug(f"[SKIP] Skipping generic Race83 events link: {link_inscricao}")
         return None
 
     event_info["link_inscricao"] = link_inscricao
@@ -997,7 +1031,7 @@ def get_event_data() -> list[EventInfo]:
 
         event_data: list[EventInfo] = []
         total_events = len(event_boxes)
-        logger.info(f"Found {total_events} boxes in listing. Starting extraction")
+        logger.debug(f"Found {total_events} boxes in listing. Starting extraction")
 
         for idx, box in enumerate(event_boxes, 1):
             try:
@@ -1005,12 +1039,12 @@ def get_event_data() -> list[EventInfo]:
                 if event_info is None:
                     continue
                 event_data.append(event_info)
-                logger.info(f"[{idx}/{total_events}] Basic data: {event_info.get('nome', '')}")
+                logger.debug(f"[{idx}/{total_events}] Basic data: {event_info.get('nome', '')}")
             except Exception:
                 continue
 
         # Busca editais e preços para complementar os dados básicos
-        logger.info("Fetching editais and prices...")
+        logger.debug("Fetching editais and prices...")
         event_data = process_event_details(event_data)
 
         return event_data
@@ -1029,39 +1063,28 @@ def main():
     1. Extrai dados dos eventos (listagem via requests + detalhes via extractors)
     2. Salva em CSV
     """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, "data/eventos_brasilquecorre.csv")
 
-    event_data = get_event_data()
+    def _fetch_brasilquecorre_records() -> list[dict[str, str]]:
+        event_data = get_event_data()
+        return [
+            {
+                "Nome do Evento": event.get("nome", ""),
+                "Link de Inscrição": event.get("link_inscricao", ""),
+                "Link da Imagem": event.get("link_imagem", ""),
+                "Data": event.get("data", ""),
+                "Horário": (event.get("horario") or "Horário de largada não encontrado"),
+                "Cidade": event.get("cidade", ""),
+                "Distância": event.get("distancia", ""),
+                "Organizador": event.get("organizador", ""),
+                "Link do Edital": event.get("link_edital", ""),
+                "precos_entries": event.get("precos_entries", ""),
+            }
+            for event in event_data
+        ]
 
-    if not event_data:
-        logger.warning("No events found or error occurred.")
-        return
-
-    logger.info(f"Total {len(event_data)} events found. Saving to CSV...")
-
-    records = [
-        {
-            "Nome do Evento": event.get("nome", ""),
-            "Link de Inscrição": event.get("link_inscricao", ""),
-            "Link da Imagem": event.get("link_imagem", ""),
-            "Data": event.get("data", ""),
-            "Horário": (event.get("horario") or "Horário de largada não encontrado"),
-            "Cidade": event.get("cidade", ""),
-            "Distância": event.get("distancia", ""),
-            "Organizador": event.get("organizador", ""),
-            "Link do Edital": event.get("link_edital", ""),
-            "precos_entries": event.get("precos_entries", ""),
-        }
-        for event in event_data
-    ]
-    write_events_csv(csv_path, records)
-
-    logger.info(f"Data saved successfully to: {csv_path}")
-
-    synced = sync_csv_to_mongodb(csv_path, "brasilquecorre")
-    if not synced:
-        logger.warning("MongoDB sync skipped or failed.")
+    run_standard_scraper(
+        _fetch_brasilquecorre_records, "eventos_brasilquecorre.csv", "brasilquecorre"
+    )
 
 
 if __name__ == "__main__":

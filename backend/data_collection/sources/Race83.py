@@ -1,6 +1,9 @@
 import json
 from typing import TypedDict, cast
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 import time
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
@@ -175,7 +178,7 @@ def load_events_json() -> list[EventoLista]:
         except Exception:
             continue
         if eventos:
-            print(f"Lista carregada de {url}: {len(eventos)} eventos")
+            logger.debug(f"List loaded from {url}: {len(eventos)} events")
             return eventos
     return []
 
@@ -289,17 +292,17 @@ def get_race83_events(
             if somente_futuros and data_parsed and data_parsed < datetime.now():
                 continue
 
-            print(f"Analisando: {nome_ref}")
+            logger.debug(f"Analyzing: {nome_ref}")
             det = fetch_event_details(api_url)
             if not det:
-                print("  -> detalhes indisponíveis")
+                logger.debug("  -> details unavailable")
                 continue
 
             # Re-checa a data com o valor canônico dos detalhes (a lista às vezes erra)
             data_final = det.get("data_evento") or data_ev
             data_final_parsed = parse_date_string(data_final) or data_parsed
             if somente_futuros and data_final_parsed and data_final_parsed < datetime.now():
-                print(f"  -> Ignorado: evento passado ({data_final})")
+                logger.debug(f"  -> Ignored: past event ({data_final})")
                 continue
 
             edital_link = "edital não encontrado"
@@ -331,9 +334,9 @@ def get_race83_events(
                     "precos_entries": json.dumps(precos, ensure_ascii=False) if precos else "[]",
                 }
             )
-            print(f"  [OK] {events_data[-1]['Data']} | Preços: {len(precos)} entradas")
+            logger.debug(f"  [OK] {events_data[-1]['Data']} | Prices: {len(precos)} entries")
         except Exception as e:
-            print(f"  [ERRO]: {e} ({nome_ref})")
+            logger.warning(f"  [ERROR]: {e} ({nome_ref})")
             continue
 
     return events_data

@@ -240,7 +240,7 @@ def _load_events_json():
             resp.raise_for_status()
             eventos = (resp.json() or {}).get("listEventos") or []
             if eventos:
-                logger.info(f"List loaded from {url}: {len(eventos)} events")
+                logger.debug(f"List loaded from {url}: {len(eventos)} events")
                 return eventos
             logger.warning(f"Empty list at {url}")
         except Exception as e:
@@ -406,7 +406,7 @@ def _fetch_kits_parallel(events_data: list[dict], pending_kits: list[tuple[int, 
 
     if not pending_kits:
         return
-    logger.info(f"iniciando extração de kits para {len(pending_kits)} PDFs em paralelo...")
+    logger.debug(f"iniciando extração de kits para {len(pending_kits)} PDFs em paralelo...")
 
     def _kit_safe(args: tuple[int, str]):
         idx, url = args
@@ -428,7 +428,7 @@ def _fetch_kits_parallel(events_data: list[dict], pending_kits: list[tuple[int, 
             kits_json = json.dumps(kits, ensure_ascii=False) if kits else ""
             events_data[idx]["Kits"] = kits_json
 
-    logger.info(f"kits paralelos: {__import__('time').monotonic() - t_kit:.2f}s")
+    logger.debug(f"kits paralelos: {__import__('time').monotonic() - t_kit:.2f}s")
 
 
 def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
@@ -440,16 +440,16 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
     t0_total = __import__("time").monotonic()
 
     eventos_lista = _load_events_json()
-    logger.info(f"_load_events_json: {__import__('time').monotonic() - t0_total:.2f}s | {len(eventos_lista)} events in list"
+    logger.debug(f"_load_events_json: {__import__('time').monotonic() - t0_total:.2f}s | {len(eventos_lista)} events in list"
     )
 
     candidates, pre_filtered = _filter_candidates(eventos_lista, estado_filter, somente_futuros)
-    logger.info(f"pre-filter: {len(candidates)} candidates (+{pre_filtered} discarded before fetch)"
+    logger.debug(f"pre-filter: {len(candidates)} candidates (+{pre_filtered} discarded before fetch)"
     )
 
     t_fetch = __import__("time").monotonic()
     fetched = _fetch_details_parallel(candidates)
-    logger.info(f"fetch details: {__import__('time').monotonic() - t_fetch:.2f}s for {len(fetched)} events (workers={min(10, max(4, len(candidates) // 2)) if candidates else 1})"
+    logger.debug(f"fetch details: {__import__('time').monotonic() - t_fetch:.2f}s for {len(fetched)} events (workers={min(10, max(4, len(candidates) // 2)) if candidates else 1})"
     )
 
     events_data: list[dict] = []
@@ -470,12 +470,12 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
         events_data.append(record)
         if edital_pdf:
             pending_kits.append((len(events_data) - 1, edital_pdf))
-        logger.info(f"  [OK] {record['Data']} | Prices: {len(_montar_precos(det.get('precos_categorias') or []))} entries | {record['Nome do Evento'][:45]}"
+        logger.debug(f"  [OK] {record['Data']} | Prices: {len(_montar_precos(det.get('precos_categorias') or []))} entries | {record['Nome do Evento'][:45]}"
         )
 
     _fetch_kits_parallel(events_data, pending_kits)
 
-    logger.info(f"total get_smcrono_events_api: {__import__('time').monotonic() - t0_total:.2f}s | {len(events_data)} final events"
+    logger.debug(f"total get_smcrono_events_api: {__import__('time').monotonic() - t0_total:.2f}s | {len(events_data)} final events"
     )
     return events_data
 

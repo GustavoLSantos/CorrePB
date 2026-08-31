@@ -1,4 +1,7 @@
+import logging
 import re
+
+logger = logging.getLogger(__name__)
 import time
 from urllib.parse import urljoin, urlparse
 from datetime import datetime
@@ -73,7 +76,7 @@ def load_zenite_soup(
         return soup, created, local_driver, horario
     except Exception as e:
         if debug:
-            print(f"Erro ao carregar Zenite: {e}")
+            logger.debug(f"Error loading Zenite: {e}")
         try:
             if created and local_driver:
                 try:
@@ -154,7 +157,7 @@ def extract_zenite_ticket_prices(soup: BeautifulSoup, debug: bool = False) -> li
     for pe in price_elems:
         txt = pe.get_text(separator=" ", strip=True) or ""
         if debug:
-            print(f"[zenite] candidato raw: {txt}")
+            logger.debug(f"[zenite] candidate raw: {txt}")
 
         # Padrão principal: R$ 123,45 (fallback: qualquer número no texto)
         m = re.search(r"R\$\s*([\d.,]+)", txt)
@@ -187,7 +190,7 @@ def extract_zenite_ticket_prices(soup: BeautifulSoup, debug: bool = False) -> li
             continue
         if price_f >= 0 and (price_f < 0 or price_f > 500):
             if debug:
-                print(f"[zenite] descartando por range: {price_f} ({e.get('raw')})")
+                logger.debug(f"[zenite] discarding by range: {price_f} ({e.get('raw')})")
             continue
         unique.append(e)
 
@@ -216,7 +219,7 @@ def extract_zenite_ticket_prices(soup: BeautifulSoup, debug: bool = False) -> li
             )
 
     if debug:
-        print(f"[zenite] preços extraídos: {formatted}")
+        logger.debug(f"[zenite] extracted prices: {formatted}")
 
     return formatted
 
@@ -497,19 +500,19 @@ def get_zenite_events(somente_futuros: bool = True) -> list[dict[str, str]]:
     """Coleta completa dos eventos do catálogo Zenite via requests (sem Selenium)."""
     records: list[dict[str, str]] = []
     cards = discover_zenite_events()
-    print(f"Descobertos {len(cards)} produtos no catálogo Zenite")
+    logger.debug(f"Discovered {len(cards)} products in Zenite catalog")
 
     for i, card in enumerate(cards, 1):
         url = card["url"]
         try:
             rec = build_zenite_record(url, card)
             if not rec:
-                print(f"[{i}/{len(cards)}] sem dados: {url}")
+                logger.debug(f"[{i}/{len(cards)}] no data: {url}")
                 continue
 
             # Páginas de serviço (Consultoria, Cronometragem...) não têm 'Data da corrida'
             if not rec.get("_data_br"):
-                print(f"[{i}/{len(cards)}] ignorado (não é evento): {rec['Nome do Evento'][:40]}")
+                logger.debug(f"[{i}/{len(cards)}] ignored (not event): {rec['Nome do Evento'][:40]}")
                 continue
 
             if somente_futuros:
@@ -519,8 +522,8 @@ def get_zenite_events(somente_futuros: bool = True) -> list[dict[str, str]]:
             else:
                 _ = rec.pop("_data_br", "")
             records.append(rec)
-            print(f"[{i}/{len(cards)}] OK {rec['Nome do Evento'][:50]}")
+            logger.debug(f"[{i}/{len(cards)}] OK {rec['Nome do Evento'][:50]}")
         except Exception as e:
-            print(f"[{i}/{len(cards)}] ERRO {url}: {e}")
+            logger.warning(f"[{i}/{len(cards)}] ERROR {url}: {e}")
 
     return records

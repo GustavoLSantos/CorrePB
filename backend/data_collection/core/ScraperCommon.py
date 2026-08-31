@@ -8,6 +8,7 @@ scraper_brasilquecorre, scraper_race83, scraper_zenite e novos scrapers.
 import csv
 import logging
 import os
+import sys
 import threading
 import time
 from collections.abc import Callable, Iterable
@@ -31,11 +32,10 @@ logger = logging.getLogger(__name__)
 import urllib3
 import warnings
 
-# Allowlist of domains with known invalid certs — only these may use verify=False
 INSECURE_DOMAINS: set[str] = {"brasilquecorre.com"}
 
 _RATE_LIMIT_LOCK = threading.Lock()
-_LAST_REQUEST_TIME: dict[str, float] = {}  # último request por domínio (reserva de slot)
+_LAST_REQUEST_TIME: dict[str, float] = {}
 
 
 def get_http_session(user_agent: str | None = None) -> requests.Session:
@@ -84,7 +84,9 @@ def get_with_rate_limit(
         is_insecure_domain = any(domain.endswith(d) for d in INSECURE_DOMAINS)
 
         if not verify and not is_insecure_domain:
-            logger.warning(f"verify=False used for non-allowlisted domain {domain} — potential MITM risk")
+            logger.warning(
+                f"verify=False used for non-allowlisted domain {domain} — potential MITM risk"
+            )
 
         wait = 0.0
         with _RATE_LIMIT_LOCK:
@@ -188,7 +190,6 @@ def parse_long_date_string(date_str: str | None) -> datetime | None:
 
 
 def parse_long_multi_dates(date_str: str | None) -> list[datetime]:
-    """Parse '02, 03 e 15 de Agosto de 2025' to list of datetimes. Returns empty list if invalid."""
     if not date_str:
         return []
     try:
@@ -312,7 +313,6 @@ def write_events_csv(
 
 
 def sync_csv_to_mongodb(csv_path: str, collection: str) -> bool:
-    """Sincronize CSV to MongoDB Atlas (ignored with CORREPB_COLLECT_ONLY=1)."""
     if os.environ.get("CORREPB_COLLEC_ONLY") or os.environ.get("CORREPB_COLLECT_ONLY"):
         logger.debug(f"MongoDB sync skipped for {collection} (CORREPB_COLLECT_ONLY=1)")
         return False
@@ -337,16 +337,17 @@ def run_standard_scraper(
     collection: str,
     fieldnames: list[str] | None = None,
 ) -> None:
-    """Standard scraper runner (English API).
 
-    Centralizes base_dir/csv_path, empty check, price count logging,
-    CSV writing and MongoDB sync. All scrapers should use this to
-    keep the same pattern.
-    """
     import json
     from pathlib import Path
 
     scraper_logger = logging.getLogger(collection)
+    if not scraper_logger.handlers and not logging.getLogger().handlers:
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        scraper_logger.addHandler(handler)
+        scraper_logger.setLevel(logging.INFO)
+        scraper_logger.propagate = False
     base_dir = Path(__file__).parent.parent
     csv_path = str(base_dir / "data" / csv_filename)
 
@@ -355,24 +356,46 @@ def run_standard_scraper(
         scraper_logger.warning("No events found.")
         return
 
+    sem_preco = sum(
+        1 for ev in events if not ev.get("precos_entries") or ev.get("precos_entries") in ("[]", "")
+    )
+    sem_imagem = sum(1 for ev in events if not ev.get("Link da Imagem"))
+    sem_edital = sum(
+        1
+        for ev in events
+        if not ev.get("Link do Edital") or ev.get("Link do Edital") == "edital não encontrado"
+    )
+
+    scraper_logger.info(
+        f"Scraper {collection}: {len(events)} events found (without price: {sem_preco}, without image: {sem_imagem}, without edital: {sem_edital})"
+    )
+
     for ev in events:
         precos = ev.get("precos_entries", "[]")
         try:
-            qtd = len(json.loads(precos)) if precos.strip().startswith("[") else 1
+            parsed = json.loads(precos) if precos.strip().startswith("[") else [precos]
+            qtd = len(parsed) if isinstance(parsed, list) else 1
+            has_price = qtd > 0 and precos not in ("[]", "")
         except Exception:
             qtd = 1
+            has_price = True
+        price_info = f"{qtd} entries" if has_price else "0 (sem preço)"
+        has_edital = (
+            "yes"
+            if ev.get("Link do Edital") and ev.get("Link do Edital") != "edital não encontrado"
+            else "no"
+        )
+        has_imagem = "yes" if ev.get("Link da Imagem") else "no"
         scraper_logger.info(
-            f" - {ev.get('Nome do Evento','?')} | {ev.get('Data','')} {ev.get('Horário','')}"
-            f" | {ev.get('Cidade','')} | {ev.get('Distância','')} | Prices: {qtd} entries"
+            f" - {ev.get('Nome do Evento', '?')} | {ev.get('Data', '')} {ev.get('Horário', '')} "
+            f"| {ev.get('Cidade', '')} | {ev.get('Distância', '')} | Prices: {price_info} | Edital: {has_edital} | Imagem: {has_imagem}"
         )
 
-    scraper_logger.info(f"Total {len(events)} events found. Saving to CSV...")
+    scraper_logger.info(f"Total {len(events)} events ready. Saving to {csv_filename}...")
     write_events_csv(csv_path, events, fieldnames or EVENTOS_CSV_FIELDNAMES)
-    scraper_logger.info(f"Data saved successfully to: {csv_path}")
 
     if not sync_csv_to_mongodb(csv_path, collection):
-        # When run via app/services/scraper_runner (CORREPB_COLLECT_ONLY=1), skip is expected
         if os.environ.get("CORREPB_COLLECT_ONLY") or os.environ.get("CORREPB_COLLEC_ONLY"):
-            scraper_logger.info("MongoDB sync skipped (CORREPB_COLLECT_ONLY=1) — will be handled by pipeline ImportToDB")
+            scraper_logger.info("")
         else:
             scraper_logger.warning("MongoDB sync skipped or failed.")
