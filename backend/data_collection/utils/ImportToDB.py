@@ -11,7 +11,7 @@ sys.path.insert(0, backend_dir)
 import certifi
 from dotenv import load_dotenv
 from data_collection.evento_de_corrida import EventoDeCorrida
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 
 load_dotenv(os.path.abspath(os.path.join(current_dir, '../..', '.env')))
 
@@ -64,23 +64,47 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                     # Checa se já existe pelo nome
                     evento_existente = db.eventos.find_one({'nome_evento': evento.nome_evento})
                     if not evento_existente:
-                        # Gerar _id customizado no formato YYYYMMXXXX (ex: 2026020001)
+                        # Gerar _id atômico no formato YYYYMMXXXX via counters (evita race com find_one+regex)
                         now = datetime.now()
                         prefix = f"{now.year}{now.month:02d}"
-                        # Buscar o último _id com este prefixo, ordenando decrescente
-                        last = db.eventos.find_one({'_id': {'$regex': f'^{prefix}'}}, sort=[('_id', -1)])
-                        if last and isinstance(last.get('_id'), str) and len(last['_id']) >= len(prefix) + 4:
-                            try:
-                                last_seq = int(last['_id'][-4:])
-                            except Exception:
+                        try:
+                            counters = db.counters
+                            # Inicializa contador com max existente se ainda não existe
+                            existing = counters.find_one({"_id": prefix})
+                            if not existing:
+                                last = db.eventos.find_one(
+                                    {"_id": {"$regex": f"^{prefix}"}}, sort=[("_id", -1)]
+                                )
+                                init_seq = 0
+                                if last and isinstance(last.get("_id"), str) and len(last["_id"]) >= len(prefix) + 4:
+                                    try:
+                                        init_seq = int(last["_id"][-4:])
+                                    except Exception:
+                                        init_seq = 0
+                                if init_seq > 0:
+                                    counters.insert_one({"_id": prefix, "seq": init_seq})
+                            doc = counters.find_one_and_update(
+                                {"_id": prefix},
+                                {"$inc": {"seq": 1}},
+                                upsert=True,
+                                return_document=ReturnDocument.AFTER,
+                            )
+                            new_seq = doc["seq"] if doc else 1
+                        except Exception:
+                            # Fallback não-atômico (mantém compatibilidade se counters falhar)
+                            last = db.eventos.find_one({"_id": {"$regex": f"^{prefix}"}}, sort=[("_id", -1)])
+                            if last and isinstance(last.get("_id"), str) and len(last["_id"]) >= len(prefix) + 4:
+                                try:
+                                    last_seq = int(last["_id"][-4:])
+                                except Exception:
+                                    last_seq = 0
+                            else:
                                 last_seq = 0
-                        else:
-                            last_seq = 0
-                        new_seq = last_seq + 1
+                            new_seq = last_seq + 1
                         new_id = f"{prefix}{new_seq:04d}"
 
                         evento_dict = evento.to_dict()
-                        evento_dict['_id'] = new_id
+                        evento_dict["_id"] = new_id
 
                         db.eventos.insert_one(evento_dict)
                         novos_eventos += 1

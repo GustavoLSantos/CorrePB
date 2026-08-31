@@ -12,7 +12,7 @@ import re
 import certifi
 from dotenv import load_dotenv
 from data_collection.evento_de_corrida import EventoDeCorrida
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 
 load_dotenv(os.path.abspath(os.path.join(current_dir, '../..', '.env')))
 
@@ -43,15 +43,38 @@ def parse_datas(data_str: str) -> list:
 def gerar_id(db) -> str:
     now = datetime.now()
     prefix = f"{now.year}{now.month:02d}"
-    last = db.eventos.find_one({'_id': {'$regex': f'^{prefix}'}}, sort=[('_id', -1)])
-    if last and isinstance(last.get('_id'), str) and len(last['_id']) >= len(prefix) + 4:
-        try:
-            last_seq = int(last['_id'][-4:])
-        except Exception:
+    try:
+        counters = db.counters
+        existing = counters.find_one({"_id": prefix})
+        if not existing:
+            last = db.eventos.find_one({"_id": {"$regex": f"^{prefix}"}}, sort=[("_id", -1)])
+            init_seq = 0
+            if last and isinstance(last.get("_id"), str) and len(last["_id"]) >= len(prefix) + 4:
+                try:
+                    init_seq = int(last["_id"][-4:])
+                except Exception:
+                    init_seq = 0
+            if init_seq > 0:
+                counters.insert_one({"_id": prefix, "seq": init_seq})
+        doc = counters.find_one_and_update(
+            {"_id": prefix},
+            {"$inc": {"seq": 1}},
+            upsert=True,
+            return_document=ReturnDocument.AFTER,
+        )
+        new_seq = doc["seq"] if doc else 1
+        return f"{prefix}{new_seq:04d}"
+    except Exception:
+        # Fallback não-atômico
+        last = db.eventos.find_one({"_id": {"$regex": f"^{prefix}"}}, sort=[("_id", -1)])
+        if last and isinstance(last.get("_id"), str) and len(last["_id"]) >= len(prefix) + 4:
+            try:
+                last_seq = int(last["_id"][-4:])
+            except Exception:
+                last_seq = 0
+        else:
             last_seq = 0
-    else:
-        last_seq = 0
-    return f"{prefix}{(last_seq + 1):04d}"
+        return f"{prefix}{(last_seq + 1):04d}"
 
 
 def parse_preco_entry(texto: str) -> dict:
