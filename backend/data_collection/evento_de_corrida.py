@@ -74,7 +74,6 @@ class EventoDeCorrida:
             "distancias": self.distancias,
         }
 
-        # Adiciona campos opcionais apenas se não forem None ou vazios
         if self.horario and self.horario.strip():
             documento["horario"] = self.horario
         if self.url_inscricao and self.url_inscricao.strip():
@@ -83,13 +82,13 @@ class EventoDeCorrida:
             documento["url_imagem"] = self.url_imagem
         if self.categoria and self.categoria.strip():
             documento["categoria"] = self.categoria
-        if self.link_edital is not None:
+        if self.link_edital and self.link_edital.strip():
             documento["link_edital"] = self.link_edital
-        if self.categorias_premiadas is not None:
+        if self.categorias_premiadas and self.categorias_premiadas.strip():
             documento["categorias_premiadas"] = self.categorias_premiadas
 
-        # Preço (legível) e entradas estruturadas
-        if self.preco is not None:
+        # Price (readable) and structured entries
+        if self.preco and self.preco.strip():
             documento["preco"] = self.preco
         if self.precos_entries:
             documento["precos_entries"] = self.precos_entries
