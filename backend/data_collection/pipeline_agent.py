@@ -178,7 +178,25 @@ def validate_csv(path: Path, fonte: str) -> CsvSummary:
         return summary
 
     summary.total = len(rows)
-    nomes_vistos: Dict[str, int] = {}
+    # Fingerprint for duplicates: nome + cidade + data (normalized)
+    def _strip_accents(s: str) -> str:
+        import unicodedata
+
+        return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+    def _fingerprint(row: dict) -> tuple[str, str, str]:
+        nome_fp = re.sub(r"\s+", " ", _strip_accents(row.get("Nome do Evento", "") or "").lower().strip())
+        cidade_fp = re.sub(r"\s+", " ", _strip_accents(row.get("Cidade", "") or "").lower().strip())
+        data_raw = (row.get("Data", "") or "").strip()
+        # Canonical data via _parse_first_date, fallback to raw lower
+        try:
+            dt = _parse_first_date(data_raw)
+            data_fp = dt.strftime("%Y-%m-%d") if dt else data_raw.lower()
+        except Exception:
+            data_fp = data_raw.lower()
+        return (nome_fp, cidade_fp, data_fp)
+
+    vistos: Dict[tuple[str, str, str], int] = {}
 
     for i, row in enumerate(rows, start=2):  # linha 1 = cabeçalho
         # Campos obrigatórios ausentes
@@ -187,9 +205,11 @@ def validate_csv(path: Path, fonte: str) -> CsvSummary:
             if not val:
                 summary.erros.append(f'Linha {i}: campo "{campo}" vazio')
 
+        fp = _fingerprint(row)
+        # Only count if at least nome is present (avoid empty fingerprint)
+        if fp[0]:
+            vistos[fp] = vistos.get(fp, 0) + 1
         nome = row.get("Nome do Evento", "").strip()
-        if nome:
-            nomes_vistos[nome] = nomes_vistos.get(nome, 0) + 1
 
         # Eventos passados
         data_raw = row.get("Data", "").strip()
@@ -213,8 +233,8 @@ def validate_csv(path: Path, fonte: str) -> CsvSummary:
         if ENCODING_GARBAGE_RE.search(texto_concatenado):
             summary.erros_encoding += 1
 
-    # Duplicatas
-    summary.duplicados = sum(1 for c in nomes_vistos.values() if c > 1)
+    # Duplicatas: count fingerprints with >1 occurrence (nome+cidade+data)
+    summary.duplicados = sum(1 for c in vistos.values() if c > 1)
 
     return summary
 
