@@ -141,11 +141,31 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                                 f"  Campos protegidos em '{evento.nome_evento}': {campos_protegidos}"
                             )
 
-                        # Garante que ambos os dicionários tenham o campo 'link_edital' para comparação justa
-                        if "link_edital" not in evento_existente_dict:
-                            evento_existente_dict["link_edital"] = ""
-                        if "link_edital" not in evento_dict:
-                            evento_dict["link_edital"] = ""
+                        # Normalize edital placeholder "edital não encontrado" → "" for fair comparison
+                        def _normalize_edital(v):
+                            if not v:
+                                return ""
+                            s = str(v).strip()
+                            if not s:
+                                return ""
+                            import unicodedata
+
+                            norm = "".join(
+                                c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)
+                            )
+                            if norm in ("edital nao encontrado", "edital não encontrado"):
+                                return ""
+                            return s
+
+                        for d in (evento_dict, evento_existente_dict):
+                            # Ensure key exists and is normalized
+                            raw = d.get("link_edital", "")
+                            d["link_edital"] = _normalize_edital(raw)
+                            # Also normalize empty vs missing for other optional string fields that may be ""
+                            for k in ("preco", "categoria", "horario"):
+                                if k in d and isinstance(d[k], str) and not d[k].strip():
+                                    d[k] = ""
+
                         if evento_dict != evento_existente_dict:
                             # Montar dict de update sem campos protegidos
                             update_dict = evento.to_dict()
