@@ -15,9 +15,11 @@ def parse_price_str(text: str | float | int | None) -> float | None:
     Lida com separadores de milhares (.) e decimais (, ou .).
     Exemplos: '1.234,56' -> 1234.56, '89,90' -> 89.9, '50' -> 50.0
     """
-    if not text:
+    if text is None or text == "":
         return None
-    s = re.sub(r'[^\d.,]', '', str(text))
+    if isinstance(text, (int, float)):
+        return float(text)
+    s = re.sub(r"[^\d.,]", "", str(text))
     if not s:
         return None
 
