@@ -16,19 +16,17 @@ def is_prize_text(text: str | None) -> bool:
     text_l = text.lower()
 
     # Palavras-chave diretas relacionadas a prêmios
-    if re.search(r'\b(prêmio|premiação|premio|prize|award|prêmios|premiações|awards)\b', text_l):
+    if re.search(r"\b(prêmio|premiação|premio|prize|award|prêmios|premiações|awards)\b", text_l):
         return True
 
     # Padrões como "lugar", "colocado", "classificado" com preço
-    if re.search(r'\b(lugar|colocado|classificado|classificação|ranking|posição|podium|pódio)\b', text_l):
+    if re.search(
+        r"\b(lugar|colocado|classificado|classificação|ranking|posição|podium|pódio)\b", text_l
+    ):
         return True
 
     # Padrões como "destinada a quantia", "será destinada", "distribuída da seguinte forma"
-    if re.search(r'(destinada a quantia|será destinada|distribuída da seguinte forma)', text_l):
-        return True
-
-    # Padrões como "masculino e feminino", "prova de", "km" com preço
-    if re.search(r'(masculino|feminino|prova de|km)', text_l) and re.search(r'R\$\s*[\d.,]+', text_l):
+    if re.search(r"(destinada a quantia|será destinada|distribuída da seguinte forma)", text_l):
         return True
 
     return False
@@ -40,12 +38,12 @@ def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
     entry: dict com keys 'raw','label','price' (pode ser None)
     page_html: string com HTML inteiro (usado para contexto)
     """
-    raw = (entry.get('raw') or '').lower()
-    label = (entry.get('label') or '')
+    raw = (entry.get("raw") or "").lower()
+    label = entry.get("label") or ""
     if is_prize_text(raw) or is_prize_text(label):
         return True
 
-    price = entry.get('price')
+    price = entry.get("price")
     if price is None:
         return False
     try:
@@ -55,7 +53,7 @@ def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
         return False
 
     # Constrói variantes de string comuns para corresponder como preços aparecem na página
-    price_br = f"{pv:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+    price_br = f"{pv:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     price_dot = f"{pv:.2f}"
 
     patterns = [
@@ -71,7 +69,7 @@ def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
         r"\b(prêmio|premiação|premio|prize|award|prêmios|premiações|awards|"
         r"lugar|colocado|classificado|classificação|posição|podium|pódio|"
         r"destinada a quantia|será destinada|distribuída da seguinte forma)\b",
-        re.IGNORECASE
+        re.IGNORECASE,
     )
 
     for pat in patterns:
@@ -82,4 +80,3 @@ def entry_is_prize(entry: PriceEntry, page_html: str) -> bool:
             if prize_context_re.search(context):
                 return True
     return False
-
