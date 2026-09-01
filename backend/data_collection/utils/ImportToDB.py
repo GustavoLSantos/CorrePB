@@ -1,6 +1,9 @@
 import csv
+import logging
 import os
+import re
 import sys
+import unicodedata
 from datetime import datetime
 
 # Configurar caminho
@@ -18,6 +21,135 @@ load_dotenv(os.path.abspath(os.path.join(current_dir, "../..", ".env")))
 MONGO_URI = os.getenv("MONGODB_REMOTE_URI") or os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_REMOTE_DB_NAME") or os.getenv("MONGODB_DB_NAME") or "correpb"
 COLLECTION_NAME = "eventos"
+
+logger = logging.getLogger(__name__)
+
+# ─── Fingerprint composto (nome + cidade + data) ──────────────────────────────
+# Mesma lógica de pipeline_agent.validate_csv: normaliza acentos/caixa/espaços
+# e canonicaliza a data para YYYY-MM-DD. Troca T1: evita colisão por nome apenas.
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def _normalize_str(s: str | None) -> str:
+    if not s:
+        return ""
+    s = _strip_accents(s).lower().strip()
+    return re.sub(r"\s+", " ", s)
+
+
+def _fingerprint_from_evento(evento) -> tuple[str, str, str]:
+    nome_fp = _normalize_str(evento.nome_evento)
+    cidade_fp = _normalize_str(evento.cidade)
+    datas = getattr(evento, "datas_realizacao", None) or []
+    data_fp = ""
+    if datas:
+        try:
+            # primeira data é a canônica (multi-datas: "02, 03 e 15 de Agosto")
+            dt = datas[0]
+            if isinstance(dt, datetime):
+                data_fp = dt.strftime("%Y-%m-%d")
+            elif isinstance(dt, str) and dt.strip():
+                # fallback: tenta parsear string já formatada
+                from data_collection.core.ScraperCommon import parse_long_date_string, parse_date_string
+
+                parsed = parse_long_date_string(dt) or parse_date_string(dt)
+                data_fp = parsed.strftime("%Y-%m-%d") if parsed else dt.strip().lower()
+        except Exception:
+            data_fp = ""
+    return (nome_fp, cidade_fp, data_fp)
+
+
+def _fingerprint_from_doc(doc: dict) -> tuple[str, str, str]:
+    nome_fp = _normalize_str(doc.get("nome_evento", ""))
+    cidade_fp = _normalize_str(doc.get("cidade", ""))
+    datas = doc.get("datas_realizacao") or []
+    data_fp = ""
+    if datas:
+        try:
+            dt = datas[0]
+            if isinstance(dt, datetime):
+                data_fp = dt.strftime("%Y-%m-%d")
+            elif isinstance(dt, str) and dt.strip():
+                from data_collection.core.ScraperCommon import parse_long_date_string, parse_date_string
+
+                parsed = parse_long_date_string(dt) or parse_date_string(dt)
+                data_fp = parsed.strftime("%Y-%m-%d") if parsed else dt.strip().lower()
+        except Exception:
+            data_fp = ""
+    else:
+        # fallback para campo legado "Data" string se existir
+        raw = doc.get("Data") or doc.get("data") or ""
+        if raw:
+            try:
+                from data_collection.core.ScraperCommon import parse_long_date_string
+
+                parsed = parse_long_date_string(str(raw))
+                data_fp = parsed.strftime("%Y-%m-%d") if parsed else str(raw).strip().lower()
+            except Exception:
+                data_fp = str(raw).strip().lower()
+    return (nome_fp, cidade_fp, data_fp)
+
+
+def _find_existing_event(db, evento) -> dict | None:
+    """Busca evento existente pelo fingerprint composto (nome+cidade+data).
+
+    Estratégia: busca candidatos por nome normalizado via regex (índice ajuda),
+    depois filtra em Python pelo fingerprint completo. Evita varredura total
+    e tolera variações de caixa/acentos.
+    """
+    fp_target = _fingerprint_from_evento(evento)
+    if not fp_target[0]:
+        return None
+
+    # Candidato por nome: regex case-insensitive ancorado no nome normalizado
+    # não é perfeito para acentos, então fallback para scan se não achar
+    try:
+        # tenta busca exata no primeiro nível (mais rápido se índice existir)
+        # usa primeiro token do nome para reduzir candidatos
+        nome_raw = (evento.nome_evento or "").strip()
+        primeiro_token = re.escape(nome_raw.split()[0]) if nome_raw else ""
+        candidatos = []
+        if primeiro_token:
+            # busca ampla mas indexável: nome começa com mesmo prefixo
+            candidatos = list(
+                db.eventos.find({"nome_evento": {"$regex": f"^{primeiro_token}", "$options": "i"}})
+            )
+        if not candidatos:
+            # fallback: varredura total (coleção pequena < 10k, custo aceitável)
+            candidatos = list(db.eventos.find({}))
+
+        for doc in candidatos:
+            if _fingerprint_from_doc(doc) == fp_target:
+                return doc
+        return None
+    except Exception as exc:
+        logger.debug(f"_find_existing_event fallback scan: {exc}", exc_info=True)
+        try:
+            for doc in db.eventos.find({}):
+                if _fingerprint_from_doc(doc) == fp_target:
+                    return doc
+        except Exception:
+            pass
+        return None
+
+
+def _ensure_event_indexes(db) -> None:
+    """Garante índices para a nova chave composta. Não cria unique para não quebrar
+    dados legados já duplicados — unicidade é garantida em aplicação via fingerprint.
+    """
+    try:
+        # Índice simples para acelerar busca por nome (usado em _find_existing_event)
+        db.eventos.create_index([("nome_evento", 1)], background=True)
+        # Índice composto cru (para debug/inspeção); fingerprint normalizado fica em app
+        db.eventos.create_index(
+            [("cidade", 1), ("estado", 1), ("datas_realizacao", 1)], background=True
+        )
+    except Exception as exc:
+        logger.debug(f"_ensure_event_indexes failed: {exc}", exc_info=True)
+
 
 print("Conectando ao MongoDB Atlas\n")
 
@@ -50,6 +182,8 @@ def import_csv_to_mongodb(db, csv_file, fonte):
             "em Network Access. Dados não foram sincronizados."
         )
         return
+    # Garante índices da T1 (idempotente)
+    _ensure_event_indexes(db)
     try:
         with open(csv_file, "r", encoding="utf-8") as file:
             reader = csv.DictReader(file, delimiter=";", quoting=csv.QUOTE_ALL)
@@ -63,8 +197,8 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                     # O campo 'Categorias Premiadas' será tratado automaticamente pelo EventoDeCorrida
                     evento = EventoDeCorrida.from_csv_row(row, fonte)
 
-                    # Checa se já existe pelo nome
-                    evento_existente = db.eventos.find_one({"nome_evento": evento.nome_evento})
+                    # T1: checa existência pelo fingerprint composto (nome+cidade+data)
+                    evento_existente = _find_existing_event(db, evento)
                     if not evento_existente:
                         # Gerar _id atômico no formato YYYYMMXXXX via counters (evita race com find_one+regex)
                         now = datetime.now()
@@ -175,8 +309,9 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                             print(f"Atualizando evento: {evento.nome_evento}")
                             print(f"Antes: {evento_existente_dict}")
                             print(f"Depois: {evento_dict}")
+                            # T1: atualiza pelo _id do documento encontrado (chave composta), não só por nome
                             db.eventos.update_one(
-                                {"nome_evento": evento.nome_evento}, {"$set": update_dict}
+                                {"_id": evento_existente["_id"]}, {"$set": update_dict}
                             )
                             eventos_atualizados += 1
                 except Exception as e:
