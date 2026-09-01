@@ -4,6 +4,7 @@ import re
 import io
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import logging
 
@@ -14,7 +15,8 @@ from urllib3.util.retry import Retry
 
 logger = logging.getLogger(__name__)
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from data_collection.core.ScraperCommon import (
     MONTHS_PT,

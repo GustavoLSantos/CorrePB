@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 import re
 import threading
 import time
@@ -23,7 +24,8 @@ if not logger.handlers and not logging.getLogger().handlers:
 
 # Registro de evento no schema CSV — todos os valores são strings
 EventInfo = dict[str, str]
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from data_collection.core.Driver import setup_driver
 from data_collection.core.ScraperCommon import (

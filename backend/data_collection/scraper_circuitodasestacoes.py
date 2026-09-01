@@ -11,10 +11,11 @@ Corre e sem Selenium:
 Produz o mesmo schema CSV dos demais scrapers e sincroniza com a coleção
 "circuitodasestacoes".
 """
-import os
 import sys
+from pathlib import Path
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from data_collection.core.ScraperCommon import run_standard_scraper
 from data_collection.sources.CircuitoDasEstacoes import get_circuito_events

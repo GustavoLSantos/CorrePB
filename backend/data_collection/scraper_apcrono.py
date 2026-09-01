@@ -6,10 +6,11 @@ Coleta via:
 Segue padrão ScraperCommon (CSV + sync MongoDB).
 """
 
-import os
 import sys
+from pathlib import Path
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from data_collection.core.ScraperCommon import run_standard_scraper
 from data_collection.sources.Apcrono import get_apcrono_events
