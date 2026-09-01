@@ -24,10 +24,6 @@ COLLECTION_NAME = "eventos"
 
 logger = logging.getLogger(__name__)
 
-# ─── Fingerprint composto (nome + cidade + data) ──────────────────────────────
-# Mesma lógica de pipeline_agent.validate_csv: normaliza acentos/caixa/espaços
-# e canonicaliza a data para YYYY-MM-DD. Troca T1: evita colisão por nome apenas.
-
 
 def _strip_accents(s: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
@@ -53,7 +49,10 @@ def _fingerprint_from_evento(evento) -> tuple[str, str, str]:
                 data_fp = dt.strftime("%Y-%m-%d")
             elif isinstance(dt, str) and dt.strip():
                 # fallback: tenta parsear string já formatada
-                from data_collection.core.ScraperCommon import parse_long_date_string, parse_date_string
+                from data_collection.core.ScraperCommon import (
+                    parse_long_date_string,
+                    parse_date_string,
+                )
 
                 parsed = parse_long_date_string(dt) or parse_date_string(dt)
                 data_fp = parsed.strftime("%Y-%m-%d") if parsed else dt.strip().lower()
@@ -73,7 +72,10 @@ def _fingerprint_from_doc(doc: dict) -> tuple[str, str, str]:
             if isinstance(dt, datetime):
                 data_fp = dt.strftime("%Y-%m-%d")
             elif isinstance(dt, str) and dt.strip():
-                from data_collection.core.ScraperCommon import parse_long_date_string, parse_date_string
+                from data_collection.core.ScraperCommon import (
+                    parse_long_date_string,
+                    parse_date_string,
+                )
 
                 parsed = parse_long_date_string(dt) or parse_date_string(dt)
                 data_fp = parsed.strftime("%Y-%m-%d") if parsed else dt.strip().lower()
@@ -182,7 +184,6 @@ def import_csv_to_mongodb(db, csv_file, fonte):
             "em Network Access. Dados não foram sincronizados."
         )
         return
-    # Garante índices da T1 (idempotente)
     _ensure_event_indexes(db)
     try:
         with open(csv_file, "r", encoding="utf-8") as file:
@@ -197,7 +198,6 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                     # O campo 'Categorias Premiadas' será tratado automaticamente pelo EventoDeCorrida
                     evento = EventoDeCorrida.from_csv_row(row, fonte)
 
-                    # T1: checa existência pelo fingerprint composto (nome+cidade+data)
                     evento_existente = _find_existing_event(db, evento)
                     if not evento_existente:
                         # Gerar _id atômico no formato YYYYMMXXXX via counters (evita race com find_one+regex)
@@ -259,9 +259,7 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                         evento_existente_dict = {
                             k: v for k, v in evento_existente.items() if k != "_id"
                         }
-                        # T2: campos transientes/imutáveis não entram na comparação
-                        # data_coleta = quando coletou (sempre now), site_coleta = fonte do primeiro insert
-                        # patrocinado/campos_protegidos = edição manual
+
                         campos_nao_comparaveis = [
                             "data_coleta",
                             "site_coleta",
@@ -293,7 +291,9 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                             import unicodedata
 
                             norm = "".join(
-                                c for c in unicodedata.normalize("NFKD", s.lower()) if not unicodedata.combining(c)
+                                c
+                                for c in unicodedata.normalize("NFKD", s.lower())
+                                if not unicodedata.combining(c)
                             )
                             if norm in ("edital nao encontrado", "edital não encontrado"):
                                 return ""
@@ -309,9 +309,6 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                                     d[k] = ""
 
                         if evento_dict != evento_existente_dict:
-                            # T2: montar dict de update sem campos imutáveis/transientes
-                            # antes: update_dict incluía data_coleta=now() e site_coleta,
-                            # causando churn (todo run parecia "atualizado")
                             update_dict = evento.to_dict()
                             # _id nunca vai no $set
                             update_dict.pop("_id", None)
@@ -327,7 +324,6 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                             print(f"Atualizando evento: {evento.nome_evento}")
                             print(f"Antes: {evento_existente_dict}")
                             print(f"Depois: {evento_dict}")
-                            # T1: atualiza pelo _id do documento encontrado (chave composta), não só por nome
                             db.eventos.update_one(
                                 {"_id": evento_existente["_id"]}, {"$set": update_dict}
                             )

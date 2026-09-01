@@ -8,6 +8,7 @@ scraper_brasilquecorre, scraper_race83, scraper_zenite e novos scrapers.
 import csv
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -33,6 +34,9 @@ import urllib3
 import warnings
 
 INSECURE_DOMAINS: set[str] = {"brasilquecorre.com"}
+
+
+_MOJIBAKE_RE = re.compile(r"\ufffd|Ã|Â[°»£¢]|â€")
 
 _RATE_LIMIT_LOCK = threading.Lock()
 _LAST_REQUEST_TIME: dict[str, float] = {}
@@ -122,11 +126,18 @@ def get_with_rate_limit(
 
 
 def fix_encoding(text: str | None) -> str:
-    """Corrige texto com encoding latin1<->utf-8 quebrado (ex.: 'JoÃ£o' -> 'João')."""
+
     if not text:
         return ""
+    # Guarda: sem mojibake visível, retorna intacto
+    if not _MOJIBAKE_RE.search(text):
+        return text
     try:
-        return text.encode("latin1").decode("utf-8")
+        fixed = text.encode("latin1").decode("utf-8")
+        # Só aceita se mudou e não introduziu �
+        if fixed != text and "\ufffd" not in fixed:
+            return fixed
+        return text
     except Exception:
         return text
 
