@@ -259,7 +259,15 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                         evento_existente_dict = {
                             k: v for k, v in evento_existente.items() if k != "_id"
                         }
-                        campos_nao_comparaveis = ["data_coleta", "patrocinado", "campos_protegidos"]
+                        # T2: campos transientes/imutáveis não entram na comparação
+                        # data_coleta = quando coletou (sempre now), site_coleta = fonte do primeiro insert
+                        # patrocinado/campos_protegidos = edição manual
+                        campos_nao_comparaveis = [
+                            "data_coleta",
+                            "site_coleta",
+                            "patrocinado",
+                            "campos_protegidos",
+                        ]
                         for campo in campos_nao_comparaveis:
                             evento_dict.pop(campo, None)
                             evento_existente_dict.pop(campo, None)
@@ -301,10 +309,20 @@ def import_csv_to_mongodb(db, csv_file, fonte):
                                     d[k] = ""
 
                         if evento_dict != evento_existente_dict:
-                            # Montar dict de update sem campos protegidos
+                            # T2: montar dict de update sem campos imutáveis/transientes
+                            # antes: update_dict incluía data_coleta=now() e site_coleta,
+                            # causando churn (todo run parecia "atualizado")
                             update_dict = evento.to_dict()
+                            # _id nunca vai no $set
+                            update_dict.pop("_id", None)
                             for campo in campos_protegidos:
                                 update_dict.pop(campo, None)
+                            for campo in campos_nao_comparaveis:
+                                update_dict.pop(campo, None)
+
+                            if not update_dict:
+                                # só mudaram campos imutáveis -> nada a persistir
+                                continue
 
                             print(f"Atualizando evento: {evento.nome_evento}")
                             print(f"Antes: {evento_existente_dict}")
