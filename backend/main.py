@@ -41,12 +41,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+cors_origins = settings.cors_origins_list
+is_wildcard = len(cors_origins) == 1 and cors_origins[0] == "*"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=cors_origins,
+    allow_credentials=not is_wildcard,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Requested-With"],
 )
 
 app.include_router(eventos_router)

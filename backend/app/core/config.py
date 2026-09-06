@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     AWS_SECRET_ACCESS_KEY: str = ""
     BUCKET_JSON_KEY: str = "eventos_real.json"
 
+    CORS_ORIGINS: str = ""
+
     model_config = {
         "env_file": Path(__file__).resolve().parents[2] / ".env",
         "extra": "ignore",
@@ -34,6 +36,12 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.strip()
         return v
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        if not self.CORS_ORIGINS or self.CORS_ORIGINS.strip() == "*":
+            return ["*"]
+        return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
 
 
 settings = Settings()
