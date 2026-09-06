@@ -35,6 +35,23 @@ class Database:
         if self.client:
             self.client.close()
 
+    async def ensure_indexes(self) -> None:
+        if self.db is None:
+            return
+        try:
+            eventos = self.db[settings.MONGODB_COLLECTION]
+            await eventos.create_index([("datas_realizacao", -1)], background=True)
+            await eventos.create_index(
+                [("estado", 1), ("datas_realizacao", -1)], background=True
+            )
+            await eventos.create_index([("nome_evento", 1)], background=True)
+            await eventos.create_index([("cidade", 1)], background=True)
+            await self.db["counters"].create_index([("seq", 1)], background=True)
+            await self.db["scrape_state"].create_index([("finished_at", -1)], background=True)
+            logger.info("MongoDB indexes ensured")
+        except Exception as e:
+            logger.warning(f"Failed to ensure indexes: {e}")
+
     def get_collection(self, name: str | None = None):
         if self.db is None:
             raise RuntimeError("Database not connected — call await database.connect() first")

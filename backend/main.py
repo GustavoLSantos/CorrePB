@@ -35,6 +35,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.error(f"MongoDB ping failed: {e}")
                 raise RuntimeError(f"MongoDB ping failed: {e}") from e
+        await database.ensure_indexes()
         _ = cleanup_scraped_csvs(24.0)
         logger.info("Connected to MongoDB")
     except Exception as e:
