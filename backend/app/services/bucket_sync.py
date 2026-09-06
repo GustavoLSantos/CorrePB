@@ -17,16 +17,19 @@ async def trigger_bucket_sync() -> dict[str, str | int]:
         raise HTTPException(status_code=500, detail="AWS_BUCKET_NAME não configurado")
 
     collection = database.get_collection()
-    docs = await collection.find({}).to_list(length=None)
-
-    eventos = []
-    for doc in docs:
+    eventos: list[dict] = []
+    skipped = 0
+    cursor = collection.find({}).batch_size(500)
+    async for doc in cursor:
         try:
             evento = EventoResponse(**doc)
             eventos.append(evento.model_dump(by_alias=True))
         except Exception as e:
+            skipped += 1
             logger.warning(f"Erro ao serializar evento {doc.get('_id')}: {e}")
             continue
+    if skipped:
+        logger.warning(f"Bucket sync: {skipped} eventos ignorados por falha de serialização")
 
     payload = json.dumps(eventos, ensure_ascii=False, default=str)
 
