@@ -1,13 +1,16 @@
 import csv
+import logging
 import re
-from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TypeAlias, cast
 
 import certifi
-from pymongo import MongoClient
+from pymongo import MongoClient, ReturnDocument
 from pymongo.database import Database
+from pymongo.errors import DuplicateKeyError
+
+logger = logging.getLogger(__name__)
 
 from app.core.config import settings
 from data_collection.evento_de_corrida import EventoDeCorrida
@@ -55,20 +58,39 @@ def _generate_id(
     db: Database[EventoDoc],
     prefix: str,
 ) -> str:
-    last = db["eventos"].find_one(
-        {"_id": {"$regex": f"^{re.escape(prefix)}"}},
-        sort=[("_id", -1)],
+
+    doc = db["counters"].find_one_and_update(
+        {"_id": prefix},
+        {"$inc": {"seq": 1}},
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
     )
-
-    last_id = last.get("_id") if last else None
-
-    last_seq = 0
-
-    if isinstance(last_id, str) and len(last_id) >= len(prefix) + 4:
-        with suppress(ValueError):
-            last_seq = int(last_id[-4:])
-
-    return f"{prefix}{last_seq + 1:04d}"
+    seq = int(doc["seq"])  # type: ignore[union-attr]
+    if seq == 1:
+        try:
+            last = db["eventos"].find_one(
+                {"_id": {"$regex": f"^{re.escape(prefix)}"}},
+                sort=[("_id", -1)],
+            )
+            if last and isinstance(last.get("_id"), str):
+                legacy_seq = 0
+                try:
+                    legacy_seq = int(str(last["_id"])[-4:])
+                except ValueError:
+                    legacy_seq = 0
+                if legacy_seq >= 1:
+                    doc2 = db["counters"].find_one_and_update(
+                        {"_id": prefix},
+                        {"$set": {"seq": legacy_seq + 1}},
+                        return_document=ReturnDocument.AFTER,
+                    )
+                    seq = int(doc2["seq"])  # type: ignore[union-attr]
+                    logger.info(
+                        f"[counters] prefix {prefix} inicializado em {seq} (legado {legacy_seq})"
+                    )
+        except Exception as e:
+            logger.warning(f"[counters] falha legado {prefix}: {e}")
+    return f"{prefix}{seq:04d}"
 
 
 def _campos_protegidos(documento: EventoDoc) -> list[str]:
@@ -117,13 +139,25 @@ def _import_csv(
                 evento_dict = evento.to_dict()
 
                 if existente is None:
-                    evento_dict["_id"] = _generate_id(
-                        db,
-                        datetime.now().strftime("%Y%m"),
-                    )
-
-                    _ = db["eventos"].insert_one(evento_dict)
-                    novos += 1
+                    # Retry para colisão residual de ID
+                    inserted = False
+                    for _attempt in range(3):
+                        evento_dict["_id"] = _generate_id(
+                            db,
+                            datetime.now(timezone.utc).strftime("%Y%m"),
+                        )
+                        try:
+                            _ = db["eventos"].insert_one(evento_dict)
+                            inserted = True
+                            break
+                        except DuplicateKeyError:
+                            continue
+                    if inserted:
+                        novos += 1
+                    else:
+                        logger.warning(
+                            f"Falha ao inserir evento '{evento.nome_evento}' após 3 tentativas de ID"
+                        )
                     continue
 
                 existente_dict: EventoDoc = {

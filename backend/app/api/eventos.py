@@ -1,7 +1,7 @@
-from datetime import datetime
 from math import ceil
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pymongo.errors import DuplicateKeyError
 
 from app.core.auth import verify_api_key
 from app.core.database import database
@@ -14,21 +14,7 @@ SEARCH_FIELDS = ["nome_evento", "cidade", "organizador"]
 
 
 async def _generate_id() -> str:
-    now = datetime.now()
-    prefix = now.strftime("%Y%m")
-    collection = database.get_collection()
-
-    last = await collection.find_one(
-        {"_id": {"$regex": f"^{prefix}"}},
-        sort=[("_id", -1)],
-    )
-
-    if last:
-        seq = int(last["_id"][6:]) + 1
-    else:
-        seq = 1
-
-    return f"{prefix}{seq:04d}"
+    return await database.get_next_evento_id()
 
 
 @router.get("", response_model=EventoPageResponse)
@@ -76,11 +62,21 @@ async def create_evento(
     _: str = Depends(verify_api_key),
 ):
     collection = database.get_collection()
-    evento_id = await _generate_id()
-    doc = evento.model_dump()
-    doc["_id"] = evento_id
-    await collection.insert_one(doc)
-    return EventoResponse(**doc)
+    # Retry em caso de colisão residual (legado / concorrência extrema)
+    last_exc: Exception | None = None
+    for _ in range(3):
+        evento_id = await _generate_id()
+        doc = evento.model_dump()
+        doc["_id"] = evento_id
+        try:
+            await collection.insert_one(doc)
+            return EventoResponse(**doc)
+        except DuplicateKeyError as e:
+            last_exc = e
+            continue
+    raise HTTPException(
+        status_code=409, detail=f"Falha ao gerar ID único após 3 tentativas: {last_exc}"
+    )
 
 
 @router.patch("/{evento_id}", response_model=EventoResponse)
