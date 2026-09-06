@@ -2,8 +2,9 @@ import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.eventos import router as eventos_router
 from app.api.sync import router as sync_router
@@ -26,11 +27,24 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await database.connect()
-    _ = cleanup_scraped_csvs(24.0)
-    logger.info("Connected to MongoDB")
+    try:
+        await database.connect()
+        if database.db is not None:
+            try:
+                await database.db.command("ping")
+            except Exception as e:
+                logger.error(f"MongoDB ping failed: {e}")
+                raise RuntimeError(f"MongoDB ping failed: {e}") from e
+        _ = cleanup_scraped_csvs(24.0)
+        logger.info("Connected to MongoDB")
+    except Exception as e:
+        logger.error(f"Failed to connect to MongoDB: {e}")
+        raise
     yield
-    await database.disconnect()
+    try:
+        await database.disconnect()
+    except Exception as e:
+        logger.warning(f"Error disconnecting MongoDB: {e}")
     logger.info("Disconnected from MongoDB")
 
 
@@ -57,9 +71,27 @@ app.include_router(sync_router)
 app.include_router(scrape_router)
 
 
-@app.get("/health")
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request: Request, exc: RuntimeError):
+    if "Database not connected" in str(exc) or "MongoDB" in str(exc):
+        return JSONResponse(status_code=503, content={"detail": "Database unavailable"})
+    return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.get("/health", tags=["health"])
 async def health_check():
     return {"status": "ok"}
+
+
+@app.get("/ready", tags=["health"])
+async def readiness_check():
+    if database.db is None:
+        return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "database not connected"})
+    try:
+        await database.db.command("ping")
+        return {"status": "ready"}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "not_ready", "reason": str(e)})
 
 
 if __name__ == "__main__":
