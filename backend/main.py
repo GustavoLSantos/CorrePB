@@ -2,8 +2,11 @@ import logging
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+import uuid
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api import api_router
@@ -57,13 +60,24 @@ app = FastAPI(
 cors_origins = settings.cors_origins_list
 is_wildcard = len(cors_origins) == 1 and cors_origins[0] == "*"
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=not is_wildcard,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Requested-With"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Requested-With", "X-Request-Id"],
 )
+
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = request_id
+    return response
 
 app.include_router(api_router)
 
