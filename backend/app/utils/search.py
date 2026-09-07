@@ -1,5 +1,6 @@
 import re
 import unicodedata
+from functools import lru_cache
 
 _ACENTOS = {
     "a": "aáàâã",
@@ -11,6 +12,7 @@ _ACENTOS = {
 }
 
 
+@lru_cache(maxsize=512)
 def build_search_regex(termo: str) -> str:
     termo = unicodedata.normalize("NFD", termo).lower().strip()
     if not termo:

@@ -1,6 +1,9 @@
 import re
 from typing import Any
 
+_PRICE_RE = re.compile(r"R\$\s*[\d.,]+")
+_PRICE_WITH_TAX_RE = re.compile(r"R\$\s*[\d.,]+(?:.*?taxa.*)?")
+
 
 def parse_price_str(text: Any) -> float | None:
     if not text:
@@ -90,7 +93,7 @@ def formatar_lista_precos(precos_entries: list[Any] | None, preco_raw: str | Non
                             formatted = ''
 
                     if formatted:
-                        m = re.search(r"R\$\s*[\d.,]+(?:.*?taxa.*)?", formatted)
+                        m = _PRICE_WITH_TAX_RE.search(formatted)
                         if m:
                             price_part = m.group(0).strip()
                             label_part = formatted[:m.start()].strip(' -—–')
@@ -121,7 +124,7 @@ def formatar_lista_precos(precos_entries: list[Any] | None, preco_raw: str | Non
 
                     raw = p.get('raw') or ''
                     if raw:
-                        m = re.search(r"R\$\s*[\d.,]+", raw)
+                        m = _PRICE_RE.search(raw)
                         if m:
                             price_part = m.group(0).strip()
                             label_part = raw.replace(m.group(0), '').strip(' -—|')
@@ -140,7 +143,7 @@ def formatar_lista_precos(precos_entries: list[Any] | None, preco_raw: str | Non
                             price_part, label_part = parts[0], parts[1]
                             lista_precos.append(f"{label_part.upper()} — {price_part}")
                             continue
-                    m = re.search(r"R\$\s*[\d.,]+", s)
+                    m = _PRICE_RE.search(s)
                     if m:
                         price_part = m.group(0).strip()
                         label_part = s.replace(m.group(0), '').strip(' -—|')
