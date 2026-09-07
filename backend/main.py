@@ -6,9 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.eventos import router as eventos_router
-from app.api.sync import router as sync_router
-from app.api.scrape import router as scrape_router
+from app.api import api_router
 from app.core.config import settings
 from app.core.database import database
 from app.services.scraper_runner import cleanup_scraped_csvs
@@ -67,9 +65,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Requested-With"],
 )
 
-app.include_router(eventos_router)
-app.include_router(sync_router)
-app.include_router(scrape_router)
+app.include_router(api_router)
 
 
 @app.exception_handler(RuntimeError)
