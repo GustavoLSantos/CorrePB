@@ -21,8 +21,8 @@ async def _generate_id() -> str:
 async def list_eventos(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    estado: str | None = Query(None),
-    q: str | None = Query(None, description="Busca em nome, cidade e organizador"),
+    estado: str | None = Query(None, min_length=2, max_length=2, pattern=r"^[A-Za-z]{2}$", description="UF com 2 letras"),
+    q: str | None = Query(None, max_length=80, description="Busca em nome, cidade e organizador"),
 ):
     collection = database.get_collection()
     query: dict = {}
