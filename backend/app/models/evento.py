@@ -1,10 +1,14 @@
 import json
-import re
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
+from app.models.validators import (
+    normalize_distancias,
+    normalize_distancias_nullable,
+    validate_horario_format,
+)
 from app.utils.price_formatting import formatar_lista_precos
 
 
@@ -57,11 +61,7 @@ class EventoResponse(BaseModel):
     @field_validator("distancias", mode="before")
     @classmethod
     def parse_distancias(cls, v: Any) -> list[str]:
-        if isinstance(v, str):
-            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
-        if isinstance(v, list):
-            return [str(d).strip() for d in v if str(d).strip()]
-        return []
+        return normalize_distancias(v)
 
     @field_validator("precos_entries", mode="before")
     @classmethod
@@ -107,11 +107,8 @@ class EventoCreate(BaseModel):
     @field_validator("distancias", mode="before")
     @classmethod
     def parse_distancias(cls, v: Any) -> list[str]:
-        if isinstance(v, str):
-            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
-        if isinstance(v, list):
-            return [str(d).strip() for d in v if str(d).strip()]
-        return []
+        return normalize_distancias(v)
+
     url_inscricao: str | None = None
     url_imagem: str | None = None
     categoria: str | None = None
@@ -126,9 +123,7 @@ class EventoCreate(BaseModel):
     @field_validator("horario")
     @classmethod
     def validate_horario(cls, v: str | None) -> str | None:
-        if v is not None and not re.match(r"^\d{2}:\d{2}$", v):
-            raise ValueError("horario must match HH:MM format")
-        return v
+        return validate_horario_format(v)
 
 
 class EventoUpdate(BaseModel):
@@ -144,13 +139,7 @@ class EventoUpdate(BaseModel):
     @field_validator("distancias", mode="before")
     @classmethod
     def parse_distancias(cls, v: Any) -> list[str] | None:
-        if v is None:
-            return None
-        if isinstance(v, str):
-            return [d.strip() for d in v.split(",") if d.strip()] if v.strip() else []
-        if isinstance(v, list):
-            return [str(d).strip() for d in v if str(d).strip()]
-        return []
+        return normalize_distancias_nullable(v)
     url_inscricao: str | None = None
     url_imagem: str | None = None
     categoria: str | None = None
@@ -166,9 +155,7 @@ class EventoUpdate(BaseModel):
     @field_validator("horario")
     @classmethod
     def validate_horario(cls, v: str | None) -> str | None:
-        if v is not None and not re.match(r"^\d{2}:\d{2}$", v):
-            raise ValueError("horario must match HH:MM format")
-        return v
+        return validate_horario_format(v)
 
     @model_validator(mode="before")
     @classmethod
