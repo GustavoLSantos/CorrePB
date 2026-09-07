@@ -17,6 +17,9 @@ from app.services.scrape_config import BASE_DIR, CSV_MAP, DATA_COLLECTION_DIR, D
 
 logger = logging.getLogger(__name__)
 
+SCRAPER_TIMEOUT_S = 600
+SCRAPER_CONCURRENCY = 3
+
 _background_tasks: set[asyncio.Task[None]] = set()
 
 
@@ -108,6 +111,7 @@ def _run_scraper(script_name: str) -> ScraperResult:
             errors="replace",
             env=env,
             cwd=str(BASE_DIR),
+            timeout=SCRAPER_TIMEOUT_S,
         )
         duration = round(time.monotonic() - start, 1)
         ok = proc.returncode == 0
@@ -126,6 +130,16 @@ def _run_scraper(script_name: str) -> ScraperResult:
             "duration_s": duration,
             "detail": (proc.stdout or "")[-8000:],
             "stderr": (proc.stderr or "")[-2000:],
+        }
+    except subprocess.TimeoutExpired:
+        duration = round(time.monotonic() - start, 1)
+        logger.error(f"Scraper {script_name} timeout after {SCRAPER_TIMEOUT_S}s")
+        return {
+            "nome": script_name,
+            "ok": False,
+            "duration_s": duration,
+            "detail": "",
+            "stderr": f"Timeout after {SCRAPER_TIMEOUT_S}s",
         }
     except Exception as e:
         logger.error(f"Scraper {script_name} exception: {e}", exc_info=True)
@@ -183,9 +197,13 @@ async def _execute_job(job: ScraperJob) -> None:
     try:
         cleanup_scraped_csvs()
         DATA_DIR.mkdir(parents=True, exist_ok=True)
-        scraper_results = await asyncio.gather(
-            *[asyncio.to_thread(_run_scraper, s) for s in SCRAPERS]
-        )
+        sem = asyncio.Semaphore(SCRAPER_CONCURRENCY)
+
+        async def _run_limited(name: str) -> ScraperResult:
+            async with sem:
+                return await asyncio.to_thread(_run_scraper, name)
+
+        scraper_results = await asyncio.gather(*[_run_limited(s) for s in SCRAPERS])
         report: ScraperReport = {
             "started_at": job.started_at,
             "finished_at": None,
