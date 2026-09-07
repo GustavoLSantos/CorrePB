@@ -91,6 +91,14 @@ class EventoPageResponse(BaseModel):
     total_pages: int
     page: int
     size: int
+    has_next: bool = False
+    has_prev: bool = False
+
+    @model_validator(mode="after")
+    def compute_pagination(self) -> "EventoPageResponse":
+        self.has_next = self.page < self.total_pages
+        self.has_prev = self.page > 1
+        return self
 
 
 class EventoCreate(BaseModel):
