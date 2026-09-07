@@ -1,6 +1,6 @@
 import hmac
 
-from fastapi import Depends, HTTPException
+from fastapi import HTTPException, Security
 from fastapi.security import APIKeyHeader
 
 from app.core.config import settings
@@ -16,9 +16,9 @@ def _verify(expected: str, provided: str | None, not_configured_msg: str) -> str
     return provided
 
 
-async def verify_api_key(x_api_key: str | None = Depends(_api_key_header)) -> str:
+async def verify_api_key(x_api_key: str | None = Security(_api_key_header)) -> str:
     return _verify(settings.API_KEY, x_api_key, "API_KEY not configured")
 
 
-async def verify_scrapers_api_key(x_api_key: str | None = Depends(_api_key_header)) -> str:
+async def verify_scrapers_api_key(x_api_key: str | None = Security(_api_key_header)) -> str:
     return _verify(settings.SCRAPERS_API_KEY, x_api_key, "SCRAPERS_API_KEY not configured")

@@ -1,6 +1,6 @@
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Security
 from pymongo.errors import DuplicateKeyError
 
 from app.core.auth import verify_api_key
@@ -59,7 +59,7 @@ async def get_evento(evento_id: str):
 @router.post("", response_model=EventoResponse, status_code=201)
 async def create_evento(
     evento: EventoCreate,
-    _: str = Depends(verify_api_key),
+    _: str = Security(verify_api_key),
 ):
     collection = database.get_collection()
     # Retry em caso de colisão residual (legado / concorrência extrema)
@@ -83,7 +83,7 @@ async def create_evento(
 async def update_evento(
     evento_id: str,
     evento: EventoUpdate,
-    _: str = Depends(verify_api_key),
+    _: str = Security(verify_api_key),
 ):
     collection = database.get_collection()
     update_data = evento.model_dump(exclude_none=True)
@@ -114,7 +114,7 @@ async def update_evento(
 @router.delete("/{evento_id}", status_code=204)
 async def delete_evento(
     evento_id: str,
-    _: str = Depends(verify_api_key),
+    _: str = Security(verify_api_key),
 ):
     collection = database.get_collection()
     result = await collection.delete_one({"_id": evento_id})

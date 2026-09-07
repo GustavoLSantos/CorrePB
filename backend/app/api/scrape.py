@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Security
 
 from app.core.auth import verify_scrapers_api_key
 from app.services import scraper_import
@@ -14,7 +14,7 @@ from app.services.scraper_runner import (
 )
 
 
-router = APIRouter(prefix="/api/v1/scrape", dependencies=[Depends(verify_scrapers_api_key)], tags=["scrape"])
+router = APIRouter(prefix="/api/v1/scrape", dependencies=[Security(verify_scrapers_api_key)], tags=["scrape"])
 
 
 @router.post("/run", status_code=202)
