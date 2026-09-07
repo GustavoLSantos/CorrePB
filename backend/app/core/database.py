@@ -48,6 +48,8 @@ class Database:
             await eventos.create_index([("cidade", 1)], background=True)
             await self.db["counters"].create_index([("seq", 1)], background=True)
             await self.db["scrape_state"].create_index([("finished_at", -1)], background=True)
+            await self.db["scrape_jobs"].create_index([("status", 1), ("started_at", -1)], background=True)
+            await self.db["scrape_jobs"].create_index("updated_at", expireAfterSeconds=604800, background=True)
             logger.info("MongoDB indexes ensured")
         except Exception as e:
             logger.warning(f"Failed to ensure indexes: {e}")

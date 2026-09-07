@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 from app.core.database import database
 from app.services.dedup.csv import DedupStats, deduplicate_csvs
@@ -71,10 +71,13 @@ class ScraperReport(TypedDict):
     deduplicacao_db: dict | None
 
 
+ScraperStatus = Literal["running", "complete", "failed"]
+
+
 @dataclass
 class ScraperJob:
     job_id: str
-    status: str = "running"
+    status: ScraperStatus = "running"
     started_at: str = ""
     finished_at: str = ""
     report: ScraperReport | None = None
@@ -84,6 +87,46 @@ class ScraperJob:
 _jobs: dict[str, ScraperJob] = {}
 _lock = asyncio.Lock()
 _active_job_id: str | None = None
+
+
+def _jobs_collection():
+    if database.db is None:
+        return None
+    return database.db["scrape_jobs"]
+
+
+def _job_to_doc(job: ScraperJob) -> dict:
+    return {
+        "_id": job.job_id,
+        "job_id": job.job_id,
+        "status": job.status,
+        "started_at": job.started_at,
+        "finished_at": job.finished_at,
+        "report": job.report,
+        "error": job.error,
+        "updated_at": _now_iso(),
+    }
+
+
+def _doc_to_job(doc: dict) -> ScraperJob:
+    return ScraperJob(
+        job_id=doc.get("job_id") or doc.get("_id", ""),
+        status=doc.get("status", "running"),
+        started_at=doc.get("started_at", ""),
+        finished_at=doc.get("finished_at", ""),
+        report=doc.get("report"),
+        error=doc.get("error"),
+    )
+
+
+async def _persist_job(job: ScraperJob) -> None:
+    try:
+        coll = _jobs_collection()
+        if coll is None:
+            return
+        await coll.update_one({"_id": job.job_id}, {"$set": _job_to_doc(job)}, upsert=True)
+    except Exception as e:
+        logger.warning(f"Failed to persist job {job.job_id}: {e}")
 
 
 def _now_iso() -> str:
@@ -194,6 +237,7 @@ async def get_last_run() -> dict | None:
 async def _execute_job(job: ScraperJob) -> None:
     global _active_job_id
     job.started_at = _now_iso()
+    await _persist_job(job)
     try:
         cleanup_scraped_csvs()
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -215,6 +259,7 @@ async def _execute_job(job: ScraperJob) -> None:
         if any(not r["ok"] for r in scraper_results):
             job.status = "failed"
             job.error = "Um ou mais scrapers falharam"
+            await _persist_job(job)
         else:
             try:
                 dedup_stats = await asyncio.to_thread(deduplicate_csvs)
@@ -251,12 +296,14 @@ async def _execute_job(job: ScraperJob) -> None:
         report["finished_at"] = finished = _now_iso()
         job.finished_at = finished
         job.report = report
+        await _persist_job(job)
         if job.status == "complete":
             await _save_last_run(report["finished_at"])
     except Exception as e:
         job.status = "failed"
         job.error = str(e)
         job.finished_at = _now_iso()
+        await _persist_job(job)
     finally:
         _active_job_id = None
 
@@ -266,18 +313,66 @@ async def start_scrape_job() -> str | None:
     async with _lock:
         if _active_job_id:
             return None
+        # check persisted running job in case of restart with stale lock
+        try:
+            coll = _jobs_collection()
+            if coll is not None:
+                running = await coll.find_one({"status": "running"})
+                if running:
+                    _jobs[running["_id"]] = _doc_to_job(running)
+                    _active_job_id = running["_id"]
+                    return None
+        except Exception:
+            pass
         job = ScraperJob(job_id=str(uuid.uuid4()))
         _jobs[job.job_id] = job
         _active_job_id = job.job_id
+        await _persist_job(job)
     task = asyncio.get_running_loop().create_task(_execute_job(job))
     _background_tasks.add(task)
     task.add_done_callback(_background_tasks.discard)
     return job.job_id
 
 
+async def get_job_async(job_id: str) -> ScraperJob | None:
+    if job_id in _jobs:
+        return _jobs[job_id]
+    try:
+        coll = _jobs_collection()
+        if coll is not None:
+            doc = await coll.find_one({"_id": job_id})
+            if doc:
+                job = _doc_to_job(doc)
+                _jobs[job_id] = job
+                return job
+    except Exception:
+        pass
+    return None
+
+
 def get_job(job_id: str) -> ScraperJob | None:
-    return _jobs.get(job_id)
+    job = _jobs.get(job_id)
+    if job is not None:
+        return job
+    return None
 
 
 def get_active_job_id() -> str | None:
-    return _active_job_id
+    if _active_job_id is not None:
+        return _active_job_id
+    return None
+
+
+async def get_active_job_id_async() -> str | None:
+    if _active_job_id is not None:
+        return _active_job_id
+    try:
+        coll = _jobs_collection()
+        if coll is not None:
+            doc = await coll.find_one({"status": "running"}, sort=[("started_at", -1)])
+            if doc:
+                _jobs[doc["_id"]] = _doc_to_job(doc)
+                return doc["_id"]
+    except Exception:
+        pass
+    return None

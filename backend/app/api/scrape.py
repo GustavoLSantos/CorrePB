@@ -8,7 +8,9 @@ from app.services.scraper_runner import (
     cleanup_scraped_csvs,
     deduplicate_db_and_bucket,
     get_active_job_id,
+    get_active_job_id_async,
     get_job,
+    get_job_async,
     get_last_run,
     start_scrape_job,
 )
@@ -19,7 +21,7 @@ router = APIRouter(prefix="/api/v1/scrape", dependencies=[Security(verify_scrape
 
 @router.post("/run", status_code=202)
 async def run_scrape():
-    if get_active_job_id():
+    if await get_active_job_id_async() or get_active_job_id():
         raise HTTPException(status_code=409, detail="Scrape já esta em andamento")
     job_id = await start_scrape_job()
     if not job_id:
@@ -29,7 +31,7 @@ async def run_scrape():
 
 @router.get("/status/{job_id}")
 async def scrape_status(job_id: str):
-    job = get_job(job_id)
+    job = await get_job_async(job_id) or get_job(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job não encontrado")
     return {
@@ -50,7 +52,7 @@ async def scrape_last_run():
 
 @router.post("/import")
 async def import_scraped():
-    if get_active_job_id():
+    if await get_active_job_id_async() or get_active_job_id():
         raise HTTPException(status_code=409, detail="Coleta em andamento; tente importar depois")
     result = await asyncio.to_thread(scraper_import.import_scraped_csvs)
     result["deduplicacao_db"] = await deduplicate_db_and_bucket()
