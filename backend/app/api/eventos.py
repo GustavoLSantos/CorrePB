@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from math import ceil
 
 from fastapi import APIRouter, HTTPException, Query, Security
@@ -63,11 +64,14 @@ async def create_evento(
 ):
     collection = database.get_collection()
     # Retry em caso de colisão residual (legado / concorrência extrema)
+    now = datetime.now(timezone.utc)
     last_exc: Exception | None = None
     for _ in range(3):
         evento_id = await _generate_id()
         doc = evento.model_dump()
         doc["_id"] = evento_id
+        doc["created_at"] = now
+        doc["updated_at"] = now
         try:
             await collection.insert_one(doc)
             return EventoResponse(**doc)
@@ -92,8 +96,8 @@ async def update_evento(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     campos_editados = [k for k in update_data if k != "campos_protegidos"]
+    update_data["updated_at"] = datetime.now(timezone.utc)
 
-    # Se o usuário enviou campos_protegidos explicitamente, não usar $addToSet
     if "campos_protegidos" in update_data:
         update_ops: dict = {"$set": update_data}
     else:

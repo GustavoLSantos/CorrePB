@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -40,6 +40,8 @@ class EventoResponse(BaseModel):
     organizador: str = ""
     site_coleta: str = ""
     data_coleta: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
     distancias: list[str] = []
     horario: str | None = None
     url_inscricao: str | None = None
@@ -108,7 +110,7 @@ class EventoCreate(BaseModel):
     estado: str = "PB"
     organizador: str = ""
     site_coleta: str = ""
-    data_coleta: datetime = Field(default_factory=datetime.now)
+    data_coleta: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     distancias: list[str] = []
     horario: str | None = None
 
