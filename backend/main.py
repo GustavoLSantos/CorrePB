@@ -85,7 +85,7 @@ app.include_router(api_router)
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
     if "Database not connected" in str(exc) or "MongoDB" in str(exc):
-        return JSONResponse(status_code=503, content={"detail": "Database unavailable"})
+        return JSONResponse(status_code=503, content={"detail": "Banco de dados indisponível"})
     return JSONResponse(status_code=500, content={"detail": str(exc)})
 
 
@@ -97,7 +97,7 @@ async def health_check():
 @app.get("/ready", tags=["health"])
 async def readiness_check():
     if database.db is None:
-        return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "database not connected"})
+        return JSONResponse(status_code=503, content={"status": "not_ready", "reason": "banco não conectado"})
     try:
         await database.db.command("ping")
         return {"status": "ready"}

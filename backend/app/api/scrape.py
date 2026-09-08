@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1/scrape", dependencies=[Security(verify_scrape
 @router.post("/run", status_code=202)
 async def run_scrape():
     if await get_active_job_id_async() or get_active_job_id():
-        raise HTTPException(status_code=409, detail="Scrape já esta em andamento")
+        raise HTTPException(status_code=409, detail="Scrape já está em andamento")
     job_id = await start_scrape_job()
     if not job_id:
         raise HTTPException(status_code=409, detail="Scrape já em andamento")

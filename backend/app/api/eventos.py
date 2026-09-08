@@ -53,7 +53,7 @@ async def get_evento(evento_id: str):
     collection = database.get_collection()
     doc = await collection.find_one({"_id": evento_id})
     if not doc:
-        raise HTTPException(status_code=404, detail="Evento not found")
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
     return EventoResponse(**doc)
 
 
@@ -93,7 +93,7 @@ async def update_evento(
     update_data = evento.model_dump(exclude_none=True)
 
     if not update_data:
-        raise HTTPException(status_code=400, detail="No fields to update")
+        raise HTTPException(status_code=400, detail="Nenhum campo para atualizar")
 
     campos_editados = [k for k in update_data if k != "campos_protegidos"]
     update_data["updated_at"] = datetime.now(timezone.utc)
@@ -111,7 +111,7 @@ async def update_evento(
         return_document=True,
     )
     if not result:
-        raise HTTPException(status_code=404, detail="Evento not found")
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
     return EventoResponse(**result)
 
 
@@ -123,4 +123,4 @@ async def delete_evento(
     collection = database.get_collection()
     result = await collection.delete_one({"_id": evento_id})
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Evento not found")
+        raise HTTPException(status_code=404, detail="Evento não encontrado")

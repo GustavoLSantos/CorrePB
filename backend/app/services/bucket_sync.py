@@ -23,7 +23,7 @@ async def trigger_bucket_sync() -> dict[str, str | int]:
         raise HTTPException(status_code=500, detail="AWS_BUCKET_NAME não configurado")
 
     if _sync_lock.locked():
-        raise HTTPException(status_code=409, detail="Sync already in progress")
+        raise HTTPException(status_code=409, detail="Sincronização já em andamento")
 
     async with _sync_lock:
 
