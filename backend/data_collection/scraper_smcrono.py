@@ -76,18 +76,23 @@ MAX_PDF_BYTES = 10 * 1024 * 1024  # 10MB limit to avoid OOM
 
 
 def _extract_pdf_text(pdf_url):
-    resp = SESSION.get(pdf_url, timeout=15, stream=True)
+    resp = SESSION.get(pdf_url, timeout=(5, 15), stream=True)
     resp.raise_for_status()
 
     content_length = resp.headers.get("Content-Length")
     if content_length and int(content_length) > MAX_PDF_BYTES:
         raise ValueError(f"PDF too large: {content_length} bytes > {MAX_PDF_BYTES}")
 
-    content = b""
-    for chunk in resp.iter_content(chunk_size=8192):
-        content += chunk
-        if len(content) > MAX_PDF_BYTES:
+    chunks: list[bytes] = []
+    total = 0
+    for chunk in resp.iter_content(chunk_size=32768):
+        if not chunk:
+            continue
+        chunks.append(chunk)
+        total += len(chunk)
+        if total > MAX_PDF_BYTES:
             raise ValueError(f"PDF exceeded {MAX_PDF_BYTES} bytes limit")
+    content = b"".join(chunks)
 
     reader = PdfReader(io.BytesIO(content))
     return "\n".join(page.extract_text() or "" for page in reader.pages)
@@ -221,24 +226,33 @@ def extract_kits_from_pdf(pdf_url):
 
 
 def _candidate_events_urls():
-    urls = []
-    try:
-        html = SESSION.get(f"{BASE_URL}/calendario-eventos", timeout=15).text
-        m = re.search(r"url_arquivo_events\s*=\s*'([^']+)'", html)
-        if m:
-            urls.append(m.group(1))
-    except Exception as e:
-        logger.warning(f"Calendar shell unavailable: {e}")
+    # Prioriza URLs diretas por data (mais rápido que buscar /calendario-eventos).
+    # O shell /calendario-eventos só é usado como fallback se as diretas falharem.
+    urls: list[str] = []
     for delta in (0, 1):
         dia = datetime.now() - timedelta(days=delta)
         urls.append(f"{BASE_URL}/session/{dia:%Y%m%d}_smcrono_events.json")
+    # Tenta descobrir URL via shell apenas se quisermos cobrir edge-case de data divergente;
+    # faz com timeout curto para não bloquear o caminho feliz (hoje já tem o JSON).
+    # Mantido como fallback lazy em _load_events_json, não aqui para evitar 0.6s extra.
     return urls
+
+
+def _discover_shell_url() -> str | None:
+    try:
+        html = SESSION.get(f"{BASE_URL}/calendario-eventos", timeout=5).text
+        m = re.search(r"url_arquivo_events\s*=\s*'([^']+)'", html)
+        if m:
+            return m.group(1)
+    except Exception as e:
+        logger.debug(f"Calendar shell unavailable: {e}")
+    return None
 
 
 def _load_events_json():
     for url in _candidate_events_urls():
         try:
-            resp = SESSION.get(url, timeout=20)
+            resp = SESSION.get(url, timeout=(5, 10))
             resp.raise_for_status()
             eventos = (resp.json() or {}).get("listEventos") or []
             if eventos:
@@ -247,13 +261,58 @@ def _load_events_json():
             logger.warning(f"Empty list at {url}")
         except Exception as e:
             logger.warning(f"Failed to load {url}: {e}")
+    # Fallback: tenta descobrir via shell HTML (caso data do JSON esteja defasada)
+    shell_url = _discover_shell_url()
+    if shell_url:
+        try:
+            resp = SESSION.get(shell_url, timeout=(5, 10))
+            resp.raise_for_status()
+            eventos = (resp.json() or {}).get("listEventos") or []
+            if eventos:
+                logger.debug(f"List loaded from shell {shell_url}: {len(eventos)} events")
+                return eventos
+        except Exception as e:
+            logger.warning(f"Failed to load shell {shell_url}: {e}")
     return []
 
 
 def _fetch_event_details(url_evento):
-    resp = SESSION.get(f"{BASE_URL}/api_evento.php", params={"url": url_evento}, timeout=20)
+    resp = SESSION.get(f"{BASE_URL}/api_evento.php", params={"url": url_evento}, timeout=(5, 10))
     resp.raise_for_status()
     return resp.json()
+
+
+def _extract_edital_link(det: dict, ev: dict) -> str:
+    """Extrai link do regulamento/edital com fallbacks robustos.
+
+    Ordem de prioridade:
+    1. Documento com URL contendo .pdf
+    2. Documento cujo nome contém 'regulamento'
+    3. Qualquer documento com URL válida
+    4. Campo url_evento_regulamento da listagem
+    """
+    docs = det.get("documentos") or []
+    # 1. PDF (considera query params: verifica se '.pdf' está na URL)
+    for doc in docs:
+        doc_url = (doc.get("url") or "").strip()
+        if ".pdf" in doc_url.lower():
+            return doc_url
+    # 2. Nome contém regulamento (mesmo se não for pdf, ex: drive link)
+    for doc in docs:
+        doc_url = (doc.get("url") or "").strip()
+        nome = (doc.get("nome") or "").lower()
+        if doc_url and "regulamento" in nome:
+            return doc_url
+    # 3. Qualquer documento válido
+    for doc in docs:
+        doc_url = (doc.get("url") or "").strip()
+        if doc_url and doc_url not in ("", "#"):
+            return doc_url
+    # 4. Fallback para campo da listagem
+    reg_url = (ev.get("url_evento_regulamento") or "").strip()
+    if reg_url:
+        return reg_url
+    return "edital não encontrado"
 
 
 def _extrair_cidade_estado(local, ev):
@@ -364,12 +423,7 @@ def _build_event_record(ev: dict, det: dict) -> tuple[dict | None, str | None]:
     url_evento = (ev.get("url_evento") or "").strip("/")
     cidade, _ = _extrair_cidade_estado(det.get("local"), ev)
 
-    edital_link = "edital não encontrado"
-    for doc in det.get("documentos") or []:
-        doc_url = (doc.get("url") or "").strip()
-        if doc_url.lower().endswith(".pdf"):
-            edital_link = doc_url
-            break
+    edital_link = _extract_edital_link(det, ev)
 
     percursos = [
         fix_encoding((p.get("nome") or "").strip())
@@ -398,7 +452,7 @@ def _build_event_record(ev: dict, det: dict) -> tuple[dict | None, str | None]:
         "Percurso": percurso_json,
         "Kits": "",
     }
-    edital_pdf = edital_link if edital_link.lower().endswith(".pdf") else None
+    edital_pdf = edital_link if ".pdf" in edital_link.lower() else None
     return record, edital_pdf
 
 
@@ -451,7 +505,8 @@ def get_smcrono_events_api(estado_filter="PB", somente_futuros=True):
 
     t_fetch = __import__("time").monotonic()
     fetched = _fetch_details_parallel(candidates)
-    logger.debug(f"fetch details: {__import__('time').monotonic() - t_fetch:.2f}s for {len(fetched)} events (workers={min(10, max(4, len(candidates) // 2)) if candidates else 1})"
+    actual_workers = min(4, max(2, len(candidates) // 2)) if candidates else 1
+    logger.debug(f"fetch details: {__import__('time').monotonic() - t_fetch:.2f}s for {len(fetched)} events (workers={actual_workers})"
     )
 
     events_data: list[dict] = []
