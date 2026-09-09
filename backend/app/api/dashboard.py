@@ -1,18 +1,28 @@
+import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-import re
-
-from fastapi import APIRouter
 
 from app.core.database import database
+from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 
 MESES_PT = {
-    "janeiro": 1, "fevereiro": 2, "marco": 3, "março": 3, "abril": 4,
-    "maio": 5, "junho": 6, "julho": 7, "agosto": 8, "setembro": 9,
-    "outubro": 10, "novembro": 11, "dezembro": 12,
+    "janeiro": 1,
+    "fevereiro": 2,
+    "marco": 3,
+    "março": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
 }
+
 
 def _parse_data_realizacao(raw: str, datas_iso=None):
     if datas_iso:
@@ -48,23 +58,27 @@ def _parse_data_realizacao(raw: str, datas_iso=None):
     except:
         return None
 
+
 @router.get("/stats")
 async def dashboard_stats():
     collection = database.get_collection()
-    cursor = collection.find({}, {
-        "data_realizacao": 1,
-        "datas_realizacao": 1,
-        "estado": 1,
-        "cidade": 1,
-        "site_coleta": 1,
-        "organizador": 1,
-        "precos_entries": 1,
-        "patrocinado": 1,
-        "url_imagem": 1,
-        "url_inscricao": 1,
-        "link_edital": 1,
-        "distancias": 1,
-    })
+    cursor = collection.find(
+        {},
+        {
+            "data_realizacao": 1,
+            "datas_realizacao": 1,
+            "estado": 1,
+            "cidade": 1,
+            "site_coleta": 1,
+            "organizador": 1,
+            "precos_entries": 1,
+            "patrocinado": 1,
+            "url_imagem": 1,
+            "url_inscricao": 1,
+            "link_edital": 1,
+            "distancias": 1,
+        },
+    )
     eventos = [doc async for doc in cursor]
     total = len(eventos)
 
@@ -149,13 +163,26 @@ async def dashboard_stats():
         cid_raw = (doc.get("cidade") or "—").strip()
         cid_key = cid_raw.lower()
         if cid_key not in cidade_display:
-            cidade_display[cid_key] = cid_raw
+            normalized = " ".join(w.capitalize() for w in cid_raw.lower().split())
+            cidade_display[cid_key] = normalized
         por_cidade[cid_key] += 1
 
-        for dstr in (doc.get("distancias") or []):
-            norm = str(dstr).strip().upper()
-            if norm:
-                por_distancia[norm] += 1
+        for dstr in doc.get("distancias") or []:
+            raw = str(dstr).strip()
+            if not raw:
+                continue
+            import re as _re
+
+            matches = _re.findall(r"\d+(?:[.,]\d+)?\s*K\s*M?", raw.upper())
+            if matches:
+                for m in matches:
+                    norm = _re.sub(r"\s+", "", m).upper()
+                    if norm.endswith("K") and not norm.endswith("M"):
+                        norm += "M"
+                    norm = norm.replace(",", ".")
+                    por_distancia[norm] += 1
+            else:
+                por_distancia[raw.strip().upper()] += 1
 
         org_raw = (doc.get("organizador") or "—").strip()
         org_key = org_raw.lower()
@@ -187,11 +214,19 @@ async def dashboard_stats():
         "lote1Count": lote1_count,
         "porMes": [{"label": k, "count": v} for k, v in sorted(por_mes.items())],
         "porEstado": [{"estado": k, "count": v} for k, v in por_estado.most_common()],
-        "porCidade": [{"cidade": cidade_display[k], "count": v} for k, v in por_cidade.most_common()],
+        "porCidade": [
+            {"cidade": cidade_display[k], "count": v} for k, v in por_cidade.most_common()
+        ],
         "porDistancia": [{"distancia": k, "count": v} for k, v in por_distancia.most_common()],
-        "porOrganizador": [{"organizador": org_display[k], "count": v} for k, v in por_org.most_common()],
+        "porOrganizador": [
+            {"organizador": org_display[k], "count": v} for k, v in por_org.most_common()
+        ],
         "porFonte": [{"fonte": fonte_display[k], "count": v} for k, v in por_fonte.most_common()],
         "densidade": [{"data": k, "count": v} for k, v in sorted(densidade_por_dia.items())],
         "choques": choques,
-        "statusInscricoes": {"abertas": status_abertas, "emBreve": status_breve, "encerradas": status_encerradas},
+        "statusInscricoes": {
+            "abertas": status_abertas,
+            "emBreve": status_breve,
+            "encerradas": status_encerradas,
+        },
     }
