@@ -80,6 +80,8 @@ async def dashboard_stats():
     por_cidade = Counter()
     cidade_display = {}
     por_distancia = Counter()
+    por_org = Counter()
+    org_display = {}
     por_fonte = Counter()
     fonte_display = {}
     densidade_por_dia = Counter()
@@ -155,6 +157,12 @@ async def dashboard_stats():
             if norm:
                 por_distancia[norm] += 1
 
+        org_raw = (doc.get("organizador") or "—").strip()
+        org_key = org_raw.lower()
+        if org_key not in org_display:
+            org_display[org_key] = org_raw
+        por_org[org_key] += 1
+
         fonte_raw = (doc.get("site_coleta") or "—").strip()
         fonte_key = fonte_raw.lower()
         if fonte_key not in fonte_display:
@@ -179,8 +187,9 @@ async def dashboard_stats():
         "lote1Count": lote1_count,
         "porMes": [{"label": k, "count": v} for k, v in sorted(por_mes.items())],
         "porEstado": [{"estado": k, "count": v} for k, v in por_estado.most_common()],
-        "porCidade": [{"cidade": cidade_display[k], "count": v} for k, v in por_cidade.most_common(5)],
-        "porDistancia": [{"distancia": k, "count": v} for k, v in por_distancia.most_common(5)],
+        "porCidade": [{"cidade": cidade_display[k], "count": v} for k, v in por_cidade.most_common()],
+        "porDistancia": [{"distancia": k, "count": v} for k, v in por_distancia.most_common()],
+        "porOrganizador": [{"organizador": org_display[k], "count": v} for k, v in por_org.most_common()],
         "porFonte": [{"fonte": fonte_display[k], "count": v} for k, v in por_fonte.most_common()],
         "densidade": [{"data": k, "count": v} for k, v in sorted(densidade_por_dia.items())],
         "choques": choques,
