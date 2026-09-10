@@ -8,6 +8,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from app.api import api_router
 from app.core.config import settings
@@ -50,12 +52,16 @@ async def lifespan(app: FastAPI):
     logger.info("Disconnected from MongoDB")
 
 
+from app.core.limiter import limiter
+
 app = FastAPI(
     title="Circuito API",
     description="API para criar, editar, excluir e listar os eventos de corrida",
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
 
 cors_origins = settings.cors_origins_list
 is_wildcard = len(cors_origins) == 1 and cors_origins[0] == "*"
@@ -80,6 +86,11 @@ async def add_request_id(request: Request, call_next):
     return response
 
 app.include_router(api_router)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Muitas requisições, tente novamente mais tarde"})
 
 
 @app.exception_handler(RuntimeError)

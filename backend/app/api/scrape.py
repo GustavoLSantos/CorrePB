@@ -1,6 +1,8 @@
 import asyncio
 
-from fastapi import APIRouter, HTTPException, Security
+from fastapi import APIRouter, HTTPException, Request, Security
+
+from app.core.limiter import is_limited, limiter
 
 from app.core.auth import verify_scrapers_api_key
 from app.core.errors import ErrorResponse
@@ -20,8 +22,11 @@ from app.services.scraper_runner import (
 router = APIRouter(prefix="/api/v1/scrape", dependencies=[Security(verify_scrapers_api_key)], tags=["scrape"])
 
 
-@router.post("/run", status_code=202, summary="Iniciar coleta dos scrapers", responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}})
-async def run_scrape():
+@router.post("/run", status_code=202, summary="Iniciar coleta dos scrapers", responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 429: {"model": ErrorResponse}})
+@limiter.limit("5/minute")
+async def run_scrape(request: Request):
+    if is_limited(request, limit=5, window_s=60, prefix="scrape_run"):
+        raise HTTPException(status_code=429, detail="Muitas requisições, tente novamente mais tarde")
     if await get_active_job_id_async() or get_active_job_id():
         raise HTTPException(status_code=409, detail="Scrape já está em andamento")
     job_id = await start_scrape_job()

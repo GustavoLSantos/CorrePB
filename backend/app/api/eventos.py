@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from math import ceil
 
-from fastapi import APIRouter, HTTPException, Query, Security
+from fastapi import APIRouter, HTTPException, Query, Request, Security
+
+from app.core.limiter import is_limited, limiter
 from pymongo.errors import DuplicateKeyError
 
 from app.core.auth import verify_api_key
@@ -73,12 +75,16 @@ async def get_evento(evento_id: str):
     response_model=EventoResponse,
     status_code=201,
     summary="Criar evento",
-    responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+    responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 429: {"model": ErrorResponse}},
 )
+@limiter.limit("10/minute")
 async def create_evento(
+    request: Request,
     evento: EventoCreate,
     _: str = Security(verify_api_key),
 ):
+    if is_limited(request, limit=10, window_s=60, prefix="create_evento"):
+        raise HTTPException(status_code=429, detail="Muitas requisições, tente novamente mais tarde")
     collection = database.get_collection()
     # Retry em caso de colisão residual (legado / concorrência extrema)
     now = datetime.now(timezone.utc)
