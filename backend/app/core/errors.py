@@ -1,4 +1,10 @@
 from fastapi import HTTPException
+from pydantic import BaseModel
+
+
+class ErrorResponse(BaseModel):
+    detail: str
+    code: str | None = None
 
 
 def not_found(detail: str = "Evento não encontrado") -> HTTPException:

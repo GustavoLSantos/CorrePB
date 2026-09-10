@@ -6,6 +6,7 @@ from pymongo.errors import DuplicateKeyError
 
 from app.core.auth import verify_api_key
 from app.core.database import database
+from app.core.errors import ErrorResponse
 from app.models.evento import EventoCreate, EventoPageResponse, EventoResponse, EventoUpdate
 from app.utils.search import build_search_regex
 
@@ -18,7 +19,12 @@ async def _generate_id() -> str:
     return await database.get_next_evento_id()
 
 
-@router.get("", response_model=EventoPageResponse)
+@router.get(
+    "",
+    response_model=EventoPageResponse,
+    summary="Listar eventos",
+    description="Lista eventos paginados, filtra por UF e busca textual em nome/cidade/organizador.",
+)
 async def list_eventos(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
@@ -48,7 +54,12 @@ async def list_eventos(
     )
 
 
-@router.get("/{evento_id}", response_model=EventoResponse)
+@router.get(
+    "/{evento_id}",
+    response_model=EventoResponse,
+    summary="Obter evento por ID",
+    responses={404: {"model": ErrorResponse, "description": "Evento não encontrado"}},
+)
 async def get_evento(evento_id: str):
     collection = database.get_collection()
     doc = await collection.find_one({"_id": evento_id})
@@ -57,7 +68,13 @@ async def get_evento(evento_id: str):
     return EventoResponse(**doc)
 
 
-@router.post("", response_model=EventoResponse, status_code=201)
+@router.post(
+    "",
+    response_model=EventoResponse,
+    status_code=201,
+    summary="Criar evento",
+    responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}},
+)
 async def create_evento(
     evento: EventoCreate,
     _: str = Security(verify_api_key),
@@ -83,7 +100,12 @@ async def create_evento(
     )
 
 
-@router.patch("/{evento_id}", response_model=EventoResponse)
+@router.patch(
+    "/{evento_id}",
+    response_model=EventoResponse,
+    summary="Atualizar evento",
+    responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
 async def update_evento(
     evento_id: str,
     evento: EventoUpdate,
@@ -115,7 +137,12 @@ async def update_evento(
     return EventoResponse(**result)
 
 
-@router.delete("/{evento_id}", status_code=204)
+@router.delete(
+    "/{evento_id}",
+    status_code=204,
+    summary="Remover evento",
+    responses={401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+)
 async def delete_evento(
     evento_id: str,
     _: str = Security(verify_api_key),

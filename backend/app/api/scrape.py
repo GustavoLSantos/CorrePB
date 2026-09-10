@@ -3,6 +3,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Security
 
 from app.core.auth import verify_scrapers_api_key
+from app.core.errors import ErrorResponse
 from app.services import scraper_import
 from app.services.scraper_runner import (
     cleanup_scraped_csvs,
@@ -19,7 +20,7 @@ from app.services.scraper_runner import (
 router = APIRouter(prefix="/api/v1/scrape", dependencies=[Security(verify_scrapers_api_key)], tags=["scrape"])
 
 
-@router.post("/run", status_code=202)
+@router.post("/run", status_code=202, summary="Iniciar coleta dos scrapers", responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}})
 async def run_scrape():
     if await get_active_job_id_async() or get_active_job_id():
         raise HTTPException(status_code=409, detail="Scrape já está em andamento")
@@ -29,7 +30,7 @@ async def run_scrape():
     return {"job_id": job_id}
 
 
-@router.get("/status/{job_id}")
+@router.get("/status/{job_id}", summary="Status do job de scrape", responses={401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 async def scrape_status(job_id: str):
     job = await get_job_async(job_id) or get_job(job_id)
     if not job:
@@ -44,13 +45,13 @@ async def scrape_status(job_id: str):
     }
 
 
-@router.get("/last-run")
+@router.get("/last-run", summary="Última execução do scrape")
 async def scrape_last_run():
     doc = await get_last_run()
     return {"finished_at": (doc or {}).get("finished_at")}
 
 
-@router.post("/import")
+@router.post("/import", summary="Importar CSVs coletados", responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}})
 async def import_scraped():
     if await get_active_job_id_async() or get_active_job_id():
         raise HTTPException(status_code=409, detail="Coleta em andamento; tente importar depois")
