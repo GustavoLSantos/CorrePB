@@ -74,6 +74,31 @@ class DashboardStats(BaseModel):
     densidade: list[DensidadeItem]
     choques: int
     statusInscricoes: StatusInscricoes
+    comPercurso: int
+    comKits: int
+    porHorario: list[CountItem]
+    porKit: list[CountItem]
+
+
+def _is_valid_local_largada(s: str) -> bool:
+    if not s or len(s) < 10 or len(s) > 120:
+        return False
+    if "Art." in s or "CAPÍTULO" in s or "meia hora" in s.lower():
+        return False
+    low = s.strip().lower()
+    if low.startswith(("com ", "para ", "com pelo")):
+        return False
+    words = s.strip().split()
+    if len(words) < 2:
+        return False
+    upper = s.strip().upper()
+    if upper in {"PRAÇA", "RUA", "AVENIDA", "CENTRO", "PRAÇA "}:
+        return False
+    if re.match(r"^[A-Za-zÀ-ÿ\s\-]+ - [A-Z]{2}$", s.strip()) and len(words) <= 4 and "," not in s:
+        low2 = s.lower()
+        if not any(k in low2 for k in ["rua", "av", "avenida", "praça", "parque", "estádio", "ginásio", "igreja", "shopping", "orla", "pista", "centro", "bairro", "frente", "matriz"]):
+            return False
+    return True
 
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
@@ -160,6 +185,9 @@ async def dashboard_stats() -> dict[str, Any]:
             "url_inscricao": 1,
             "link_edital": 1,
             "distancias": 1,
+            "percurso": 1,
+            "kits": 1,
+            "horario": 1,
         },
     )
     eventos = [doc async for doc in cursor]
@@ -185,6 +213,9 @@ async def dashboard_stats() -> dict[str, Any]:
     status_abertas = status_breve = status_encerradas = 0
     precos_vals: list[float] = []
     lote1_count = 0
+    com_percurso = com_kits = 0
+    por_horario = Counter()
+    por_kit = Counter()
 
     for doc in eventos:
         raw = doc.get("data_realizacao", "")
@@ -231,6 +262,32 @@ async def dashboard_stats() -> dict[str, Any]:
                     except:
                         pass
 
+        horario = (doc.get("horario") or "").strip()
+        if horario and re.match(r"^\d{2}:\d{2}$", horario) and len(horario) <= 5:
+            por_horario[horario] += 1
+
+        percurso = doc.get("percurso")
+        if isinstance(percurso, dict) and (percurso.get("local_largada") or percurso.get("trajeto")):
+            local_raw = (percurso.get("local_largada") or "").strip()
+            trajeto_raw = (percurso.get("trajeto") or "").strip()
+            has_valid = False
+            if local_raw and _is_valid_local_largada(local_raw):
+                has_valid = True
+            if trajeto_raw and len(trajeto_raw) <= 500 and "Art." not in trajeto_raw and "CAPÍTULO" not in trajeto_raw:
+                has_valid = True
+            if has_valid:
+                com_percurso += 1
+
+        kits = doc.get("kits")
+        if isinstance(kits, list) and kits:
+            valid_kits = [k for k in kits if isinstance(k, dict) and (k.get("nome") or "").strip() and len((k.get("nome") or "").strip()) <= 50 and "Art." not in (k.get("nome") or "")]
+            if valid_kits:
+                com_kits += 1
+                for kit in valid_kits:
+                    nome = (kit.get("nome") or "Kit").strip() or "Kit"
+                    if len(nome) <= 50 and "Art." not in nome:
+                        por_kit[nome] += 1
+
         if doc.get("patrocinado"):
             patrocinados += 1
         if not doc.get("url_imagem"):
@@ -250,22 +307,22 @@ async def dashboard_stats() -> dict[str, Any]:
             cidade_display[cid_key] = normalized
         por_cidade[cid_key] += 1
 
-        for dstr in doc.get("distancias") or []:
+        raw_dist = doc.get("distancias")
+        if isinstance(raw_dist, str):
+            dist_list = [d.strip() for d in raw_dist.split(",") if d.strip()]
+        elif isinstance(raw_dist, list):
+            dist_list = raw_dist
+        else:
+            dist_list = []
+        for dstr in dist_list:
             raw = str(dstr).strip()
-            if not raw:
+            if not raw or len(raw) > 30 or "Art." in raw or "CAPÍTULO" in raw:
                 continue
-            import re as _re
-
-            matches = _re.findall(r"\d+(?:[.,]\d+)?\s*K\s*M?", raw.upper())
-            if matches:
-                for m in matches:
-                    norm = _re.sub(r"\s+", "", m).upper()
-                    if norm.endswith("K") and not norm.endswith("M"):
-                        norm += "M"
-                    norm = norm.replace(",", ".")
+            matches = re.findall(r"\d+(?:[.,]\d+)?\s*KM", raw.upper())
+            for m in matches:
+                norm = re.sub(r"\s+", "", m).upper().replace(",", ".")
+                if len(norm) <= 10:
                     por_distancia[norm] += 1
-            else:
-                por_distancia[raw.strip().upper()] += 1
 
         org_raw = (doc.get("organizador") or "—").strip()
         org_key = org_raw.lower()
@@ -312,4 +369,8 @@ async def dashboard_stats() -> dict[str, Any]:
             "emBreve": status_breve,
             "encerradas": status_encerradas,
         },
+        "comPercurso": com_percurso,
+        "comKits": com_kits,
+        "porHorario": [{"label": k, "count": v} for k, v in por_horario.most_common()],
+        "porKit": [{"label": k, "count": v} for k, v in por_kit.most_common()],
     }
