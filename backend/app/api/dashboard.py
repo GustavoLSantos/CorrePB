@@ -2,8 +2,79 @@ import re
 from collections import Counter
 from datetime import datetime, timedelta, timezone
 
+from typing import Any
+
+from pydantic import BaseModel, Field
+
 from app.core.database import database
 from fastapi import APIRouter
+
+class CountItem(BaseModel):
+    label: str
+    count: int
+
+
+class EstadoCount(BaseModel):
+    estado: str
+    count: int
+
+
+class CidadeCount(BaseModel):
+    cidade: str
+    count: int
+
+
+class DistanciaCount(BaseModel):
+    distancia: str
+    count: int
+
+
+class OrganizadorCount(BaseModel):
+    organizador: str
+    count: int
+
+
+class FonteCount(BaseModel):
+    fonte: str
+    count: int
+
+
+class DensidadeItem(BaseModel):
+    data: str
+    count: int
+
+
+class StatusInscricoes(BaseModel):
+    abertas: int
+    emBreve: int = Field(alias="emBreve")
+    encerradas: int
+
+    model_config = {"populate_by_name": True}
+
+
+class DashboardStats(BaseModel):
+    total: int
+    ativos: int
+    passados: int
+    proximos30d: int
+    proximos90d: int
+    semPreco: int
+    patrocinados: int
+    semImagem: int
+    semLink: int
+    semRegulamento: int
+    valorMedio: float
+    lote1Count: int
+    porMes: list[CountItem]
+    porEstado: list[EstadoCount]
+    porCidade: list[CidadeCount]
+    porDistancia: list[DistanciaCount]
+    porOrganizador: list[OrganizadorCount]
+    porFonte: list[FonteCount]
+    densidade: list[DensidadeItem]
+    choques: int
+    statusInscricoes: StatusInscricoes
+
 
 router = APIRouter(prefix="/api/v1/dashboard", tags=["dashboard"])
 
@@ -59,8 +130,20 @@ def _parse_data_realizacao(raw: str, datas_iso=None):
         return None
 
 
-@router.get("/stats")
-async def dashboard_stats():
+@router.get(
+    "/stats",
+    response_model=DashboardStats,
+    summary="Estatísticas do dashboard",
+    description=(
+        "Agrega todos os eventos para o dashboard administrativo: totais, "
+        "ativos/passados, próximos 30/90 dias, qualidade de dados "
+        "(sem preço/imagem/link/regulamento), preço médio, distribuição por "
+        "mês/estado/cidade/distância/organizador/fonte, densidade por dia, "
+        "choques de data e status de inscrições."
+    ),
+    response_description="Estatísticas consolidadas de eventos",
+)
+async def dashboard_stats() -> dict[str, Any]:
     collection = database.get_collection()
     cursor = collection.find(
         {},
