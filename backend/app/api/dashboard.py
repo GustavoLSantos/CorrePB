@@ -396,66 +396,85 @@ async def dashboard_stats() -> dict[str, Any]:
             fonte_display[fonte_key] = fonte_raw
         por_fonte[fonte_key] += 1
 
-        if (
-            fonte_raw
-            and fonte_raw != "—"
-            and not any(ig in fonte_key for ig in ("manual", "ticketsports"))
-        ):
-            h = health_map.get(fonte_key)
-            sem_link = 0 if doc.get("url_inscricao") else 1
-            link_edital = doc.get("link_edital")
-            sem_reg = 0 if link_edital and link_edital != "edital não encontrado" else 1
-            sem_img = 0 if doc.get("url_imagem") else 1
-            sem_prc = 0 if doc.get("precos_entries") else 1
-            dc = doc.get("data_coleta")
-            dc_iso = dc.isoformat() if isinstance(dc, datetime) else (str(dc) if dc else None)
-            if h is None:
-                health_map[fonte_key] = {
-                    "fonte": fonte_key,
-                    "display": fonte_raw,
-                    "count": 1,
-                    "semLink": sem_link,
-                    "semRegulamento": sem_reg,
-                    "semImagem": sem_img,
-                    "semPreco": sem_prc,
-                    "maxDataColeta": dc_iso,
-                }
-            else:
-                h["count"] += 1
-                h["semLink"] += sem_link
-                h["semRegulamento"] += sem_reg
-                h["semImagem"] += sem_img
-                h["semPreco"] += sem_prc
-                if dc_iso and (not h["maxDataColeta"] or dc_iso > h["maxDataColeta"]):
-                    h["maxDataColeta"] = dc_iso
+        try:
+            if (
+                fonte_raw
+                and fonte_raw != "—"
+                and not any(ig in fonte_key for ig in ("manual", "ticketsports"))
+            ):
+                h = health_map.get(fonte_key)
+                sem_link = 0 if doc.get("url_inscricao") else 1
+                link_edital = doc.get("link_edital")
+                sem_reg = 0 if link_edital and link_edital != "edital não encontrado" else 1
+                sem_img = 0 if doc.get("url_imagem") else 1
+                sem_prc = 0 if doc.get("precos_entries") else 1
+                dc = doc.get("data_coleta")
+                try:
+                    dc_iso = (
+                        dc.isoformat() if isinstance(dc, datetime) else (str(dc) if dc else None)
+                    )
+                except Exception:
+                    dc_iso = None
+                if h is None:
+                    health_map[fonte_key] = {
+                        "fonte": fonte_key,
+                        "display": fonte_raw,
+                        "count": 1,
+                        "semLink": sem_link,
+                        "semRegulamento": sem_reg,
+                        "semImagem": sem_img,
+                        "semPreco": sem_prc,
+                        "maxDataColeta": dc_iso,
+                    }
+                else:
+                    h["count"] += 1
+                    h["semLink"] += sem_link
+                    h["semRegulamento"] += sem_reg
+                    h["semImagem"] += sem_img
+                    h["semPreco"] += sem_prc
+                    try:
+                        if dc_iso and (not h["maxDataColeta"] or dc_iso > h["maxDataColeta"]):
+                            h["maxDataColeta"] = dc_iso
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
-        # candidatos a próximos 30 dias (top 5)
-        if d_utc and d_utc >= now and d_utc <= in30:
-            proximos_candidates.append(
-                {
-                    "_id": str(doc.get("_id", "")),
-                    "nome_evento": doc.get("nome_evento", ""),
-                    "data_realizacao": doc.get("data_realizacao", ""),
-                    "datas_realizacao": [
-                        d.isoformat()
-                        for d in (doc.get("datas_realizacao") or [])
-                        if isinstance(d, datetime)
-                    ],
-                    "cidade": doc.get("cidade", ""),
-                    "estado": doc.get("estado", ""),
-                    "organizador": doc.get("organizador", ""),
-                    "_sort": d_utc,
-                }
-            )
+        try:
+            if d_utc and d_utc >= now and d_utc <= in30:
+                proximos_candidates.append(
+                    {
+                        "_id": str(doc.get("_id", "")),
+                        "nome_evento": doc.get("nome_evento", ""),
+                        "data_realizacao": doc.get("data_realizacao", ""),
+                        "datas_realizacao": [
+                            d.isoformat()
+                            for d in (doc.get("datas_realizacao") or [])
+                            if isinstance(d, datetime)
+                        ],
+                        "cidade": doc.get("cidade", ""),
+                        "estado": doc.get("estado", ""),
+                        "organizador": doc.get("organizador", ""),
+                        "_sort": d_utc,
+                    }
+                )
+        except Exception:
+            pass
 
     valor_medio = round(sum(precos_vals) / len(precos_vals), 2) if precos_vals else 0
     choques = sum(1 for v in densidade_por_dia.values() if v > 1)
-    scraper_health = sorted(
-        health_map.values(), key=lambda x: x["maxDataColeta"] or "", reverse=True
-    )
-    proximos_eventos = sorted(proximos_candidates, key=lambda x: x["_sort"])[:5]
-    for p in proximos_eventos:
-        p.pop("_sort", None)
+    try:
+        scraper_health = sorted(
+            health_map.values(), key=lambda x: x["maxDataColeta"] or "", reverse=True
+        )
+    except Exception:
+        scraper_health = list(health_map.values())
+    try:
+        proximos_eventos = sorted(proximos_candidates, key=lambda x: x["_sort"])[:5]
+        for p in proximos_eventos:
+            p.pop("_sort", None)
+    except Exception:
+        proximos_eventos = []
 
     return {
         "total": total,
