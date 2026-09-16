@@ -1,16 +1,14 @@
 from datetime import datetime, timezone
 from math import ceil
 
-from fastapi import APIRouter, HTTPException, Query, Request, Security
-
-from app.core.limiter import is_limited, limiter
-from pymongo.errors import DuplicateKeyError
-
 from app.core.auth import verify_api_key
 from app.core.database import database
 from app.core.errors import ErrorResponse
+from app.core.limiter import is_limited, limiter
 from app.models.evento import EventoCreate, EventoPageResponse, EventoResponse, EventoUpdate
 from app.utils.search import build_search_regex
+from fastapi import APIRouter, HTTPException, Query, Request, Security
+from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/api/v1/eventos", tags=["eventos"])
 
@@ -30,8 +28,13 @@ async def _generate_id() -> str:
 async def list_eventos(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
-    estado: str | None = Query(None, min_length=2, max_length=2, pattern=r"^[A-Za-z]{2}$", description="UF com 2 letras"),
+    estado: str | None = Query(
+        None, min_length=2, max_length=2, pattern=r"^[A-Za-z]{2}$", description="UF com 2 letras"
+    ),
     q: str | None = Query(None, max_length=80, description="Busca em nome, cidade e organizador"),
+    fields: str | None = Query(
+        None, max_length=300, description="Lista de campos separados por vírgula"
+    ),
 ):
     collection = database.get_collection()
     query: dict = {}
@@ -45,7 +48,36 @@ async def list_eventos(
             ]
     total = await collection.count_documents(query)
     skip = (page - 1) * size
-    cursor = collection.find(query).sort("datas_realizacao", -1).skip(skip).limit(size)
+
+    projection = None
+    if fields:
+        allowed = {
+            "_id",
+            "nome_evento",
+            "data_realizacao",
+            "datas_realizacao",
+            "cidade",
+            "estado",
+            "organizador",
+            "site_coleta",
+            "data_coleta",
+            "distancias",
+            "horario",
+            "url_inscricao",
+            "url_imagem",
+            "link_edital",
+            "precos_entries",
+            "patrocinado",
+            "percurso",
+            "kits",
+            "categorias",
+            "categorias_premiadas",
+        }
+        requested = {f.strip() for f in fields.split(",") if f.strip() in allowed}
+        if requested:
+            projection = {f: 1 for f in requested}
+            projection["_id"] = 1
+    cursor = collection.find(query, projection).sort("datas_realizacao", -1).skip(skip).limit(size)
     eventos = [EventoResponse(**doc) async for doc in cursor]
     return EventoPageResponse(
         eventos=eventos,
@@ -75,7 +107,11 @@ async def get_evento(evento_id: str):
     response_model=EventoResponse,
     status_code=201,
     summary="Criar evento",
-    responses={401: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 429: {"model": ErrorResponse}},
+    responses={
+        401: {"model": ErrorResponse},
+        409: {"model": ErrorResponse},
+        429: {"model": ErrorResponse},
+    },
 )
 @limiter.limit("10/minute")
 async def create_evento(
@@ -84,9 +120,10 @@ async def create_evento(
     _: str = Security(verify_api_key),
 ):
     if is_limited(request, limit=10, window_s=60, prefix="create_evento"):
-        raise HTTPException(status_code=429, detail="Muitas requisições, tente novamente mais tarde")
+        raise HTTPException(
+            status_code=429, detail="Muitas requisições, tente novamente mais tarde"
+        )
     collection = database.get_collection()
-    # Retry em caso de colisão residual (legado / concorrência extrema)
     now = datetime.now(timezone.utc)
     last_exc: Exception | None = None
     for _ in range(3):
@@ -110,7 +147,11 @@ async def create_evento(
     "/{evento_id}",
     response_model=EventoResponse,
     summary="Atualizar evento",
-    responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
 )
 async def update_evento(
     evento_id: str,
