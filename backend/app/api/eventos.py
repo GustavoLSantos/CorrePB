@@ -15,6 +15,19 @@ router = APIRouter(prefix="/api/v1/eventos", tags=["eventos"])
 SEARCH_FIELDS = ["nome_evento", "cidade", "organizador"]
 
 
+def _build_eventos_query(estado: str | None, q: str | None) -> dict:
+    query: dict = {}
+    if estado:
+        query["estado"] = estado.upper()
+    if q:
+        pattern = build_search_regex(q)
+        if pattern:
+            query["$or"] = [
+                {field: {"$regex": pattern, "$options": "i"}} for field in SEARCH_FIELDS
+            ]
+    return query
+
+
 async def _generate_id() -> str:
     return await database.get_next_evento_id()
 
@@ -22,6 +35,7 @@ async def _generate_id() -> str:
 @router.get(
     "",
     response_model=EventoPageResponse,
+    response_model_exclude_unset=True,
     summary="Listar eventos",
     description="Lista eventos paginados, filtra por UF e busca textual em nome/cidade/organizador.",
 )
@@ -37,15 +51,7 @@ async def list_eventos(
     ),
 ):
     collection = database.get_collection()
-    query: dict = {}
-    if estado:
-        query["estado"] = estado.upper()
-    if q:
-        pattern = build_search_regex(q)
-        if pattern:
-            query["$or"] = [
-                {field: {"$regex": pattern, "$options": "i"}} for field in SEARCH_FIELDS
-            ]
+    query = _build_eventos_query(estado, q)
     total = await collection.count_documents(query)
     skip = (page - 1) * size
 
@@ -79,12 +85,15 @@ async def list_eventos(
             projection["_id"] = 1
     cursor = collection.find(query, projection).sort("datas_realizacao", -1).skip(skip).limit(size)
     eventos = [EventoResponse(**doc) async for doc in cursor]
+    total_pages = ceil(total / size)
     return EventoPageResponse(
         eventos=eventos,
         total=total,
-        total_pages=ceil(total / size),
+        total_pages=total_pages,
         page=page,
         size=size,
+        has_next=page < total_pages,
+        has_prev=page > 1,
     )
 
 

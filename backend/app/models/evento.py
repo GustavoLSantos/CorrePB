@@ -2,14 +2,13 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator, model_validator
-
 from app.models.validators import (
     normalize_distancias,
     normalize_distancias_nullable,
     validate_horario_format,
 )
 from app.utils.price_formatting import formatar_lista_precos
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Percurso(BaseModel):
@@ -25,14 +24,25 @@ class Kit(BaseModel):
 
 
 MESES_PT = [
-    "", "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+    "",
+    "Janeiro",
+    "Fevereiro",
+    "Março",
+    "Abril",
+    "Maio",
+    "Junho",
+    "Julho",
+    "Agosto",
+    "Setembro",
+    "Outubro",
+    "Novembro",
+    "Dezembro",
 ]
 
 
 class EventoResponse(BaseModel):
     id: str = Field(alias="_id")
-    nome_evento: str
+    nome_evento: str = ""
     datas_realizacao: list[datetime] = Field(default=[], exclude=True)
     data_realizacao: str = ""
     cidade: str = ""
@@ -82,7 +92,10 @@ class EventoResponse(BaseModel):
             self.data_realizacao = f"{dt.day:02d} de {MESES_PT[dt.month]} de {dt.year}"
         if self.categoria and not self.categorias:
             self.categorias = [c.strip() for c in self.categoria.split(",") if c.strip()]
-        if not self.lista_precos:
+
+        if not self.lista_precos and (
+            "precos_entries" in self.model_fields_set or "preco" in self.model_fields_set
+        ):
             self.lista_precos = formatar_lista_precos(self.precos_entries, self.preco)
         return self
 
@@ -150,6 +163,7 @@ class EventoUpdate(BaseModel):
     @classmethod
     def parse_distancias(cls, v: Any) -> list[str] | None:
         return normalize_distancias_nullable(v)
+
     url_inscricao: str | None = None
     url_imagem: str | None = None
     categoria: str | None = None
