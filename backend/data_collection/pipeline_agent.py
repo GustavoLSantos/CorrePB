@@ -388,12 +388,18 @@ def build_frontend_report(
     scraper_results: List[StepResult],
     csv_summaries: List[CsvSummary],
     started_iso: str,
+    import_db: Optional[StepResult] = None,
 ) -> Dict[str, Any]:
     """Monta o ScrapeReport do contrato (puro, sem I/O).
 
     Truncamentos iguais aos do fluxo antigo (_execute_job): stdout em 8000
     e stderr em 2000 caracteres, erros de CSV limitados a 10 itens.
     """
+    if import_db is not None and import_db.ok:
+        novos, atualizados = _parse_import_db_output(import_db.stdout or "")
+        import_summary: Dict[str, Any] = {"ok": True, "novos": novos, "atualizados": atualizados}
+    else:
+        import_summary = {"ok": False, "novos": 0, "atualizados": 0}
     report = {
         "started_at": started_iso,
         "finished_at": datetime.now(timezone.utc).isoformat(),
@@ -421,6 +427,7 @@ def build_frontend_report(
             }
             for summary in csv_summaries
         ],
+        "import_db": import_summary,
     }
     return report
 
@@ -429,13 +436,14 @@ def save_frontend_report(
     scraper_results: List[StepResult],
     csv_summaries: List[CsvSummary],
     started_iso: str,
+    import_db: Optional[StepResult] = None,
 ) -> Dict[str, Any]:
     """Monta o relatório e persiste em last-report.json para o worker ler.
 
     Truncamentos iguais aos do fluxo antigo (_execute_job): stdout em 8000
     e stderr em 2000 caracteres, erros de CSV limitados a 10 itens.
     """
-    report = build_frontend_report(scraper_results, csv_summaries, started_iso)
+    report = build_frontend_report(scraper_results, csv_summaries, started_iso, import_db)
     try:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
@@ -523,7 +531,7 @@ def main() -> None:
 
     if not import_db_result.ok:
         logger.error("ImportToDB falhou. Abortando pipeline.")
-        save_frontend_report(scraper_results, csv_summaries, started_iso)
+        save_frontend_report(scraper_results, csv_summaries, started_iso, import_db_result)
         print_report(
             scraper_results,
             csv_summaries,
@@ -557,7 +565,7 @@ def main() -> None:
     # Relatório final (ImportToBucket falha → reporta mas não é exit(1) crítico aqui;
     # porém seguindo o plano: falha → exit(1))
     total_duration = time.monotonic() - pipeline_start
-    save_frontend_report(scraper_results, csv_summaries, started_iso)
+    save_frontend_report(scraper_results, csv_summaries, started_iso, import_db_result)
     print_report(
         scraper_results,
         csv_summaries,

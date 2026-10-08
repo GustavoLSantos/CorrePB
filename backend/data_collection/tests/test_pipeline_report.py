@@ -36,9 +36,10 @@ def _csv(fonte="brasilquecorre"):
 def test_report_has_contract_keys():
     report = save_frontend_report([_scraper()], [_csv()], "2026-10-08T02:00:00+00:00")
 
-    assert set(report.keys()) == {"started_at", "finished_at", "scrapers", "csvs"}
+    assert set(report.keys()) == {"started_at", "finished_at", "scrapers", "csvs", "import_db"}
     assert report["started_at"] == "2026-10-08T02:00:00+00:00"
     assert report["finished_at"] is not None
+    assert report["import_db"] == {"ok": False, "novos": 0, "atualizados": 0}
 
     scraper = report["scrapers"][0]
     assert set(scraper.keys()) == {"nome", "ok", "duration_s", "detail", "stderr"}
@@ -79,3 +80,33 @@ def test_report_empty_inputs():
     assert report["scrapers"] == []
     assert report["csvs"] == []
     assert report["finished_at"] is not None
+
+
+def test_report_includes_import_summary():
+    from data_collection.pipeline_agent import StepResult as ImportStep
+
+    import_db = ImportStep(
+        name="ImportToDB",
+        ok=True,
+        duration=5.9,
+        stdout="12 novos eventos adicionados\n3 eventos atualizados\n",
+        stderr="",
+    )
+    report = save_frontend_report(
+        [_scraper()], [_csv()], "2026-10-08T02:00:00+00:00", import_db
+    )
+
+    assert report["import_db"] == {"ok": True, "novos": 12, "atualizados": 3}
+
+
+def test_report_import_failed():
+    from data_collection.pipeline_agent import StepResult as ImportStep
+
+    import_db = ImportStep(
+        name="ImportToDB", ok=False, duration=1.0, stdout="", stderr="boom"
+    )
+    report = save_frontend_report(
+        [_scraper()], [_csv()], "2026-10-08T02:00:00+00:00", import_db
+    )
+
+    assert report["import_db"] == {"ok": False, "novos": 0, "atualizados": 0}
