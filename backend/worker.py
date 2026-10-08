@@ -204,17 +204,17 @@ def process_one(timeout_s: int) -> int:
     logger.info(f"Job {job_id} reivindicado (fase {phase}).")
 
     if phase == "import":
-        exit_code = run_pipeline(timeout_s, f"--mode import --job {job_id}")
+        pipeline_ok, _ = run_pipeline(timeout_s, f"--mode import --job {job_id}")
         report = load_frontend_report()
-        error = None if exit_code == 0 else "importação falhou"
-        finish_job(jobs, states, job_id, exit_code == 0, report, error)
-        logger.info(f"Job {job_id} finalizado: {'complete' if exit_code == 0 else 'failed'}.")
-        return exit_code
+        error = None if pipeline_ok else "importação falhou"
+        finish_job(jobs, states, job_id, pipeline_ok, report, error)
+        logger.info(f"Job {job_id} finalizado: {'complete' if pipeline_ok else 'failed'}.")
+        return 0 if pipeline_ok else 1
 
-    exit_code = run_pipeline(timeout_s, f"--mode collect --job {job_id}")
-    if exit_code != 0:
+    pipeline_ok, _ = run_pipeline(timeout_s, f"--mode collect --job {job_id}")
+    if not pipeline_ok:
         finish_job(jobs, states, job_id, False, load_frontend_report(), "coleta falhou")
-        return exit_code
+        return 1
 
     mark_awaiting_import(jobs, job_id, load_frontend_report())
     logger.info(f"Job {job_id} aguardando confirmação de importação.")
