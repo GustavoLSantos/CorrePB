@@ -132,10 +132,10 @@ def main():
     try:
         chave = gerar_e_enviar_para_bucket()
         print(f"Arquivo enviado para S3 com chave: {chave}")
-    except Exception as e:
+    except Exception:
         import traceback
-        print(f"Erro: {e}")
         traceback.print_exc()
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
