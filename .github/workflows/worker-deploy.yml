@@ -83,7 +83,7 @@ jobs:
           az containerapp job update \
             -n correpb-scraper \
             -g rg-circuitoapp \
-            -i "${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}" \
+            --image "${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}" \
             --cpu 0.5 \
             --memory 1Gi
           echo "Worker atualizado: ${{ needs.build.outputs.digest }}"
