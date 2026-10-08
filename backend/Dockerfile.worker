@@ -1,0 +1,36 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  chromium \
+  chromium-driver \
+  fonts-liberation \
+  fonts-noto \
+  xdg-utils \
+  ca-certificates \
+  && ln -sf /usr/bin/chromium /usr/bin/google-chrome \
+  && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+  CHROME_BIN=/usr/bin/chromium \
+  CHROMEDRIVER_BIN=/usr/bin/chromedriver \
+  PYTHONPATH=/app
+
+# Dependências do pipeline (scrapers) + da API (acesso ao Mongo via app.*).
+COPY requirements.txt ./requirements-api.txt
+COPY data_collection/requirements.txt ./requirements-worker.txt
+RUN pip install --no-cache-dir -r requirements-worker.txt \
+  && pip install --no-cache-dir -r requirements-api.txt
+
+COPY . .
+
+RUN mkdir -p logs data_collection/data
+
+# Variáveis esperadas (via ambiente do Container Apps Job, nunca no código):
+#   MONGODB_URI, MONGODB_DB_NAME, MONGODB_COLLECTION,
+#   AWS_BUCKET_NAME, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+
+# One-shot: processa um job queued e encerra (ideal para Container Apps Job).
+ENTRYPOINT ["python", "worker.py"]
+CMD ["--once"]

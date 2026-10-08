@@ -87,6 +87,40 @@ python main.py
 # Acesse http://localhost:8181/docs para a documentação interativa
 ```
 
+## Worker de scraping (`worker.py`)
+
+A API Go cria jobs com status `queued` e responde 202 imediatamente. Este
+worker reivindica o job mais antigo (`queued` → `running`, atomicamente via
+`find_one_and_update`), executa `data_collection/pipeline_agent.py` como
+subprocesso e marca `complete`/`failed` com `active: false` (liberando o
+slot para o próximo `POST /scrape/run`). Também grava `scrape_state`
+(`last_scrape`), lido pelo `GET /scrape/last-run`.
+
+```bash
+# Dependências (API + scrapers)
+pip install -r requirements.txt -r data_collection/requirements.txt
+
+# Ver o plano sem executar nada
+python worker.py --dry-run
+
+# Processar um job e sair (ideal para Azure Container Apps Job)
+python worker.py --once
+
+# Loop contínuo (desenvolvimento)
+python worker.py --loop --interval 60
+
+# Validar o protocolo num banco de teste (sem scrape, sem S3)
+MONGODB_DB_NAME=worker_selftest WORKER_ALLOW_SELF_TEST=1 python worker.py --self-test
+```
+
+Variáveis: `MONGODB_URI` (obrigatória), `MONGODB_DB_NAME` (default
+`corridas_db`), `WORKER_POLL_INTERVAL` (default 60s), `WORKER_JOB_TIMEOUT`
+(default 3600s). O `.env` local é carregado automaticamente; em produção
+tudo chega pelo ambiente do Container Apps Job.
+
+Imagem própria (separada da API): `Dockerfile.worker`
+(`python worker.py --once` como entrypoint padrão).
+
 ## Variáveis de ambiente
 
 Copie `.env.example` para `.env` e preencha:
