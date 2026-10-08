@@ -1,4 +1,5 @@
 import csv
+import json
 import logging
 import os
 import re
@@ -7,7 +8,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -44,6 +45,11 @@ CSV_MAP: Dict[str, Path] = {
 
 IMPORT_TO_DB_SCRIPT = BASE_DIR / "utils" / "ImportToDB.py"
 IMPORT_TO_BUCKET_SCRIPT = BASE_DIR / "utils" / "ImportToBucket.py"
+
+# Relatório estruturado no formato do contrato do frontend
+# (ScrapeReport: started_at, finished_at, scrapers[], csvs[]).
+# O worker lê este arquivo e grava no documento do job.
+REPORT_PATH = DATA_DIR / "last-report.json"
 
 # ─── Data structures ──────────────────────────────────────────────────────────
 
@@ -378,11 +384,72 @@ def print_report(
     print()
 
 
+def build_frontend_report(
+    scraper_results: List[StepResult],
+    csv_summaries: List[CsvSummary],
+    started_iso: str,
+) -> Dict[str, Any]:
+    """Monta o ScrapeReport do contrato (puro, sem I/O).
+
+    Truncamentos iguais aos do fluxo antigo (_execute_job): stdout em 8000
+    e stderr em 2000 caracteres, erros de CSV limitados a 10 itens.
+    """
+    report = {
+        "started_at": started_iso,
+        "finished_at": datetime.now(timezone.utc).isoformat(),
+        "scrapers": [
+            {
+                "nome": result.name,
+                "ok": bool(result.ok),
+                "duration_s": round(float(result.duration), 1),
+                "detail": (result.stdout or "")[-8000:],
+                "stderr": (result.stderr or "")[-2000:],
+            }
+            for result in scraper_results
+        ],
+        "csvs": [
+            {
+                "fonte": summary.fonte,
+                "ok": bool(summary.ok),
+                "total": int(summary.total),
+                "duplicados": int(summary.duplicados),
+                "sem_preco": int(summary.sem_preco),
+                "eventos_passados": int(summary.eventos_passados),
+                "sem_imagem": int(summary.sem_imagem),
+                "erros_encoding": int(summary.erros_encoding),
+                "erros": list(summary.erros or [])[:10],
+            }
+            for summary in csv_summaries
+        ],
+    }
+    return report
+
+
+def save_frontend_report(
+    scraper_results: List[StepResult],
+    csv_summaries: List[CsvSummary],
+    started_iso: str,
+) -> Dict[str, Any]:
+    """Monta o relatório e persiste em last-report.json para o worker ler.
+
+    Truncamentos iguais aos do fluxo antigo (_execute_job): stdout em 8000
+    e stderr em 2000 caracteres, erros de CSV limitados a 10 itens.
+    """
+    report = build_frontend_report(scraper_results, csv_summaries, started_iso)
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False), encoding="utf-8")
+    except Exception as exc:
+        logger.warning(f"Falha ao gravar relatório estruturado: {exc}")
+    return report
+
+
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
     pipeline_start = time.monotonic()
+    started_iso = datetime.now(timezone.utc).isoformat()
 
     logger.info("=== Pipeline Corre PB iniciado ===")
 
@@ -395,6 +462,7 @@ def main() -> None:
     if not scrapers_ok:
         failed = [r.name for r in scraper_results if not r.ok]
         logger.error(f"Scrapers com falha: {failed}. Abortando pipeline.")
+        save_frontend_report(scraper_results, [], started_iso)
         print_report(
             scraper_results,
             csv_summaries=[],
@@ -438,6 +506,7 @@ def main() -> None:
 
     if csv_critical_error:
         logger.error("Erro crítico na validação dos CSVs. Abortando pipeline.")
+        save_frontend_report(scraper_results, csv_summaries, started_iso)
         print_report(
             scraper_results,
             csv_summaries,
@@ -454,6 +523,7 @@ def main() -> None:
 
     if not import_db_result.ok:
         logger.error("ImportToDB falhou. Abortando pipeline.")
+        save_frontend_report(scraper_results, csv_summaries, started_iso)
         print_report(
             scraper_results,
             csv_summaries,
@@ -487,6 +557,7 @@ def main() -> None:
     # Relatório final (ImportToBucket falha → reporta mas não é exit(1) crítico aqui;
     # porém seguindo o plano: falha → exit(1))
     total_duration = time.monotonic() - pipeline_start
+    save_frontend_report(scraper_results, csv_summaries, started_iso)
     print_report(
         scraper_results,
         csv_summaries,

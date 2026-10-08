@@ -24,6 +24,7 @@ Variáveis de ambiente (nunca hardcode segredos):
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import subprocess
@@ -49,6 +50,7 @@ except ImportError:  # produção usa env do Container App
 
 BACKEND_DIR = Path(__file__).resolve().parent
 PIPELINE_SCRIPT = BACKEND_DIR / "data_collection" / "pipeline_agent.py"
+REPORT_PATH = BACKEND_DIR / "data_collection" / "data" / "last-report.json"
 
 QUEUED = "queued"
 RUNNING = "running"
@@ -143,6 +145,25 @@ def run_pipeline(timeout_s: int) -> tuple[bool, dict[str, Any]]:
         }
 
 
+def load_frontend_report() -> dict[str, Any]:
+    """Lê o ScrapeReport gerado pelo pipeline.
+
+    Retorna o formato vazio do contrato quando o arquivo não existe ou é
+    inválido: o modal do frontend trata listas ausentes como seções vazias.
+    """
+    try:
+        data = json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            data.setdefault("started_at", None)
+            data.setdefault("finished_at", None)
+            data.setdefault("scrapers", [])
+            data.setdefault("csvs", [])
+            return data
+    except Exception as exc:
+        logger.warning(f"Relatório estruturado indisponível: {exc}")
+    return {"started_at": None, "finished_at": None, "scrapers": [], "csvs": []}
+
+
 def process_one(timeout_s: int) -> int:
     """Reivindica e executa um job. Retorna exit code (0 = job concluído)."""
     _, jobs, states = mongo_collection()
@@ -153,11 +174,12 @@ def process_one(timeout_s: int) -> int:
 
     job_id = str(job.get("_id") or job.get("job_id", ""))
     logger.info(f"Job {job_id} reivindicado. Executando pipeline...")
-    ok, report = run_pipeline(timeout_s)
-    error = None if ok else (report.get("stderr_tail") or "pipeline falhou")
-    finish_job(jobs, states, job_id, ok, report, error)
-    logger.info(f"Job {job_id} finalizado: {'complete' if ok else 'failed'}.")
-    return 0 if ok else 1
+    pipeline_ok, pipeline_report = run_pipeline(timeout_s)
+    report = load_frontend_report()
+    error = None if pipeline_ok else (pipeline_report.get("stderr_tail") or "pipeline falhou")
+    finish_job(jobs, states, job_id, pipeline_ok, report, error)
+    logger.info(f"Job {job_id} finalizado: {'complete' if pipeline_ok else 'failed'}.")
+    return 0 if pipeline_ok else 1
 
 
 def check(condition: bool, message: str) -> None:
