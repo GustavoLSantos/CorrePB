@@ -80,3 +80,32 @@ def test_import_phase_completes_job():
     assert code == 0, f"import OK deveria retornar 0, veio {code}"
     assert marker["finished"] == (True, None), marker
     assert "awaiting" not in marker, "import não passa por awaiting_import"
+
+
+def test_import_report_keeps_collect_scrapers():
+    collect = {
+        "started_at": "2026-10-08T19:09:00+00:00",
+        "finished_at": "2026-10-08T19:09:30+00:00",
+        "scrapers": [{"nome": "scraper_race83.py", "ok": True}],
+        "csvs": [{"fonte": "race83", "ok": True, "total": 20}],
+    }
+    import_only = {
+        "started_at": None,
+        "finished_at": "2026-10-08T19:12:00+00:00",
+        "scrapers": [],
+        "csvs": [{"fonte": "race83", "ok": True, "total": 20}],
+        "import_db": {"ok": True, "novos": 0, "atualizados": 39},
+    }
+
+    merged = worker.merge_import_report({"_id": "j1", "report": collect}, import_only)
+
+    assert len(merged["scrapers"]) == 1, merged
+    assert merged["started_at"] == collect["started_at"], merged
+    assert merged["finished_at"] == import_only["finished_at"], merged
+    assert merged["import_db"]["atualizados"] == 39, merged
+
+
+def test_merge_import_report_passthrough_without_collect():
+    import_only = {"scrapers": [], "csvs": []}
+    assert worker.merge_import_report({}, import_only) is import_only
+    assert worker.merge_import_report({"report": {"csvs": []}}, import_only) is import_only

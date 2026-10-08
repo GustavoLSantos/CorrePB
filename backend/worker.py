@@ -168,6 +168,17 @@ def load_frontend_report() -> dict[str, Any]:
     return {"started_at": None, "finished_at": None, "scrapers": [], "csvs": []}
 
 
+def merge_import_report(job: dict, import_report: dict[str, Any]) -> dict[str, Any]:
+    previous = job.get("report") if isinstance(job.get("report"), dict) else {}
+    if not previous.get("scrapers"):
+        return import_report
+    merged = dict(import_report)
+    merged["scrapers"] = previous.get("scrapers") or []
+    if previous.get("started_at") and not merged.get("started_at"):
+        merged["started_at"] = previous["started_at"]
+    return merged
+
+
 def mark_awaiting_import(jobs, job_id: str, report: dict[str, Any]) -> None:
     """Congela o job em awaiting_import com o relatório parcial.
 
@@ -205,7 +216,7 @@ def process_one(timeout_s: int) -> int:
 
     if phase == "import":
         pipeline_ok, _ = run_pipeline(timeout_s, f"--mode import --job {job_id}")
-        report = load_frontend_report()
+        report = merge_import_report(job, load_frontend_report())
         error = None if pipeline_ok else "importação falhou"
         finish_job(jobs, states, job_id, pipeline_ok, report, error)
         logger.info(f"Job {job_id} finalizado: {'complete' if pipeline_ok else 'failed'}.")
