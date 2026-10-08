@@ -112,12 +112,16 @@ def finish_job(jobs, states, job_id: str, ok: bool, report: dict, error: str | N
         )
 
 
-def run_pipeline(timeout_s: int) -> tuple[bool, dict[str, Any]]:
-    """Executa o pipeline existente como subprocesso, sem alterá-lo."""
+def run_pipeline(timeout_s: int, extra_args: str = "") -> tuple[bool, dict[str, Any]]:
+    """Executa o pipeline existente como subprocesso, sem alterá-lo.
+
+    extra_args carrega "--mode <fase> --job <id>"; argv continua fixo
+    além dessas flags controladas pelo worker.
+    """
     start = time.monotonic()
     try:
         proc = subprocess.run(  # noqa: S603 - argv fixo: interpretador + script do repo
-            [sys.executable, str(PIPELINE_SCRIPT)],
+            [sys.executable, str(PIPELINE_SCRIPT), *extra_args.split()],
             cwd=str(BACKEND_DIR),
             capture_output=True,
             text=True,
@@ -164,8 +168,31 @@ def load_frontend_report() -> dict[str, Any]:
     return {"started_at": None, "finished_at": None, "scrapers": [], "csvs": []}
 
 
+def mark_awaiting_import(jobs, job_id: str, report: dict[str, Any]) -> None:
+    """Congela o job em awaiting_import com o relatório parcial.
+
+    `active` permanece True: o slot do run continua ocupado até a
+    confirmação (ou cancelamento), então dois runs não coexistem.
+    """
+    jobs.update_one(
+        {"_id": job_id},
+        {
+            "$set": {
+                "status": "awaiting_import",
+                "report": report,
+                "finished_at": "",
+            }
+        },
+    )
+
+
 def process_one(timeout_s: int) -> int:
-    """Reivindica e executa um job. Retorna exit code (0 = job concluído)."""
+    """Reivindica e executa um job na fase indicada por `phase`.
+
+    collect (default): scrapers -> payload no Mongo -> job em awaiting_import
+    (com relatório parcial para revisão; slot continua ocupado).
+    import: restaura CSVs -> ImportToDB/ImportToBucket -> complete.
+    """
     _, jobs, states = mongo_collection()
     job = claim_next_job(jobs)
     if job is None:
@@ -173,13 +200,25 @@ def process_one(timeout_s: int) -> int:
         return 0
 
     job_id = str(job.get("_id") or job.get("job_id", ""))
-    logger.info(f"Job {job_id} reivindicado. Executando pipeline...")
-    pipeline_ok, pipeline_report = run_pipeline(timeout_s)
-    report = load_frontend_report()
-    error = None if pipeline_ok else (pipeline_report.get("stderr_tail") or "pipeline falhou")
-    finish_job(jobs, states, job_id, pipeline_ok, report, error)
-    logger.info(f"Job {job_id} finalizado: {'complete' if pipeline_ok else 'failed'}.")
-    return 0 if pipeline_ok else 1
+    phase = str(job.get("phase") or "collect")
+    logger.info(f"Job {job_id} reivindicado (fase {phase}).")
+
+    if phase == "import":
+        exit_code = run_pipeline(timeout_s, f"--mode import --job {job_id}")
+        report = load_frontend_report()
+        error = None if exit_code == 0 else "importação falhou"
+        finish_job(jobs, states, job_id, exit_code == 0, report, error)
+        logger.info(f"Job {job_id} finalizado: {'complete' if exit_code == 0 else 'failed'}.")
+        return exit_code
+
+    exit_code = run_pipeline(timeout_s, f"--mode collect --job {job_id}")
+    if exit_code != 0:
+        finish_job(jobs, states, job_id, False, load_frontend_report(), "coleta falhou")
+        return exit_code
+
+    mark_awaiting_import(jobs, job_id, load_frontend_report())
+    logger.info(f"Job {job_id} aguardando confirmação de importação.")
+    return 0
 
 
 def check(condition: bool, message: str) -> None:
@@ -188,7 +227,11 @@ def check(condition: bool, message: str) -> None:
 
 
 def self_test() -> int:
-    """Valida o protocolo claim/complete num banco de teste, sem scrape e sem S3."""
+    """Valida o protocolo de claim/complete num banco de teste, sem scrape.
+
+    Cobre as duas fases: collect -> awaiting_import (slot mantido) e
+    a transição import -> queued com phase marcada.
+    """
     if os.environ.get("WORKER_ALLOW_SELF_TEST") != "1":
         print("self-test bloqueado: defina WORKER_ALLOW_SELF_TEST=1", file=sys.stderr)
         return 2
@@ -199,6 +242,7 @@ def self_test() -> int:
             "_id": test_id,
             "job_id": test_id,
             "status": QUEUED,
+            "phase": "collect",
             "started_at": now_iso(),
             "finished_at": "",
             "report": None,
@@ -210,6 +254,14 @@ def self_test() -> int:
         claimed = claim_next_job(jobs)
         check(claimed is not None and str(claimed["_id"]) == test_id, "claim falhou")
         check(claimed["status"] == RUNNING, "status deveria ser running")
+
+        # Fase collect concluída -> job congela em awaiting_import com slot.
+        mark_awaiting_import(jobs, test_id, {"self_test": True})
+        awaiting = jobs.find_one({"_id": test_id})
+        check(awaiting["status"] == "awaiting_import", "status deveria ser awaiting_import")
+        check(awaiting.get("active") is True, "active deveria permanecer True")
+
+        # Fase import liberada pelo usuário -> complete + slot liberado.
         finish_job(jobs, states, test_id, True, {"self_test": True}, None)
         final = jobs.find_one({"_id": test_id})
         check(final is not None, "job sumiu")
@@ -217,7 +269,9 @@ def self_test() -> int:
         check(final.get("active") is False, "active deveria ser false")
         state = states.find_one({"_id": "last_scrape"})
         check(state is not None and state.get("finished_at"), "last_scrape não gravado")
-        print("self-test OK: claim -> running -> complete + active:false + last_scrape")
+        print(
+            "self-test OK: claim -> running -> awaiting_import (slot) -> complete + active:false + last_scrape"
+        )
         return 0
     finally:
         jobs.delete_one({"_id": test_id})

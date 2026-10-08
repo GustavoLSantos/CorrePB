@@ -82,11 +82,13 @@ class CsvSummary:
 
 
 def setup_logging() -> logging.Logger:
-    logger = logging.getLogger('pipeline')
+    logger = logging.getLogger("pipeline")
     logger.setLevel(logging.DEBUG)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s %(message)s', '%H:%M:%S'))
+        handler.setFormatter(
+            logging.Formatter("[%(asctime)s] %(levelname)s %(message)s", "%H:%M:%S")
+        )
         logger.addHandler(handler)
         logger.propagate = False
     return logger
@@ -184,6 +186,7 @@ def validate_csv(path: Path, fonte: str) -> CsvSummary:
         return summary
 
     summary.total = len(rows)
+
     # Fingerprint for duplicates: nome + cidade + data (normalized)
     def _strip_accents(s: str) -> str:
         import unicodedata
@@ -191,7 +194,9 @@ def validate_csv(path: Path, fonte: str) -> CsvSummary:
         return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
 
     def _fingerprint(row: dict) -> tuple[str, str, str]:
-        nome_fp = re.sub(r"\s+", " ", _strip_accents(row.get("Nome do Evento", "") or "").lower().strip())
+        nome_fp = re.sub(
+            r"\s+", " ", _strip_accents(row.get("Nome do Evento", "") or "").lower().strip()
+        )
         cidade_fp = re.sub(r"\s+", " ", _strip_accents(row.get("Cidade", "") or "").lower().strip())
         data_raw = (row.get("Data", "") or "").strip()
         # Canonical data via _parse_first_date, fallback to raw lower
@@ -455,7 +460,8 @@ def save_frontend_report(
 # ─── Main ─────────────────────────────────────────────────────────────────────
 
 
-def main() -> None:
+def main_full() -> None:
+    """Pipe completo: coleta + importação sem gate humano (execução manual)."""
     pipeline_start = time.monotonic()
     started_iso = datetime.now(timezone.utc).isoformat()
 
@@ -485,13 +491,16 @@ def main() -> None:
     try:
         # Import tardio para evitar ciclo com app.services
         import importlib
+
         _mod = importlib.import_module("app.services.scraper_runner")
         _dedup = getattr(_mod, "deduplicate_csvs", None)
         if _dedup:
             dup_stats = _dedup()
             for s in dup_stats:
                 if s["removidos"]:
-                    logger.info(f"[dedup][CSV] {s['fonte']}: {s['removidos']} removidos, {s['mantidos']} mantidos")
+                    logger.info(
+                        f"[dedup][CSV] {s['fonte']}: {s['removidos']} removidos, {s['mantidos']} mantidos"
+                    )
     except Exception as e:
         logger.warning(f"Falha na deduplicação CSV: {e}")
 
@@ -581,6 +590,221 @@ def main() -> None:
 
     logger.info("Pipeline concluído com sucesso.")
     sys.exit(0)
+
+
+def run_scrapers_phase() -> Tuple[List[StepResult], bool]:
+    """Fase 1: scrapers em paralelo. Retorna (resultados, ok)."""
+    max_workers = min(4, len(SCRAPERS))
+    logger.info(f"Executando {len(SCRAPERS)} scrapers em paralelo (max {max_workers} workers)...")
+    scraper_results = run_scrapers_parallel()
+    ok = all(r.ok for r in scraper_results)
+    if not ok:
+        failed = [r.name for r in scraper_results if not r.ok]
+        logger.error(f"Scrapers com falha: {failed}. Abortando pipeline.")
+    return scraper_results, ok
+
+
+def dedup_csvs_phase() -> None:
+    """Fase 2: deduplicação cross-scraper nos CSVs."""
+    try:
+        import importlib
+
+        _mod = importlib.import_module("app.services.scraper_runner")
+        _dedup = getattr(_mod, "deduplicate_csvs", None)
+        if _dedup:
+            dup_stats = _dedup()
+            for s in dup_stats:
+                if s["removidos"]:
+                    logger.info(
+                        f"[dedup][CSV] {s['fonte']}: {s['removidos']} removidos, {s['mantidos']} mantidos"
+                    )
+    except Exception as e:
+        logger.warning(f"Falha na deduplicação CSV: {e}")
+
+
+def validate_csvs_phase() -> Tuple[List[CsvSummary], bool]:
+    """Fase 3: validação dos CSVs. Retorna (resumos, ok)."""
+    logger.info("Validando CSVs...")
+    csv_summaries: List[CsvSummary] = []
+    for fonte, path in CSV_MAP.items():
+        summary = validate_csv(path, fonte)
+        csv_summaries.append(summary)
+        if not summary.ok:
+            logger.error(f"Erro crítico no CSV {fonte}: {summary.erros}")
+        else:
+            if summary.eventos_passados:
+                logger.warning(f"{fonte}: {summary.eventos_passados} evento(s) com data passada.")
+            if summary.sem_preco:
+                logger.warning(f"{fonte}: {summary.sem_preco} evento(s) sem preço.")
+    ok = all(summary.ok for summary in csv_summaries)
+    return csv_summaries, ok
+
+
+def _mongo_client():
+    import pymongo
+
+    uri = os.getenv("MONGODB_REMOTE_URI") or os.getenv("MONGODB_URI")
+    if not uri:
+        raise RuntimeError("MONGODB_REMOTE_URI/MONGODB_URI não configurado")
+    return pymongo.MongoClient(uri, serverSelectionTimeoutMS=15000)
+
+
+def run_collect_phase(job_id: str) -> None:
+    """Fase de coleta: scrapers → dedup → validação → payload no Mongo.
+
+    Não importa nada no banco de eventos: os dados ficam em
+    `scrape_payload` (TTL 24h) até a confirmação humana.
+    """
+    started = time.monotonic()
+    started_iso = datetime.now(timezone.utc).isoformat()
+
+    scraper_results, ok = run_scrapers_phase()
+    if not ok:
+        save_frontend_report(scraper_results, [], started_iso)
+        print_report(
+            scraper_results,
+            csv_summaries=[],
+            import_db=None,
+            import_bucket=None,
+            total_duration=time.monotonic() - started,
+            aborted=True,
+        )
+        sys.exit(1)
+
+    dedup_csvs_phase()
+    csv_summaries, ok = validate_csvs_phase()
+    if not ok:
+        save_frontend_report(scraper_results, csv_summaries, started_iso)
+        print_report(
+            scraper_results,
+            csv_summaries,
+            import_db=None,
+            import_bucket=None,
+            total_duration=time.monotonic() - started,
+            aborted=True,
+        )
+        sys.exit(1)
+
+    client = _mongo_client()
+    try:
+        from data_collection.utils.payload_store import (
+            ensure_ttl_index,
+            payload_collection,
+            save_payload,
+        )
+
+        collection = payload_collection(client)
+        ensure_ttl_index(collection)
+        saved = save_payload(collection, job_id, CSV_MAP)
+    finally:
+        client.close()
+    logger.info(f"Payload salvo: {len(saved)} CSV(s) — {saved}")
+
+    report = save_frontend_report(scraper_results, csv_summaries, started_iso)
+    print_report(
+        scraper_results,
+        csv_summaries,
+        import_db=None,
+        import_bucket=None,
+        total_duration=time.monotonic() - started,
+        aborted=False,
+    )
+    logger.info("Coleta concluída; aguardando confirmação para importar.")
+    sys.exit(0)
+
+
+def run_import_phase(job_id: str) -> None:
+    started = time.monotonic()
+    started_iso = datetime.now(timezone.utc).isoformat()
+
+    client = _mongo_client()
+    try:
+        from data_collection.utils.payload_store import (
+            drop_payload,
+            load_payload,
+            payload_collection,
+        )
+
+        collection = payload_collection(client)
+        restored = load_payload(collection, job_id, CSV_MAP)
+    finally:
+        client.close()
+    if not restored:
+        logger.error("Nenhum CSV restaurado do payload; execução cancelada.")
+        sys.exit(1)
+    logger.info(f"Payload restaurado: {len(restored)} CSV(s) — {restored}")
+
+    # Revalida após restaurar (conteúdo pode divergir do que foi reportado).
+    csv_summaries, ok = validate_csvs_phase()
+    if not ok:
+        sys.exit(1)
+
+    logger.info("Executando ImportToDB...")
+    import_db_result = run_import(IMPORT_TO_DB_SCRIPT, "ImportToDB")
+    if not import_db_result.ok:
+        logger.error("ImportToDB falhou. Abortando pipeline.")
+        sys.exit(1)
+
+    try:
+        import asyncio as _asyncio
+
+        from app.services.scraper_runner import deduplicate_db_and_bucket as _dedup_db
+
+        _db_stats = _asyncio.run(_dedup_db())
+        if _db_stats and _db_stats.get("removidos_db"):
+            logger.info(
+                f"[dedup][DB] {_db_stats['removidos_db']} docs removidos em {_db_stats.get('grupos', '?')} grupos"
+            )
+    except Exception as e:
+        logger.warning(f"Falha na deduplicação DB/bucket: {e}")
+
+    logger.info("Executando ImportToBucket...")
+    import_bucket_result = run_import(IMPORT_TO_BUCKET_SCRIPT, "ImportToBucket")
+
+    try:
+        drop_payload(payload_collection(_mongo_client()), job_id)
+    except Exception:
+        pass
+
+    save_frontend_report([], csv_summaries, started_iso, import_db_result)
+    print_report(
+        [],
+        csv_summaries,
+        import_db=import_db_result,
+        import_bucket=import_bucket_result,
+        total_duration=time.monotonic() - started,
+        aborted=not import_bucket_result.ok,
+    )
+    if not import_bucket_result.ok:
+        sys.exit(1)
+    logger.info("Importação concluída com sucesso.")
+    sys.exit(0)
+
+
+def main() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Pipeline de coleta e importação do Corre PB")
+    parser.add_argument(
+        "--mode",
+        choices=["full", "collect", "import"],
+        default="full",
+        help="full=pipe completo (legado); collect=só coleta; import=só importação",
+    )
+    parser.add_argument(
+        "--job", dest="job_id", default="", help="job id (obrigatório em collect/import)"
+    )
+    args = parser.parse_args()
+
+    if args.mode == "full":
+        main_full()
+        return
+    if not args.job_id:
+        parser.error("--job é obrigatório nos modos collect e import")
+    if args.mode == "collect":
+        run_collect_phase(args.job_id)
+        return
+    run_import_phase(args.job_id)
 
 
 if __name__ == "__main__":
