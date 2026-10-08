@@ -121,6 +121,12 @@ tudo chega pelo ambiente do Container Apps Job.
 Imagem própria (separada da API): `Dockerfile.worker`
 (`python worker.py --once` como entrypoint padrão).
 
+Deploy automático: push para `main` tocando `worker.py`, `Dockerfile.worker`
+ou `data_collection/` dispara `.github/workflows/worker-deploy.yml`
+(lint → build/push com tag SHA → update do job `correpb-scraper` com
+`--cpu 0.5 --memory 1Gi`). Pré-requisito único: Actions access (write)
+do pacote `ghcr.io/<owner>/correpb-worker` para este repo.
+
 ## Variáveis de ambiente
 
 Copie `.env.example` para `.env` e preencha:
